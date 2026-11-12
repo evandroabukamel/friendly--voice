@@ -1,13 +1,13 @@
 [package]
 name = "friendly-voice-infrastructure"
-description = "Adaptadores: WAV, DSP, G2P pt-BR, persistência JSON, motores de voz."
+description = "Adapters: WAV, DSP, pt-BR G2P, JSON persistence, voice engines."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [features]
 default = []
-# Adaptador HTTP para um servidor de clonagem/síntese neural auto-hospedado.
+# HTTP adapter for a self-hosted neural voice cloning/synthesis server (see engine/).
 http-engine = ["dep:ureq", "dep:base64"]
 
 [dependencies]

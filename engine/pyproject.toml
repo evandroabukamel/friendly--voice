@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "friendly-voice-engine"
+version = "0.1.0"
+description = "Voice-cloning server for Friendly Voice: Piper (pt-BR base speech) + OpenVoice V2 (tone color conversion)."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+# OpenVoice itself is installed separately with --no-deps (see README): its
+# setup.py pins very old versions (numpy 1.22, gradio 3.x) that we do not need.
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "numpy>=1.24",
+    "soundfile>=0.12",
+    "librosa>=0.10",
+    "onnxruntime>=1.17",
+    "torch>=2.2",
+]
+
+[project.optional-dependencies]
+# POST /v1/transcribe
+transcribe = ["faster-whisper>=1.0"]
+# POST /v1/phonemes (learn the accent without hand-written IPA)
+phonemes = ["transformers>=4.40"]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+friendly-voice-engine = "friendly_voice_engine.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["friendly_voice_engine*"]

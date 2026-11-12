@@ -1,0 +1,73 @@
+name: Voice engine
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Engine tests + Rust end-to-end (OpenVoice)
+    runs-on: ubuntu-latest
+    env:
+      FV_MODELS_DIR: ${{ github.workspace }}/.models
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: engine/pyproject.toml
+
+      - name: Install the engine (CPU PyTorch + OpenVoice without its old pins)
+        working-directory: engine
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[dev]"
+          pip install --no-deps -r requirements-openvoice.txt
+
+      - name: Cache model weights
+        uses: actions/cache@v4
+        with:
+          path: .models
+          key: engine-models-${{ hashFiles('engine/friendly_voice_engine/download.py') }}
+
+      - name: Download and verify model weights
+        run: friendly-voice-engine download
+
+      - name: Unit and integration tests
+        working-directory: engine
+        run: pytest -q
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: engine-e2e
+
+      - name: Build the CLI with the HTTP engine adapter
+        run: cargo build --features http-engine -p friendly-voice
+
+      - name: End-to-end (CLI ⇄ engine server)
+        run: |
+          FV_VOICES_DIR="$RUNNER_TEMP/voices" friendly-voice-engine serve --port 8020 > engine.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8020/health && break; sleep 2; done
+          scripts/engine-e2e.sh http://127.0.0.1:8020
+      - name: Engine log
+        if: failure()
+        run: cat engine.log || true
+
+  docker:
+    name: Docker image (build only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: engine
+          push: false
+          tags: friendly-voice-engine:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

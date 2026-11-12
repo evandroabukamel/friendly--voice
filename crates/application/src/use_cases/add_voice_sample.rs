@@ -15,14 +15,14 @@ use std::sync::Arc;
 pub struct AddVoiceSampleInput {
     pub speaker_id: SpeakerId,
     pub audio: Vec<u8>,
-    /// O que foi dito. Se ausente, usa o [`Transcriber`] (se configurado).
+    /// What was said. If absent, the [`Transcriber`] is used (when configured).
     pub transcript: Option<String>,
-    /// Transcrição fonética do que foi ouvido (IPA). Se ausente, usa o
-    /// [`PhoneRecognizer`] (se configurado).
+    /// Phonetic transcription of what was heard (IPA). If absent, the
+    /// [`PhoneRecognizer`] is used (when configured).
     pub observed_ipa: Option<String>,
 }
 
-/// US-02: enviar arquivos de áudio da pessoa.
+/// US-02: upload audio files of the person.
 pub struct AddVoiceSample {
     speakers: Arc<dyn SpeakerRepository>,
     samples: Arc<dyn SampleRepository>,
@@ -104,7 +104,8 @@ impl AddVoiceSample {
             &self.recognizer,
         ) {
             (Some(ipa), _) => Some(parse_ipa(&ipa)),
-            (None, Some(r)) => Some(r.recognize(&clip, &transcript)?),
+            // An empty result means the recognizer is not available.
+            (None, Some(r)) => Some(r.recognize(&clip, &transcript)?).filter(|p| !p.is_empty()),
             (None, None) => None,
         };
 
