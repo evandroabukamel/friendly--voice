@@ -76,7 +76,7 @@ cargo build --release --features http-engine
 alias fv=./target/release/friendly-voice
 export FRIENDLY_VOICE_ENGINE_URL=http://localhost:8020
 export FRIENDLY_VOICE_ME="Evandro"       # your name in the messages
-export FRIENDLY_VOICE_PLAYER="aplay"     # optional: play the audio (afplay on macOS)
+export FRIENDLY_VOICE_PLAYER="aplay"     # optional: play the audio (afplay on macOS, windows on Windows)
 
 # Register the person (consent is mandatory)
 fv person add --name "Vó Lúcia" --relationship avó --consent-by "Lúcia"

@@ -31,7 +31,7 @@ pub struct Cli {
     )]
     pub engine_url: Option<String>,
     #[arg(
-        help = "Command to play the generated audio (e.g. \"aplay\", \"afplay\", \"ffplay -nodisp -autoexit\").",
+        help = "Command to play the generated audio (e.g. \"aplay\", \"afplay\", \"ffplay -nodisp -autoexit\"), or \"windows\" to native Windows player.",
         long = "player",
         env = "FRIENDLY_VOICE_PLAYER",
         global = true

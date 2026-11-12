@@ -13,7 +13,8 @@ COPY friendly_voice_engine ./friendly_voice_engine
 
 # CPU-only PyTorch first, so that pip does not pull the CUDA build.
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
- && pip install --no-cache-dir . \
+ && pip install --no-cache-dir phonemizer
+ && pip install --no-cache-dir ".[transcribe]" \
  && pip install --no-cache-dir --no-deps -r requirements-openvoice.txt
 
 ENV FV_MODELS_DIR=/models \
