@@ -1,0 +1,11 @@
+[package]
+name = "friendly-voice-application"
+description = "Casos de uso e portas (interfaces) da aplicação."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+friendly-voice-domain.workspace = true
+chrono.workspace = true
+thiserror.workspace = true

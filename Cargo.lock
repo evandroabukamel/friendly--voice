@@ -66,6 +66,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
 
 [[package]]
+name = "friendly-voice-application"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "friendly-voice-domain",
+ "thiserror",
+]
+
+[[package]]
 name = "friendly-voice-domain"
 version = "0.1.0"
 dependencies = [
