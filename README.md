@@ -11,7 +11,7 @@ are in English.
 
 ## Highlights
 
-* **Voice cloning from audio files** with [OpenVoice V2](https://github.com/myshell-ai/OpenVoice)
+* **Voice cloning from audio files** (WAV or FLAC, any bit depth, mono or stereo) with [OpenVoice V2](https://github.com/myshell-ai/OpenVoice)
   (MIT license), behind a small self-hosted server ([`engine/`](engine)).
   Consent of the person is mandatory.
 * **Accent learned from the recordings**, covering:
@@ -81,9 +81,9 @@ export FRIENDLY_VOICE_PLAYER="aplay"     # optional: play the audio (afplay on m
 fv pessoa adicionar --nome "Vó Lúcia" --relacao avó --consentimento-de "Lúcia"
 #   Pessoa cadastrada: Vó Lúcia (id: spk-...)
 
-# Upload .wav recordings (≥ 2 s, ≥ 16 kHz). Optionally, next to each file:
+# Upload .wav or .flac recordings (≥ 2 s, ≥ 16 kHz). Optionally, next to each file:
 #    recording.txt → what was said      recording.ipa → what was heard (IPA)
-fv amostra adicionar --pessoa spk-... --audio recording1.wav
+fv amostra adicionar --pessoa spk-... --audio recording1.flac
 fv amostra adicionar --pessoa spk-... --audio recording2.wav \
    --texto "Os amigos de verdade vão falar com você" \
    --fonemas "uz amiguʃ dʒi vehdadʒi vãw fala kũ vose"
@@ -120,7 +120,7 @@ melody (useful for development and tests) but **not** their timbre.
 ## Android app
 
 The same Rust core runs on Android: `crates/mobile` exposes the use cases via
-JNI and `android/` is the Kotlin app — register the person, upload `.wav`
+JNI and `android/` is the Kotlin app — register the person, upload `.wav`/`.flac`
 samples, generate the voice, ask for a message choosing **the tone**, and
 schedule messages (fired by WorkManager every 15 minutes, with a notification
 and audio). Point it at the voice engine in its settings to use the cloned

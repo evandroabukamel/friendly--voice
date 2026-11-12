@@ -11,6 +11,7 @@ One-week sprints. Every sprint delivers a **usable, tested increment**
 | 3 | Messages and schedules end to end in the CLI | US-05, US-06, US-07, US-08, US-09 | 14 |
 | 4 | Tone of voice per message and Android app with CI/CD | US-18, US-19, US-20 | 21 |
 | 5 | Real timbre cloning (OpenVoice) and English documentation | US-11, US-21 | 11 |
+| 6 | FLAC input | US-24 | 2 |
 
 Average velocity (sprints 1–5): **~14 pts/sprint**.
 
@@ -97,3 +98,14 @@ learned accent and the chosen tone; documentation and comments in English.
 * 👎 The tests use synthetic reference audio; perceptual quality with real
   recordings still has to be checked by listening. **Action:** add a
   listening checklist to the Definition of Done for voice stories.
+
+## Sprint 6 — FLAC input
+**Increment:** recordings can be uploaded as FLAC in the CLI and the Android app.
+* `FlacDecoder` (pure-Rust `claxon`): any bit depth, mixed down to mono;
+  optional ID3v2 tag skipped.
+* `AudioFileDecoder` picks the decoder by magic bytes (`RIFF…WAVE` / `fLaC`),
+  never by extension; adding a format does not touch the use cases (OCP).
+* Stored files keep the original bytes with the detected extension; the HTTP
+  adapter converts FLAC references to WAV, so the engine contract is unchanged.
+* Tests generate FLAC with `flacenc`; also checked against ffmpeg-encoded
+  files (24-bit stereo 48 kHz and 16-bit mono) through the OpenVoice engine.

@@ -116,6 +116,26 @@ Scenario: optional recognizers
   Then the sample is stored without accent evidence instead of failing
 ```
 
+### US-24 · Upload recordings in FLAC — *Should* · 2 pts · ✅ Sprint 6
+> As a user, I want to upload FLAC recordings (lossless, common in phone and
+> studio recorders) as well as WAV.
+
+```gherkin
+Scenario: FLAC sample
+  Given a 6 s FLAC recording (any bit depth, mono or stereo) with its .txt/.ipa files
+  When I add the sample
+  Then it is decoded, analyzed and stored as .flac, like a WAV sample
+
+Scenario: cloning with FLAC references
+  Given the voice engine is configured
+  When I generate the voice from FLAC samples
+  Then the references are converted to WAV before being sent (the API contract is unchanged)
+
+Scenario: unsupported format
+  When I add an OGG file
+  Then I am told that WAV (PCM/float) and FLAC are supported
+```
+
 ## Epic E3 — Messages
 
 ### US-05 · Ask for a message right now — *Must* · 3 pts · ✅ Sprint 3
@@ -221,7 +241,7 @@ Scenario: continuous delivery
 | US-13 | Intonation per sentence type (question, exclamation) learned from the samples | Could | 5 |
 | US-14 | ~~Mobile app with notifications using the use cases~~ → delivered on Android (US-19/US-20) | — | — |
 | US-15 | Revoking consent deletes the person's samples and voice (app and engine) | Must | 3 |
-| US-16 | MP3/OGG/M4A support on import | Should | 3 |
+| US-16 | ~~FLAC support on import~~ → delivered (US-24); MP3/OGG/M4A still pending | Should | 2 |
 | US-17 | Avoid repeating the same message in a row (history) | Could | 2 |
 | US-22 | Inaudible watermark on cloned audio (OpenVoice `wavmark`) | Should | 3 |
 | US-23 | Choose or train the pt-BR base voice closest to the person (gender, age) to improve quality | Could | 8 |

@@ -9,7 +9,7 @@ pub struct WavDecoder;
 impl AudioDecoder for WavDecoder {
     fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
         let mut reader = hound::WavReader::new(Cursor::new(bytes))
-            .map_err(|e| PortError::new(format!("WAV inválido (use .wav PCM): {e}")))?;
+            .map_err(|e| PortError::new(format!("WAV inválido: {e}")))?;
         let spec = reader.spec();
         let channels = spec.channels.max(1) as usize;
         let interleaved: Vec<f32> = match spec.sample_format {

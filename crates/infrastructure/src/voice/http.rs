@@ -5,7 +5,7 @@
 //! tone color conversion, both permissively licensed); any server that
 //! implements the same endpoints can be plugged in.
 use super::ssml::to_ssml;
-use crate::audio::encode_wav;
+use crate::audio::{encode_wav, to_wav};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use friendly_voice_application::ports::{
     PhoneRecognizer, PortError, PortResult, ReferenceAudio, SpeechSynthesizer, SynthesizedAudio,
@@ -142,13 +142,17 @@ impl VoiceCloningEngine for HttpVoiceEngine {
         let req = EnrollRequest {
             name: &speaker.name,
             language: LANGUAGE,
+            // The contract carries WAV; other formats (FLAC) are converted here,
+            // so engines do not need to support every input format.
             references: references
                 .iter()
-                .map(|r| EnrollReference {
-                    audio_wav_base64: B64.encode(&r.bytes),
-                    transcript: &r.transcript,
+                .map(|r| {
+                    Ok(EnrollReference {
+                        audio_wav_base64: B64.encode(to_wav(&r.bytes)?),
+                        transcript: &r.transcript,
+                    })
                 })
-                .collect(),
+                .collect::<PortResult<_>>()?,
         };
         let res: EnrollResponse = self.client.post_json("v1/voices", &req)?;
         Ok(res.voice_id)

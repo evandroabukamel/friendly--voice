@@ -1,4 +1,5 @@
 //! Persistence in JSON files (suitable for a personal/local app).
+use crate::audio::AudioFormat;
 use friendly_voice_application::ports::*;
 use friendly_voice_domain::{
     ids::{SampleId, ScheduleId, SpeakerId},
@@ -123,7 +124,8 @@ impl ScheduleRepository for JsonRepository<Schedule> {
     }
 }
 
-/// Stores the audio files at `<root>/<speaker>/<sample>.wav`.
+/// Stores the audio files at `<root>/<speaker>/<sample>.<wav|flac>`, keeping
+/// the original bytes; the extension comes from the detected format.
 pub struct FileAudioStore {
     root: PathBuf,
 }
@@ -145,8 +147,11 @@ impl FileAudioStore {
 
 impl AudioStore for FileAudioStore {
     fn store(&self, speaker: &SpeakerId, sample: &SampleId, bytes: &[u8]) -> PortResult<String> {
+        let extension = AudioFormat::detect(bytes)
+            .map(AudioFormat::extension)
+            .unwrap_or("bin");
         let rel = format!(
-            "{}/{}.wav",
+            "{}/{}.{extension}",
             Self::safe(speaker.as_str())?,
             Self::safe(sample.as_str())?
         );
@@ -204,6 +209,18 @@ mod tests {
             .store(&SpeakerId::new("s"), &SampleId::new("a"), b"x")
             .unwrap();
         assert_eq!(store.load(&loc).unwrap(), b"x");
+        let flac = store
+            .store(&SpeakerId::new("s"), &SampleId::new("b"), b"fLaC....")
+            .unwrap();
+        assert_eq!(flac, "s/b.flac");
+        let wav = store
+            .store(
+                &SpeakerId::new("s"),
+                &SampleId::new("c"),
+                b"RIFF\0\0\0\0WAVEfmt ",
+            )
+            .unwrap();
+        assert_eq!(wav, "s/c.wav");
         assert!(store.load("../etc/passwd").is_err());
         assert!(store
             .store(&SpeakerId::new(".."), &SampleId::new("a"), b"x")

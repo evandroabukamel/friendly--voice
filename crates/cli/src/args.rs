@@ -91,7 +91,7 @@ pub enum PessoaCmd {
 #[derive(Debug, Subcommand)]
 pub enum AmostraCmd {
     #[command(
-        about = "Adiciona um áudio .wav. Se existirem `<arquivo>.txt` (transcrição) ou `<arquivo>.ipa` (fonemas ouvidos) ao lado, eles são usados."
+        about = "Adiciona um áudio .wav ou .flac. Se existirem `<arquivo>.txt` (transcrição) ou `<arquivo>.ipa` (fonemas ouvidos) ao lado, eles são usados."
     )]
     Adicionar {
         #[arg(long = "pessoa")]

@@ -13,7 +13,7 @@ use friendly_voice_domain::{
     voice::{VoiceProfile, VoiceSample},
 };
 use friendly_voice_infrastructure::{
-    audio::{DspAcousticAnalyzer, WavDecoder},
+    audio::{AudioFileDecoder, DspAcousticAnalyzer},
     delivery::OutboxDelivery,
     messages::CuratedMessageCatalog,
     persistence::{FileAudioStore, JsonRepository},
@@ -140,7 +140,7 @@ impl Container {
             self.speakers.clone(),
             self.samples.clone(),
             self.store.clone(),
-            Arc::new(WavDecoder),
+            Arc::new(AudioFileDecoder),
             Arc::new(DspAcousticAnalyzer::default()),
             self.phonemizer.clone(),
             self.ids.clone(),

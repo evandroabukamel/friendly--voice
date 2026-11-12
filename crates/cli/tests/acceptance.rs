@@ -210,6 +210,86 @@ fn full_flow_learns_accent_and_speaks() {
     env.ok(&["agenda", "executar"]);
 }
 
+/// Voiced audio encoded as 24-bit stereo FLAC.
+fn flac(path: &Path, secs: f32, f0: f32) {
+    use flacenc::component::BitRepr;
+    use flacenc::error::Verify;
+    let sr = 44_100usize;
+    let scale = (1 << 23) as f32 - 1.0;
+    let samples: Vec<i32> = (0..(secs * sr as f32) as usize)
+        .flat_map(|i| {
+            let t = i as f32 / sr as f32;
+            let v: f32 = if (t % 0.5) < 0.35 {
+                (1..6)
+                    .map(|k| (std::f32::consts::TAU * f0 * k as f32 * t).sin() / k as f32)
+                    .sum::<f32>()
+                    * 0.15
+            } else {
+                0.0
+            };
+            let s = (v * scale) as i32;
+            [s, s]
+        })
+        .collect();
+    let config = flacenc::config::Encoder::default().into_verified().unwrap();
+    let source = flacenc::source::MemSource::from_samples(&samples, 2, 24, sr);
+    let stream = flacenc::encode_with_fixed_block_size(&config, source, config.block_size).unwrap();
+    let mut sink = flacenc::bitsink::ByteSink::new();
+    stream.write(&mut sink).unwrap();
+    std::fs::write(path, sink.as_slice()).unwrap();
+}
+
+#[test]
+fn accepts_flac_samples() {
+    let env = Env::new("flac");
+    let id = speaker_id(&env.ok(&[
+        "pessoa",
+        "adicionar",
+        "--nome",
+        "Mãe",
+        "--consentimento-de",
+        "Mãe",
+    ]));
+    for (name, f0) in [("f1", 200.0), ("f2", 190.0)] {
+        let path = env.dir.join(format!("{name}.flac"));
+        flac(&path, 6.0, f0);
+        // Sidecar files work for FLAC too.
+        std::fs::write(path.with_extension("txt"), "Leite quente de noite.").unwrap();
+        std::fs::write(path.with_extension("ipa"), "lejtʃi kẽtʃi dʒi nojtʃi").unwrap();
+        let out = env.ok(&["amostra", "adicionar", "--pessoa", &id, "--audio", p(&path)]);
+        assert!(out.contains("adicionada (6.0s)"), "{out}");
+        assert!(out.contains("Ouvido:   /lejtʃikẽtʃidʒinojtʃi/"), "{out}");
+    }
+    // The original FLAC is kept, with the right extension.
+    let audio_dir = env.dir.join("data/audio").join(&id);
+    let stored: Vec<_> = std::fs::read_dir(audio_dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    assert!(
+        stored
+            .iter()
+            .all(|p| p.extension().is_some_and(|x| x == "flac")),
+        "{stored:?}"
+    );
+    env.ok(&["voz", "gerar", "--pessoa", &id]);
+    env.ok(&["falar", "--pessoa", &id, "--texto", "Boa noite."]);
+
+    let ogg = env.dir.join("x.ogg");
+    std::fs::write(&ogg, b"OggS\0\0\0\0\0\0\0\0 not supported").unwrap();
+    let (ok, out) = env.run(&[
+        "amostra",
+        "adicionar",
+        "--pessoa",
+        &id,
+        "--audio",
+        p(&ogg),
+        "--texto",
+        "oi",
+    ]);
+    assert!(!ok && out.contains("WAV (PCM/float) ou FLAC"), "{out}");
+}
+
 #[test]
 fn rejects_invalid_audio() {
     let env = Env::new("bad");

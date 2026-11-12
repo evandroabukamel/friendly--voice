@@ -98,7 +98,7 @@ class MainActivity : Activity() {
         root.addView(speakerSpinner)
 
         section("2. Amostras de áudio")
-        button("Escolher arquivo .wav") {
+        button("Escolher arquivo .wav ou .flac") {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "audio/*"
@@ -108,7 +108,7 @@ class MainActivity : Activity() {
         val transcript = edit("O que é dito no áudio")
         val ipa = edit("Fonemas ouvidos em IPA (opcional, ex.: lejtʃi kẽtʃi)")
         button("Adicionar amostra") {
-            val wav = pickedWav ?: return@button show("Escolha um arquivo .wav primeiro.")
+            val wav = pickedWav ?: return@button show("Escolha um arquivo .wav ou .flac primeiro.")
             val id = selectedSpeaker() ?: return@button
             callNative({ NativeBridge.addSample(id, wav, transcript.text.toString(), ipa.text.toString()) }) {
                 val s = it.obj()
