@@ -7,6 +7,7 @@ use friendly_voice_domain::{
     accent::AccentRenderer,
     ids::SpeakerId,
     message::{MessageContent, MotivationalMessage},
+    tone::{ToneStyle, VoiceTone},
     voice::SpeechScript,
 };
 use std::sync::Arc;
@@ -19,6 +20,9 @@ pub struct SpeakRequest {
     pub listener: Option<String>,
     /// 0.0 = sem sotaque, 1.0 = sotaque completo aprendido.
     pub accent_intensity: f32,
+    /// Tom de voz desta mensagem. `None` = tom inicial sugerido pelo tema
+    /// (ex.: "calma" → calmo, "celebracao" → animado; texto livre → natural).
+    pub tone: Option<VoiceTone>,
 }
 
 #[derive(Debug, Clone)]
@@ -82,6 +86,10 @@ impl SpeakMessage {
             MessageContent::FixedText(t) => MotivationalMessage::new(&t, None)?,
         };
 
+        let tone = req
+            .tone
+            .unwrap_or_else(|| VoiceTone::of(ToneStyle::default_for(message.category())));
+
         let citation = self.phonemizer.phonemize(message.text());
         let pronunciation = self
             .renderer
@@ -89,7 +97,8 @@ impl SpeakMessage {
         let script = SpeechScript {
             text: message.text().to_string(),
             pronunciation,
-            prosody: voice.prosody,
+            prosody: tone.apply(voice.prosody),
+            tone,
         };
         let audio = self.synthesizer.synthesize(&voice, &script)?;
         let receipt = self.delivery.deliver(&Delivery {
@@ -125,9 +134,11 @@ mod tests {
                 content: MessageContent::FixedText("leite quente".into()),
                 listener: None,
                 accent_intensity: 1.0,
+                tone: None,
             })
             .unwrap();
         assert_eq!(out.script.pronunciation.ipa(), "lejtʃi kẽtʃi");
+        assert_eq!(out.script.tone, VoiceTone::of(ToneStyle::Natural));
         assert_eq!(f.delivery.delivered(), vec!["leite quente".to_string()]);
 
         let out = uc
@@ -136,9 +147,37 @@ mod tests {
                 content: MessageContent::Category(MessageCategory::Motivation),
                 listener: Some("Ana".into()),
                 accent_intensity: 0.0,
+                tone: None,
             })
             .unwrap();
         assert!(out.message.text().contains("Ana"));
+        // tom inicial sugerido pelo tema
+        assert_eq!(out.script.tone.style, ToneStyle::Cheerful);
+    }
+
+    #[test]
+    fn chosen_tone_colors_the_natural_prosody() {
+        let f = Fakes::new();
+        let spk = f.speaker();
+        f.carioca_profile(&spk);
+        let natural = f.profiles.find(&spk.id).unwrap().unwrap().prosody;
+        let tone = VoiceTone::new(ToneStyle::Calm, -1.0).unwrap();
+        let out = f
+            .speak_message()
+            .execute(SpeakRequest {
+                speaker_id: spk.id,
+                content: MessageContent::Category(MessageCategory::Celebration),
+                listener: None,
+                accent_intensity: 1.0,
+                tone: Some(tone),
+            })
+            .unwrap();
+        assert_eq!(
+            out.script.tone, tone,
+            "escolha do usuário vence o tom do tema"
+        );
+        assert_eq!(out.script.prosody, tone.apply(natural));
+        assert!(out.script.prosody.mean_pitch_hz < natural.mean_pitch_hz);
     }
 
     #[test]
@@ -152,6 +191,7 @@ mod tests {
                 content: MessageContent::FixedText("oi".into()),
                 listener: None,
                 accent_intensity: 1.0,
+                tone: None,
             })
             .unwrap_err();
         assert!(matches!(err, AppError::Precondition(_)));

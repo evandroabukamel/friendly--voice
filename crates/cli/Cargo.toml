@@ -6,12 +6,12 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-http-engine = ["friendly-voice-infrastructure/http-engine"]
+http-engine = ["friendly-voice-bootstrap/http-engine"]
 
 [dependencies]
 friendly-voice-domain.workspace = true
 friendly-voice-application.workspace = true
-friendly-voice-infrastructure.workspace = true
+friendly-voice-bootstrap.workspace = true
 chrono.workspace = true
 clap.workspace = true
 

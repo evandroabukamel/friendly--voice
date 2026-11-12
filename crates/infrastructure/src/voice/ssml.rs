@@ -39,8 +39,15 @@ pub fn to_ssml(script: &SpeechScript) -> String {
     } else {
         String::new()
     };
+    let tone = script.tone.adjustment();
+    let volume = if tone.volume_db != 0.0 {
+        format!(" volume=\"{:+.0}dB\"", tone.volume_db)
+    } else {
+        String::new()
+    };
     format!(
-        "<speak version=\"1.1\" xml:lang=\"pt-BR\"><prosody rate=\"{}%\"{pitch}>{body}</prosody></speak>",
+        "<speak version=\"1.1\" xml:lang=\"pt-BR\"><!-- tom: {} --><prosody rate=\"{}%\"{pitch}{volume}>{body}</prosody></speak>",
+        script.tone,
         rate_percent(p.syllables_per_second)
     )
 }
@@ -49,6 +56,7 @@ pub fn to_ssml(script: &SpeechScript) -> String {
 mod tests {
     use super::*;
     use friendly_voice_domain::phonetics::{parse_ipa, PhoneticUtterance, PhoneticWord};
+    use friendly_voice_domain::tone::{ToneStyle, VoiceTone};
     use friendly_voice_domain::voice::ProsodyProfile;
 
     #[test]
@@ -65,9 +73,14 @@ mod tests {
                 syllables_per_second: 5.5,
                 ..Default::default()
             },
+            tone: VoiceTone::of(ToneStyle::Calm),
         };
         let s = to_ssml(&script);
         assert!(s.contains("<phoneme alphabet=\"ipa\" ph=\"nojtʃi\">noite</phoneme>"));
         assert!(s.contains("rate=\"100%\"") && s.contains("pitch=\"210Hz\""));
+        assert!(
+            s.contains("volume=\"-3dB\"") && s.contains("tom: calmo"),
+            "{s}"
+        );
     }
 }

@@ -1,4 +1,7 @@
+//! # Friendly Voice — Bootstrap
+//!
 //! Composition root: o único lugar que conhece as implementações concretas.
+//! É compartilhada por todas as interfaces (CLI, app Android via JNI).
 //! Trocar um adaptador (ex.: JSON → SQLite, sketch → motor neural) é mudar
 //! uma linha aqui — nenhum caso de uso é alterado (OCP + DIP).
 use friendly_voice_application::{ports::*, use_cases::*};

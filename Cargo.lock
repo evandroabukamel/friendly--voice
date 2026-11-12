@@ -282,8 +282,8 @@ dependencies = [
  "chrono",
  "clap",
  "friendly-voice-application",
+ "friendly-voice-bootstrap",
  "friendly-voice-domain",
- "friendly-voice-infrastructure",
  "hound",
 ]
 
@@ -294,6 +294,15 @@ dependencies = [
  "chrono",
  "friendly-voice-domain",
  "thiserror",
+]
+
+[[package]]
+name = "friendly-voice-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "friendly-voice-application",
+ "friendly-voice-domain",
+ "friendly-voice-infrastructure",
 ]
 
 [[package]]

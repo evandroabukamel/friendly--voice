@@ -1,6 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["crates/domain", "crates/application", "crates/infrastructure", "crates/cli"]
+members = [
+    "crates/domain",
+    "crates/application",
+    "crates/infrastructure",
+    "crates/bootstrap",
+    "crates/cli",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -21,3 +27,4 @@ base64 = "0.22"
 friendly-voice-domain = { path = "crates/domain" }
 friendly-voice-application = { path = "crates/application" }
 friendly-voice-infrastructure = { path = "crates/infrastructure" }
+friendly-voice-bootstrap = { path = "crates/bootstrap" }

@@ -3,6 +3,7 @@ use crate::accent::AccentProfile;
 use crate::audio::AcousticFeatures;
 use crate::ids::{SampleId, SpeakerId};
 use crate::phonetics::{Phoneme, PhoneticUtterance};
+use crate::tone::VoiceTone;
 use crate::DomainError;
 use serde::{Deserialize, Serialize};
 
@@ -103,12 +104,15 @@ pub struct VoiceProfile {
     pub total_audio_secs: f32,
 }
 
-/// Roteiro entregue ao sintetizador: texto + pronúncia com sotaque + prosódia.
+/// Roteiro entregue ao sintetizador: texto + pronúncia com sotaque +
+/// prosódia (já colorida pelo tom escolhido).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SpeechScript {
     pub text: String,
     pub pronunciation: PhoneticUtterance,
     pub prosody: ProsodyProfile,
+    #[serde(default)]
+    pub tone: VoiceTone,
 }
 
 #[cfg(test)]

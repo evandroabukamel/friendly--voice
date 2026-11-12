@@ -44,6 +44,21 @@ impl Default for ProsodySketchSynthesizer {
     }
 }
 
+/// Fonte sonora derivada do tom escolhido.
+#[derive(Debug, Clone, Copy)]
+struct Voicing {
+    gain: f32,
+    breathy: bool,
+}
+
+/// Ruído branco em [-0.5, 0.5].
+fn xorshift(seed: &mut u32) -> f32 {
+    *seed ^= *seed << 13;
+    *seed ^= *seed >> 17;
+    *seed ^= *seed << 5;
+    *seed as f32 / u32::MAX as f32 - 0.5
+}
+
 fn is_fricative(p: &Phoneme) -> bool {
     matches!(
         p.symbol(),
@@ -52,31 +67,44 @@ fn is_fricative(p: &Phoneme) -> bool {
 }
 
 impl ProsodySketchSynthesizer {
-    fn tone(&self, out: &mut Vec<f32>, secs: f32, f0_start: f32, f0_end: f32, phase: &mut f32) {
+    #[allow(clippy::too_many_arguments)]
+    fn tone(
+        &self,
+        out: &mut Vec<f32>,
+        secs: f32,
+        f0_start: f32,
+        f0_end: f32,
+        phase: &mut f32,
+        voice: Voicing,
+        seed: &mut u32,
+    ) {
         let n = (secs * self.sample_rate as f32) as usize;
         let attack = (n / 8).max(1);
         for i in 0..n {
             let t = i as f32 / n.max(1) as f32;
             let f0 = f0_start + (f0_end - f0_start) * t;
             *phase += TAU * f0 / self.sample_rate as f32;
-            // Fonte glotal aproximada: harmônicos decrescentes.
-            let v: f32 = (1..=6).map(|k| (*phase * k as f32).sin() / k as f32).sum();
+            // Fonte glotal aproximada: harmônicos decrescentes; na voz
+            // soprosa (sussurro) a fonte é ruído modulado pelo pitch.
+            let harmonics: f32 = (1..=6).map(|k| (*phase * k as f32).sin() / k as f32).sum();
+            let v = if voice.breathy {
+                xorshift(seed) * 3.0 * (0.6 + 0.4 * harmonics.abs().min(1.0))
+            } else {
+                harmonics
+            };
             let env = if i < attack {
                 i as f32 / attack as f32
             } else {
                 1.0 - (t - 0.125).max(0.0) * 0.9
             };
-            out.push(0.25 * v * env);
+            out.push(0.25 * voice.gain * v * env);
         }
     }
 
-    fn noise(&self, out: &mut Vec<f32>, secs: f32, seed: &mut u32) {
+    fn noise(&self, out: &mut Vec<f32>, secs: f32, seed: &mut u32, gain: f32) {
         let n = (secs * self.sample_rate as f32) as usize;
         for _ in 0..n {
-            *seed ^= *seed << 13;
-            *seed ^= *seed >> 17;
-            *seed ^= *seed << 5;
-            out.push((*seed as f32 / u32::MAX as f32 - 0.5) * 0.08);
+            out.push(xorshift(seed) * 0.16 * gain);
         }
     }
 
@@ -105,6 +133,11 @@ impl ProsodySketchSynthesizer {
             0.18
         };
         let total = script.pronunciation.syllable_count().max(1) as f32;
+        let adj = script.tone.adjustment();
+        let voice = Voicing {
+            gain: 10f32.powf(adj.volume_db / 20.0),
+            breathy: adj.breathy,
+        };
         let (mut out, mut phase, mut seed, mut k) = (Vec::new(), 0.0f32, 0x9E37_79B9u32, 0.0f32);
         for word in &script.pronunciation.words {
             for (i, ph) in word.phonemes.iter().enumerate() {
@@ -117,10 +150,18 @@ impl ProsodySketchSynthesizer {
                     } else {
                         (syll * 0.85, decl)
                     };
-                    self.tone(&mut out, dur * 0.8, f0, f0 * 0.97, &mut phase);
+                    self.tone(
+                        &mut out,
+                        dur * 0.8,
+                        f0,
+                        f0 * 0.97,
+                        &mut phase,
+                        voice,
+                        &mut seed,
+                    );
                     k += 1.0;
                 } else if is_fricative(ph) {
-                    self.noise(&mut out, syll * 0.3, &mut seed);
+                    self.noise(&mut out, syll * 0.3, &mut seed, voice.gain);
                 } else if ph.is_consonant() && !ph.is_voiced() {
                     self.silence(&mut out, syll * 0.12);
                 }
@@ -148,6 +189,7 @@ impl SpeechSynthesizer for ProsodySketchSynthesizer {
 mod tests {
     use super::*;
     use friendly_voice_domain::phonetics::{parse_ipa, PhoneticUtterance, PhoneticWord};
+    use friendly_voice_domain::tone::{ToneStyle, VoiceTone};
     use friendly_voice_domain::voice::ProsodyProfile;
 
     #[test]
@@ -165,8 +207,33 @@ mod tests {
                 syllables_per_second: rate,
                 ..Default::default()
             },
+            tone: VoiceTone::default(),
         };
         let s = ProsodySketchSynthesizer::default();
         assert!(s.render(&script(7.0)).duration_secs() < s.render(&script(4.0)).duration_secs());
+    }
+
+    #[test]
+    fn whisper_is_quieter_than_firm() {
+        let utt = PhoneticUtterance::new(vec![PhoneticWord::new(
+            "x",
+            parse_ipa("vosekõsegi"),
+            Some(1),
+        )]);
+        let script = |style| SpeechScript {
+            text: "x".into(),
+            pronunciation: utt.clone(),
+            prosody: ProsodyProfile {
+                mean_pitch_hz: 200.0,
+                syllables_per_second: 5.0,
+                ..Default::default()
+            },
+            tone: VoiceTone::of(style),
+        };
+        let s = ProsodySketchSynthesizer::default();
+        assert!(
+            s.render(&script(ToneStyle::Whisper)).rms()
+                < s.render(&script(ToneStyle::Firm)).rms() / 3.0
+        );
     }
 }

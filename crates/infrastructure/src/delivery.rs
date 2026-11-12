@@ -26,9 +26,10 @@ impl MessageDelivery for OutboxDelivery {
         let wav = self.dir.join(format!("{stem}.wav"));
         fs::write(&wav, &d.audio.wav).map_err(PortError::new)?;
         let note = format!(
-            "De: {}\nQuando: {}\n\n{}\n\nPronúncia (IPA): {}\n\nMarcação enviada ao motor:\n{}\n",
+            "De: {}\nQuando: {}\nTom: {}\n\n{}\n\nPronúncia (IPA): {}\n\nMarcação enviada ao motor:\n{}\n",
             d.speaker.name,
             d.at.format("%d/%m/%Y %H:%M"),
+            d.script.tone,
             d.message.text(),
             d.script.pronunciation.ipa(),
             d.audio.markup

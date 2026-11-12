@@ -108,6 +108,31 @@ Cenário: voz ainda não gerada
   Então sou orientado a enviar amostras e gerar a voz
 ```
 
+### US-18 · Escolher o tom de voz de cada mensagem — *Must* · 5 pts · ✅ Sprint 4
+> Como usuário, quero escolher o tom de voz (natural, carinhoso, animado,
+> calmo, firme, sussurrado) e deixar a voz mais aguda ou grave em cada
+> mensagem — pedida na hora ou agendada — para que ela combine com o momento.
+
+```gherkin
+Cenário: tom inicial sugerido pelo tema
+  Quando peço uma mensagem do tema "calma" sem informar o tom
+  Então ela é falada no tom "calmo"
+
+Cenário: escolha do usuário
+  Quando peço uma mensagem do tema "calma" com tom "animado" e ajuste -2 semitons
+  Então ela é falada no tom "animado", 2 semitons mais grave
+  E a prosódia natural da pessoa (aprendida das amostras) é preservada como base
+
+Cenário: tom no agendamento
+  Dado um agendamento diário com tom "sussurrado"
+  Quando ele dispara
+  Então a mensagem é falada sussurrada
+
+Cenário: valores inválidos
+  Quando informo o tom "bravo" ou um ajuste de 9 semitons
+  Então recebo um erro explicando as opções válidas
+```
+
 ## Épico E4 — Agendamentos
 
 ### US-07 · Agendar mensagens com regras — *Must* · 5 pts · ✅ Sprint 3

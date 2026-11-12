@@ -80,6 +80,15 @@ bloqueio diante de palavra iniciada por vogal.
 5. Descobre substituições recorrentes fora do catálogo (`learned:v>b@WordInitial`).
 6. Rotula o perfil com o preset regional mais próximo (Jaccard).
 
+## Tom de voz
+
+`VoiceTone` (domínio) = estilo (`ToneStyle`) + deslocamento de altura em
+semitons. Cada estilo é um `ToneAdjustment` (semitons, fator de velocidade,
+expressividade melódica, volume, voz soprosa) aplicado **sobre** a prosódia
+natural da pessoa — a voz continua sendo a dela, só muda a "cor". O tema da
+mensagem sugere o tom inicial (`ToneStyle::default_for`), que o usuário
+pode sobrescrever em cada pedido ou agendamento.
+
 ## SOLID na prática
 
 * **S** — um caso de uso por arquivo (`RegisterSpeaker`, `AddVoiceSample`,

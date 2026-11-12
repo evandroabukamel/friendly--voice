@@ -18,6 +18,9 @@ de forma **ágil** (backlog, sprints, DoD — veja [`docs/agile`](docs/agile)).
 * Relatório explicável: cada fenômeno com a frequência medida nas amostras e o
   sotaque regional mais próximo (Carioca, Paulistano, Mineiro, Nordestino,
   Gaúcho, Caipira, Português europeu) — além de traços pessoais descobertos.
+* **Tom de voz por mensagem**: natural, carinhoso, animado, calmo, firme ou
+  sussurrado, mais um ajuste fino de altura (±6 semitons). Cada tema já sugere
+  um tom inicial (ex.: calma → calmo), que o usuário pode trocar.
 * Mensagens por tema (motivação, confiança, gratidão, calma, celebração,
   bom-dia), personalizadas com o seu nome.
 * Agendamentos: diário, dias da semana, a cada N minutos dentro de uma janela,
@@ -51,12 +54,15 @@ fv pronuncia --pessoa spk-... "Você é forte, mas às vezes esquece."
 #   Com sotaque:      /vose ɛ fohtʃi maz aʃ veziz eʃkesi/
 fv falar --pessoa spk-... --tema bom-dia
 fv falar --pessoa spk-... --texto "Respira fundo, vai dar tudo certo." --intensidade 0.5
+fv tons                                                     # lista os tons de voz
+fv falar --pessoa spk-... --tema confianca --tom carinhoso --ajuste-tom -1
 
 # 5. Agende
 fv agenda criar --pessoa spk-... --diario 07:30 --tema bom-dia
 fv agenda criar --pessoa spk-... --semanal seg,qua,sex@12:00 --tema confianca
 fv agenda criar --pessoa spk-... --a-cada 120 --entre 09:00-18:00 --tema calma --silencio 12:00-13:00
-fv agenda criar --pessoa spk-... --em "2026-12-24 20:00" --texto "Feliz Natal!"
+fv agenda criar --pessoa spk-... --em "2026-12-24 20:00" --texto "Feliz Natal!" --tom animado
+fv agenda criar --pessoa spk-... --diario 22:30 --tema gratidao --tom sussurrado
 fv agenda listar
 fv agenda executar --continuo      # deixe rodando (ou chame via cron sem --continuo)
 ```

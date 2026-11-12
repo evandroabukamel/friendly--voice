@@ -1,6 +1,7 @@
 //! Regras de agendamento definidas pelo usuário.
 use crate::ids::{ScheduleId, SpeakerId};
 use crate::message::MessageContent;
+use crate::tone::VoiceTone;
 use crate::DomainError;
 use chrono::{Datelike, Duration, NaiveDateTime, NaiveTime, Weekday};
 use serde::{Deserialize, Serialize};
@@ -59,6 +60,9 @@ pub struct Schedule {
     pub speaker_id: SpeakerId,
     pub recurrence: Recurrence,
     pub content: MessageContent,
+    /// Tom escolhido; `None` = tom inicial sugerido pelo tema.
+    #[serde(default)]
+    pub tone: Option<VoiceTone>,
     /// "Não perturbe": nunca dispara dentro desta janela.
     pub quiet_hours: Option<TimeWindow>,
     pub enabled: bool,
@@ -103,6 +107,7 @@ impl Schedule {
             speaker_id,
             recurrence,
             content,
+            tone: None,
             quiet_hours,
             enabled: true,
             created_at,
@@ -114,6 +119,11 @@ impl Schedule {
             ));
         }
         Ok(schedule)
+    }
+
+    pub fn with_tone(mut self, tone: Option<VoiceTone>) -> Self {
+        self.tone = tone;
+        self
     }
 
     fn allowed(&self, t: NaiveDateTime) -> bool {

@@ -11,6 +11,7 @@
 //! * [`voice`]     — amostras, perfil de voz, prosódia e roteiro de fala.
 //! * [`message`]   — mensagens motivacionais.
 //! * [`schedule`]  — regras de agendamento definidas pelo usuário.
+//! * [`tone`]      — tom de voz escolhido para cada mensagem.
 
 pub mod accent;
 pub mod audio;
@@ -20,6 +21,7 @@ pub mod message;
 pub mod phonetics;
 pub mod schedule;
 pub mod speaker;
+pub mod tone;
 pub mod voice;
 
 pub use error::DomainError;

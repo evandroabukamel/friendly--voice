@@ -109,6 +109,11 @@ struct SynthesizeRequest<'a> {
     ipa_words: Vec<String>,
     pitch_hz: f32,
     syllables_per_second: f32,
+    /// Tom de voz escolhido (natural, carinhoso, animado, calmo, firme, sussurrado).
+    style: &'a str,
+    /// Ajustes do tom em relação à prosódia natural da pessoa.
+    pitch_shift_semitones: f32,
+    volume_db: f32,
 }
 
 impl SpeechSynthesizer for HttpVoiceEngine {
@@ -126,6 +131,9 @@ impl SpeechSynthesizer for HttpVoiceEngine {
             ipa_words: script.pronunciation.words.iter().map(|w| w.ipa()).collect(),
             pitch_hz: script.prosody.mean_pitch_hz,
             syllables_per_second: script.prosody.syllables_per_second,
+            style: script.tone.style.slug(),
+            pitch_shift_semitones: script.tone.adjustment().pitch_semitones,
+            volume_db: script.tone.adjustment().volume_db,
         };
         let wav = ureq::post(&self.client.url("v1/synthesize"))
             .send_json(&req)

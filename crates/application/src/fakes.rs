@@ -337,7 +337,12 @@ impl Fakes {
                 speaker_id: spk.id.clone(),
                 engine_voice_id: "v".into(),
                 accent,
-                prosody: ProsodyProfile::default(),
+                prosody: ProsodyProfile {
+                    mean_pitch_hz: 210.0,
+                    pitch_spread_hz: 40.0,
+                    syllables_per_second: 5.0,
+                    pause_ratio: 0.2,
+                },
                 sample_count: 1,
                 total_audio_secs: 10.0,
             })

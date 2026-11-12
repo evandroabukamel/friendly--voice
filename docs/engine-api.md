@@ -18,9 +18,14 @@ Resposta: `{ "voice_id": "abc123" }`
   "text": "Bom dia, Evandro!",
   "ssml": "<speak ...><prosody rate=\"95%\" pitch=\"210Hz\"><phoneme alphabet=\"ipa\" ph=\"bõ\">bom</phoneme> ...",
   "ipa_words": ["bõ", "dʒia", "evãdɾu"],
-  "pitch_hz": 210.0, "syllables_per_second": 5.2 }
+  "pitch_hz": 210.0, "syllables_per_second": 5.2,
+  "style": "carinhoso", "pitch_shift_semitones": -0.5, "volume_db": -2.0 }
 ```
 Resposta: bytes `audio/wav`.
+
+`pitch_hz` e `syllables_per_second` já incluem o efeito do tom escolhido.
+`style` (natural, carinhoso, animado, calmo, firme, sussurrado) pode ser
+mapeado para o controle de emoção/estilo do modelo, quando existir.
 
 O servidor **deve** priorizar a pronúncia de `ssml`/`ipa_words` (é ali que está
 o sotaque aprendido) — p.ex. alimentando o modelo com fonemas em vez de texto.

@@ -159,6 +159,40 @@ fn full_flow_learns_accent_and_speaks() {
         .extension()
         .is_some_and(|x| x == "wav")));
 
+    // US-18: o usuário escolhe o tom de voz de cada mensagem
+    let out = env.ok(&["falar", "--pessoa", &id, "--tema", "calma"]);
+    assert!(
+        out.contains("tom: calmo"),
+        "tom inicial sugerido pelo tema:\n{out}"
+    );
+    let out = env.ok(&[
+        "falar",
+        "--pessoa",
+        &id,
+        "--tema",
+        "calma",
+        "--tom",
+        "animado",
+        "--ajuste-tom",
+        "-2",
+    ]);
+    assert!(out.contains("tom: animado (-2 st)"), "{out}");
+    let (ok, out) = env.run(&["falar", "--pessoa", &id, "--tom", "bravo"]);
+    assert!(!ok && out.contains("tom 'bravo' desconhecido"), "{out}");
+    let (ok, out) = env.run(&["falar", "--pessoa", &id, "--ajuste-tom", "9"]);
+    assert!(!ok && out.contains("semitons"), "{out}");
+    let out = env.ok(&[
+        "agenda",
+        "criar",
+        "--pessoa",
+        &id,
+        "--diario",
+        "21:00",
+        "--tom",
+        "sussurrado",
+    ]);
+    assert!(out.contains("tom: sussurrado"), "{out}");
+
     // US-07/US-08: agendamento
     let out = env.ok(&[
         "agenda",

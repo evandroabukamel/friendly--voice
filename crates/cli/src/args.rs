@@ -52,6 +52,8 @@ pub enum Command {
     Agenda(AgendaCmd),
     /// Lista os temas de mensagens disponíveis.
     Temas,
+    /// Lista os tons de voz disponíveis.
+    Tons,
 }
 
 #[derive(Debug, Subcommand)]
@@ -114,12 +116,26 @@ pub struct ContentArgs {
     pub text: Option<String>,
 }
 
+/// Tom de voz da mensagem. Sem `--tom`, usa o tom inicial sugerido pelo tema
+/// (ex.: calma → calmo, celebracao → animado; texto livre → natural).
+#[derive(Debug, Args)]
+pub struct ToneArgs {
+    /// natural, carinhoso, animado, calmo, firme ou sussurrado (veja `tons`).
+    #[arg(long = "tom")]
+    pub style: Option<String>,
+    /// Deixa a voz mais aguda (+) ou mais grave (-), em semitons (-6 a +6).
+    #[arg(long = "ajuste-tom", allow_hyphen_values = true)]
+    pub pitch_shift: Option<f32>,
+}
+
 #[derive(Debug, Args)]
 pub struct FalarArgs {
     #[arg(long = "pessoa")]
     pub speaker: String,
     #[command(flatten)]
     pub content: ContentArgs,
+    #[command(flatten)]
+    pub tone: ToneArgs,
     /// 0.0 (sem sotaque) a 1.0 (sotaque completo).
     #[arg(long = "intensidade", default_value_t = 1.0)]
     pub intensity: f32,
@@ -127,7 +143,7 @@ pub struct FalarArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum AgendaCmd {
-    Criar(CriarAgendaArgs),
+    Criar(Box<CriarAgendaArgs>),
     Listar,
     Remover {
         id: String,
@@ -170,4 +186,6 @@ pub struct CriarAgendaArgs {
     pub quiet: Option<String>,
     #[command(flatten)]
     pub content: ContentArgs,
+    #[command(flatten)]
+    pub tone: ToneArgs,
 }

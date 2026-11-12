@@ -5,6 +5,7 @@ use friendly_voice_domain::{
     ids::{ScheduleId, SpeakerId},
     message::MessageContent,
     schedule::{Recurrence, Schedule, TimeWindow},
+    tone::VoiceTone,
 };
 use std::sync::Arc;
 
@@ -13,6 +14,8 @@ pub struct CreateScheduleInput {
     pub speaker_id: SpeakerId,
     pub recurrence: Recurrence,
     pub content: MessageContent,
+    /// Tom de voz das mensagens deste agendamento (`None` = sugerido pelo tema).
+    pub tone: Option<VoiceTone>,
     pub quiet_hours: Option<TimeWindow>,
 }
 
@@ -50,7 +53,8 @@ impl CreateSchedule {
             input.content,
             input.quiet_hours,
             self.clock.now(),
-        )?;
+        )?
+        .with_tone(input.tone);
         self.schedules.save(&schedule)?;
         Ok(schedule)
     }
@@ -137,6 +141,7 @@ impl RunDueSchedules {
                 content: schedule.content.clone(),
                 listener: self.listener.clone(),
                 accent_intensity: self.accent_intensity,
+                tone: schedule.tone,
             });
             schedule.mark_fired(now);
             self.schedules.save(&schedule)?;
@@ -172,6 +177,9 @@ mod tests {
                 speaker_id: spk.id.clone(),
                 recurrence: Recurrence::Daily { at },
                 content: MessageContent::FixedText("bom dia".into()),
+                tone: Some(VoiceTone::of(
+                    friendly_voice_domain::tone::ToneStyle::Whisper,
+                )),
                 quiet_hours: None,
             })
             .unwrap();
@@ -186,7 +194,11 @@ mod tests {
         f.clock.advance(Duration::minutes(6));
         let out = run.execute().unwrap();
         assert_eq!(out.len(), 1);
-        assert!(out[0].result.is_ok());
+        let spoken = out[0].result.as_ref().unwrap();
+        assert_eq!(
+            spoken.script.tone.style,
+            friendly_voice_domain::tone::ToneStyle::Whisper
+        );
         assert!(run.execute().unwrap().is_empty(), "não repete no mesmo dia");
 
         f.clock.advance(Duration::days(1));
@@ -211,6 +223,7 @@ mod tests {
                     at: NaiveTime::from_hms_opt(8, 0, 0).unwrap(),
                 },
                 content: MessageContent::FixedText("oi".into()),
+                tone: None,
                 quiet_hours: None,
             })
             .unwrap();

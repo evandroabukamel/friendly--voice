@@ -1,20 +1,21 @@
 //! Interface de linha de comando (camada de apresentação).
 mod args;
-mod container;
 mod parse;
 
 use args::*;
 use clap::Parser;
-use container::Container;
 use friendly_voice_application::{
     use_cases::{AddVoiceSampleInput, CreateScheduleInput, RegisterSpeakerInput, SpeakRequest},
     AppError,
 };
+use friendly_voice_bootstrap::Container;
 use friendly_voice_domain::{
     accent::RulePhenomenon,
     ids::{ScheduleId, SpeakerId},
     message::{MessageCategory, MessageContent},
     schedule::{Recurrence, Schedule},
+    tone::{ToneStyle, VoiceTone},
+    DomainError,
 };
 use std::path::Path;
 use std::process::ExitCode;
@@ -65,9 +66,11 @@ fn run(cli: Cli) -> CliResult {
                     content: content(&a.content)?,
                     listener,
                     accent_intensity: a.intensity,
+                    tone: tone(&a.tone)?,
                 })
                 .map_err(app_err)?;
             println!("💬 {}", out.message.text());
+            println!("   tom: {}", out.script.tone);
             println!("   /{}/", out.script.pronunciation.ipa());
             println!("🔊 {} [{}]", out.receipt, c.engine_name);
             Ok(())
@@ -75,20 +78,45 @@ fn run(cli: Cli) -> CliResult {
         Command::Agenda(cmd) => agenda(&c, cmd, listener),
         Command::Temas => {
             for cat in MessageCategory::ALL {
-                println!("{cat}");
+                println!(
+                    "{:<11} tom inicial: {}",
+                    cat.slug(),
+                    ToneStyle::default_for(Some(cat))
+                );
             }
+            Ok(())
+        }
+        Command::Tons => {
+            for t in ToneStyle::ALL {
+                println!("{:<11} {}", t.slug(), t.description());
+            }
+            println!(
+                "\nAjuste fino: --ajuste-tom <semitons> (-6 a +6) deixa a voz mais aguda ou grave."
+            );
             Ok(())
         }
     }
 }
 
+fn tone(a: &ToneArgs) -> Result<Option<VoiceTone>, String> {
+    if a.style.is_none() && a.pitch_shift.is_none() {
+        return Ok(None);
+    }
+    let style = match &a.style {
+        Some(s) => s.parse::<ToneStyle>().map_err(|e| e.to_string())?,
+        None => ToneStyle::Natural,
+    };
+    VoiceTone::new(style, a.pitch_shift.unwrap_or(0.0))
+        .map(Some)
+        .map_err(|e: DomainError| e.to_string())
+}
+
 fn content(a: &ContentArgs) -> Result<MessageContent, String> {
     Ok(match (&a.text, &a.category) {
         (Some(t), _) => MessageContent::FixedText(t.clone()),
-        (None, Some(cat)) => MessageContent::Category(
-            cat.parse()
-                .map_err(|e: friendly_voice_domain::DomainError| e.to_string())?,
-        ),
+        (None, Some(cat)) => {
+            MessageContent::Category(cat.parse().map_err(|e: DomainError| e.to_string())?)
+        }
         (None, None) => MessageContent::Category(MessageCategory::Motivation),
     })
 }
@@ -310,8 +338,12 @@ fn describe(s: &Schedule) -> String {
         .filter(|_| s.enabled)
         .map(|n| n.format("%d/%m %H:%M").to_string())
         .unwrap_or("—".into());
+    let tone = s
+        .tone
+        .map(|t| t.to_string())
+        .unwrap_or_else(|| "sugerido pelo tema".into());
     format!(
-        "{}  pessoa {}  {rule}{quiet}  {what}  próxima: {next}",
+        "{}  pessoa {}  {rule}{quiet}  {what}  tom: {tone}  próxima: {next}",
         s.id, s.speaker_id
     )
 }
@@ -342,6 +374,7 @@ fn agenda(c: &Container, cmd: AgendaCmd, listener: Option<String>) -> CliResult 
                     speaker_id: SpeakerId::new(a.speaker),
                     recurrence,
                     content: content(&a.content)?,
+                    tone: tone(&a.tone)?,
                     quiet_hours: a.quiet.as_deref().map(parse::window).transpose()?,
                 })
                 .map_err(app_err)?;
