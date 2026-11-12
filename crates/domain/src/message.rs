@@ -33,6 +33,17 @@ impl MessageCategory {
             Self::GoodMorning => "bom-dia",
         }
     }
+    /// English alias accepted on input (e.g. `--theme good-morning`).
+    pub fn english_slug(self) -> &'static str {
+        match self {
+            Self::Motivation => "motivation",
+            Self::Confidence => "confidence",
+            Self::Gratitude => "gratitude",
+            Self::Calm => "calm",
+            Self::Celebration => "celebration",
+            Self::GoodMorning => "good-morning",
+        }
+    }
 }
 
 impl fmt::Display for MessageCategory {
@@ -47,7 +58,7 @@ impl FromStr for MessageCategory {
         let s = s.trim().to_lowercase();
         Self::ALL
             .into_iter()
-            .find(|c| c.slug() == s)
+            .find(|c| c.slug() == s || c.english_slug() == s)
             .ok_or_else(|| {
                 DomainError::invalid(
                     "category",
@@ -112,6 +123,14 @@ mod tests {
         assert_eq!(
             "bom-dia".parse::<MessageCategory>().unwrap(),
             MessageCategory::GoodMorning
+        );
+        assert_eq!(
+            "Good-Morning".parse::<MessageCategory>().unwrap(),
+            MessageCategory::GoodMorning
+        );
+        assert_eq!(
+            "calm".parse::<MessageCategory>().unwrap(),
+            MessageCategory::Calm
         );
         assert!("xyz".parse::<MessageCategory>().is_err());
     }

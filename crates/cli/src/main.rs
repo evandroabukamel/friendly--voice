@@ -40,10 +40,10 @@ fn run(cli: Cli) -> CliResult {
     let c = Container::new(&cli.data_dir, cli.engine_url.as_deref(), cli.player.clone())?;
     let listener = cli.listener.clone();
     match cli.command {
-        Command::Pessoa(cmd) => pessoa(&c, cmd),
-        Command::Amostra(cmd) => amostra(&c, cmd),
-        Command::Voz(cmd) => voz(&c, cmd),
-        Command::Pronuncia {
+        Command::Person(cmd) => person(&c, cmd),
+        Command::Sample(cmd) => sample(&c, cmd),
+        Command::Voice(cmd) => voice(&c, cmd),
+        Command::Pronounce {
             speaker,
             intensity,
             text,
@@ -57,7 +57,7 @@ fn run(cli: Cli) -> CliResult {
             println!("Com sotaque:      /{}/", p.accented_ipa);
             Ok(())
         }
-        Command::Falar(a) => {
+        Command::Speak(a) => {
             let out = c
                 .speak_message()
                 .execute(SpeakRequest {
@@ -74,23 +74,29 @@ fn run(cli: Cli) -> CliResult {
             println!("🔊 {} [{}]", out.receipt, c.engine_name);
             Ok(())
         }
-        Command::Agenda(cmd) => agenda(&c, cmd, listener),
-        Command::Temas => {
+        Command::Schedule(cmd) => schedule(&c, cmd, listener),
+        Command::Themes => {
             for cat in MessageCategory::ALL {
                 println!(
-                    "{:<11} tom inicial: {}",
+                    "{:<11} ({:<12}) tom inicial: {}",
                     cat.slug(),
+                    cat.english_slug(),
                     ToneStyle::default_for(Some(cat))
                 );
             }
             Ok(())
         }
-        Command::Tons => {
+        Command::Tones => {
             for t in ToneStyle::ALL {
-                println!("{:<11} {}", t.slug(), t.description());
+                println!(
+                    "{:<11} ({:<8}) {}",
+                    t.slug(),
+                    t.english_slug(),
+                    t.description()
+                );
             }
             println!(
-                "\nAjuste fino: --ajuste-tom <semitons> (-6 a +6) deixa a voz mais aguda ou grave."
+                "\nAjuste fino: --pitch-shift <semitons> (-6 a +6) deixa a voz mais aguda ou grave."
             );
             Ok(())
         }
@@ -120,9 +126,9 @@ fn content(a: &ContentArgs) -> Result<MessageContent, String> {
     })
 }
 
-fn pessoa(c: &Container, cmd: PessoaCmd) -> CliResult {
+fn person(c: &Container, cmd: PersonCmd) -> CliResult {
     match cmd {
-        PessoaCmd::Adicionar {
+        PersonCmd::Add {
             name,
             relationship,
             consent_by,
@@ -138,7 +144,7 @@ fn pessoa(c: &Container, cmd: PessoaCmd) -> CliResult {
             println!("Pessoa cadastrada: {} (id: {})", s.name, s.id);
             println!("Consentimento: {}", s.consent.statement);
         }
-        PessoaCmd::Listar => {
+        PersonCmd::List => {
             for s in c.speakers.list().map_err(|e| e.to_string())? {
                 let voice = c.profiles.find(&s.id).map_err(|e| e.to_string())?;
                 println!(
@@ -164,9 +170,9 @@ fn sidecar(audio: &Path, ext: &str) -> Option<String> {
         .map(|s| s.trim().to_string())
 }
 
-fn amostra(c: &Container, cmd: AmostraCmd) -> CliResult {
+fn sample(c: &Container, cmd: SampleCmd) -> CliResult {
     match cmd {
-        AmostraCmd::Adicionar {
+        SampleCmd::Add {
             speaker,
             audio,
             transcript,
@@ -201,7 +207,7 @@ fn amostra(c: &Container, cmd: AmostraCmd) -> CliResult {
                 s.features.pause_ratio * 100.0
             );
         }
-        AmostraCmd::Listar { speaker } => {
+        SampleCmd::List { speaker } => {
             for s in c
                 .samples
                 .list_by_speaker(&SpeakerId::new(speaker))
@@ -222,9 +228,9 @@ fn phenomenon_pt(p: RulePhenomenon) -> &'static str {
     }
 }
 
-fn voz(c: &Container, cmd: VozCmd) -> CliResult {
+fn voice(c: &Container, cmd: VoiceCmd) -> CliResult {
     match cmd {
-        VozCmd::Gerar { speaker } => {
+        VoiceCmd::Generate { speaker } => {
             let out = c
                 .build_voice_profile()
                 .execute(&SpeakerId::new(speaker))
@@ -269,7 +275,7 @@ fn voz(c: &Container, cmd: VozCmd) -> CliResult {
                 }
             }
         }
-        VozCmd::Mostrar { speaker } => {
+        VoiceCmd::Show { speaker } => {
             let p = c
                 .profiles
                 .find(&SpeakerId::new(&speaker))
@@ -347,9 +353,9 @@ fn describe(s: &Schedule) -> String {
     )
 }
 
-fn agenda(c: &Container, cmd: AgendaCmd, listener: Option<String>) -> CliResult {
+fn schedule(c: &Container, cmd: ScheduleCmd, listener: Option<String>) -> CliResult {
     match cmd {
-        AgendaCmd::Criar(a) => {
+        ScheduleCmd::Create(a) => {
             let recurrence = if let Some(t) = &a.daily {
                 Recurrence::Daily {
                     at: parse::time(t)?,
@@ -379,18 +385,18 @@ fn agenda(c: &Container, cmd: AgendaCmd, listener: Option<String>) -> CliResult 
                 .map_err(app_err)?;
             println!("Agendado: {}", describe(&s));
         }
-        AgendaCmd::Listar => {
+        ScheduleCmd::List => {
             for s in c.list_schedules().execute().map_err(app_err)? {
                 println!("{}", describe(&s));
             }
         }
-        AgendaCmd::Remover { id } => {
+        ScheduleCmd::Remove { id } => {
             c.remove_schedule()
                 .execute(&ScheduleId::new(id))
                 .map_err(app_err)?;
             println!("Removido.");
         }
-        AgendaCmd::Executar {
+        ScheduleCmd::Run {
             watch,
             interval_secs,
             intensity,

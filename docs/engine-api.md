@@ -1,7 +1,7 @@
 # Neural voice server contract
 
 Used when the app is built with `--features http-engine` and run with
-`--motor-url http://host:port` (or `FRIENDLY_VOICE_ENGINE_URL`). The reference
+`--engine-url http://host:port` (or `FRIENDLY_VOICE_ENGINE_URL`). The reference
 implementation is [`engine/`](../engine) (Piper pt-BR + OpenVoice V2), but any
 server implementing these endpoints can be plugged in. All audio travels as
 base64-encoded WAV (the app converts other input formats, such as FLAC, to WAV before sending).

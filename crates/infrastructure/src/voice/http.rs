@@ -310,7 +310,7 @@ impl Transcriber for HttpTranscriber {
         match self.client.post_json::<TranscribeResponse>("v1/transcribe", &req) {
             Ok(res) => Ok(res.text),
             Err(CallError::NotImplemented) => Err(err(
-                "o servidor não faz transcrição; informe o texto do áudio (--texto ou arquivo .txt)",
+                "o servidor não faz transcrição; informe o texto do áudio (--transcript ou arquivo .txt)",
             )),
             Err(e) => Err(e.into()),
         }

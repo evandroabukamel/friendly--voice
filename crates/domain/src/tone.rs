@@ -65,6 +65,18 @@ impl ToneStyle {
         }
     }
 
+    /// English alias accepted on input (e.g. `--tone warm`).
+    pub fn english_slug(self) -> &'static str {
+        match self {
+            Self::Natural => "natural",
+            Self::Warm => "warm",
+            Self::Cheerful => "cheerful",
+            Self::Calm => "calm",
+            Self::Firm => "firm",
+            Self::Whisper => "whisper",
+        }
+    }
+
     pub fn description(self) -> &'static str {
         match self {
             Self::Natural => "como a pessoa fala normalmente",
@@ -120,7 +132,7 @@ impl FromStr for ToneStyle {
         let s = s.trim().to_lowercase();
         Self::ALL
             .into_iter()
-            .find(|t| t.slug() == s)
+            .find(|t| t.slug() == s || t.english_slug() == s)
             .ok_or_else(|| {
                 DomainError::invalid(
                     "tone",
@@ -239,6 +251,7 @@ mod tests {
     #[test]
     fn parses_and_defaults_by_category() {
         assert_eq!("Carinhoso".parse::<ToneStyle>().unwrap(), ToneStyle::Warm);
+        assert_eq!("whisper".parse::<ToneStyle>().unwrap(), ToneStyle::Whisper);
         assert!("bravo".parse::<ToneStyle>().is_err());
         assert_eq!(
             ToneStyle::default_for(Some(MessageCategory::Calm)),

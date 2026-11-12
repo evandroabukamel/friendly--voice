@@ -16,16 +16,16 @@ pub fn window(s: &str) -> Result<TimeWindow, String> {
 
 pub fn weekday(s: &str) -> Result<Weekday, String> {
     let d = match s.trim().to_lowercase().as_str() {
-        "seg" | "segunda" => Weekday::Mon,
-        "ter" | "terca" | "terça" => Weekday::Tue,
-        "qua" | "quarta" => Weekday::Wed,
-        "qui" | "quinta" => Weekday::Thu,
-        "sex" | "sexta" => Weekday::Fri,
-        "sab" | "sáb" | "sabado" | "sábado" => Weekday::Sat,
-        "dom" | "domingo" => Weekday::Sun,
+        "seg" | "segunda" | "mon" | "monday" => Weekday::Mon,
+        "ter" | "terca" | "terça" | "tue" | "tuesday" => Weekday::Tue,
+        "qua" | "quarta" | "wed" | "wednesday" => Weekday::Wed,
+        "qui" | "quinta" | "thu" | "thursday" => Weekday::Thu,
+        "sex" | "sexta" | "fri" | "friday" => Weekday::Fri,
+        "sab" | "sáb" | "sabado" | "sábado" | "sat" | "saturday" => Weekday::Sat,
+        "dom" | "domingo" | "sun" | "sunday" => Weekday::Sun,
         other => {
             return Err(format!(
-                "dia inválido '{other}' (use seg, ter, qua, qui, sex, sab, dom)"
+                "dia inválido '{other}' (use seg, ter, qua, qui, sex, sab, dom ou mon..sun)"
             ))
         }
     };
@@ -73,6 +73,10 @@ mod tests {
         assert!(window("22:00-07:00")
             .unwrap()
             .contains(time("23:00").unwrap()));
+        assert_eq!(
+            weekly("mon,Fri@08:00").unwrap().0,
+            vec![Weekday::Mon, Weekday::Fri]
+        );
         assert!(weekly("seg").is_err());
         assert!(datetime("2026-11-20 09:00").is_ok());
         assert!(time("25:00").is_err());

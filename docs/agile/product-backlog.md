@@ -136,6 +136,21 @@ Scenario: unsupported format
   Then I am told that WAV (PCM/float) and FLAC are supported
 ```
 
+### US-25 · CLI commands in English — *Should* · 2 pts · ✅ Sprint 6
+> As a user, I want the CLI commands and options in English
+> (`person add --name`), without breaking my existing scripts.
+
+```gherkin
+Scenario: English commands and values
+  When I run "person add --name Grandma --consent-by Grandma"
+  And "speak --theme good-morning --tone whisper"
+  Then they work as the former Portuguese commands did
+
+Scenario: backwards compatibility
+  When I run the former "pessoa adicionar --nome Vó --consentimento-de Vó"
+  Then it still works
+```
+
 ## Epic E3 — Messages
 
 ### US-05 · Ask for a message right now — *Must* · 3 pts · ✅ Sprint 3
