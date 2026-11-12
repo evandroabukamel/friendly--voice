@@ -1,0 +1,19 @@
+[package]
+name = "friendly-voice"
+description = "Interface de linha de comando (composition root)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+http-engine = ["friendly-voice-infrastructure/http-engine"]
+
+[dependencies]
+friendly-voice-domain.workspace = true
+friendly-voice-application.workspace = true
+friendly-voice-infrastructure.workspace = true
+chrono.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+hound.workspace = true
