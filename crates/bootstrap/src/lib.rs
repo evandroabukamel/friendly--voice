@@ -61,7 +61,7 @@ impl Container {
                 local_sketch,
                 None,
                 None,
-                "local (esboço de prosódia)",
+                "local (prosody sketch)",
             ),
             Some(url) => Self::http(url)?,
         };
@@ -82,7 +82,7 @@ impl Container {
             synthesizer,
             transcriber,
             recognizer,
-            delivery: Arc::new(OutboxDelivery::new(data.join("saida"), player)),
+            delivery: Arc::new(OutboxDelivery::new(data.join("outbox"), player)),
             engine_name,
         })
     }
@@ -110,7 +110,7 @@ impl Container {
             engine,
             Some(Arc::new(HttpTranscriber::new(url))),
             Some(Arc::new(HttpPhoneRecognizer::new(url))),
-            "servidor neural (HTTP)",
+            "neural server (HTTP)",
         ))
     }
 
@@ -128,7 +128,7 @@ impl Container {
         ),
         String,
     > {
-        Err("--motor-url requer compilar com `cargo build --features http-engine`".into())
+        Err("--engine-url requires building with `cargo build --features http-engine`".into())
     }
 
     pub fn register_speaker(&self) -> RegisterSpeaker {

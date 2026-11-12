@@ -30,7 +30,7 @@ fn main() -> ExitCode {
     match run(cli) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("erro: {e}");
+            eprintln!("error: {e}");
             ExitCode::FAILURE
         }
     }
@@ -40,10 +40,10 @@ fn run(cli: Cli) -> CliResult {
     let c = Container::new(&cli.data_dir, cli.engine_url.as_deref(), cli.player.clone())?;
     let listener = cli.listener.clone();
     match cli.command {
-        Command::Pessoa(cmd) => pessoa(&c, cmd),
-        Command::Amostra(cmd) => amostra(&c, cmd),
-        Command::Voz(cmd) => voz(&c, cmd),
-        Command::Pronuncia {
+        Command::Person(cmd) => person(&c, cmd),
+        Command::Sample(cmd) => sample(&c, cmd),
+        Command::Voice(cmd) => voice(&c, cmd),
+        Command::Pronounce {
             speaker,
             intensity,
             text,
@@ -52,12 +52,12 @@ fn run(cli: Cli) -> CliResult {
                 .preview_pronunciation()
                 .execute(&SpeakerId::new(speaker), &text, intensity)
                 .map_err(app_err)?;
-            println!("Sotaque:          {}", p.accent_label);
-            println!("Forma de citação: /{}/", p.citation_ipa);
-            println!("Com sotaque:      /{}/", p.accented_ipa);
+            println!("Accent:         {}", p.accent_label);
+            println!("Citation form:  /{}/", p.citation_ipa);
+            println!("With accent:    /{}/", p.accented_ipa);
             Ok(())
         }
-        Command::Falar(a) => {
+        Command::Speak(a) => {
             let out = c
                 .speak_message()
                 .execute(SpeakRequest {
@@ -69,28 +69,29 @@ fn run(cli: Cli) -> CliResult {
                 })
                 .map_err(app_err)?;
             println!("💬 {}", out.message.text());
-            println!("   tom: {}", out.script.tone);
+            println!("   tone: {}", out.script.tone);
             println!("   /{}/", out.script.pronunciation.ipa());
             println!("🔊 {} [{}]", out.receipt, c.engine_name);
             Ok(())
         }
-        Command::Agenda(cmd) => agenda(&c, cmd, listener),
-        Command::Temas => {
+        Command::Schedule(cmd) => schedule(&c, cmd, listener),
+        Command::Themes => {
             for cat in MessageCategory::ALL {
                 println!(
-                    "{:<11} tom inicial: {}",
+                    "{:<13} ({:<11}) initial tone: {}",
                     cat.slug(),
+                    cat.pt_slug(),
                     ToneStyle::default_for(Some(cat))
                 );
             }
             Ok(())
         }
-        Command::Tons => {
+        Command::Tones => {
             for t in ToneStyle::ALL {
-                println!("{:<11} {}", t.slug(), t.description());
+                println!("{:<9} ({:<10}) {}", t.slug(), t.pt_slug(), t.description());
             }
             println!(
-                "\nAjuste fino: --ajuste-tom <semitons> (-6 a +6) deixa a voz mais aguda ou grave."
+                "\nFine tuning: --pitch-shift <semitones> (-6 to +6) makes the voice higher or lower."
             );
             Ok(())
         }
@@ -120,9 +121,9 @@ fn content(a: &ContentArgs) -> Result<MessageContent, String> {
     })
 }
 
-fn pessoa(c: &Container, cmd: PessoaCmd) -> CliResult {
+fn person(c: &Container, cmd: PersonCmd) -> CliResult {
     match cmd {
-        PessoaCmd::Adicionar {
+        PersonCmd::Add {
             name,
             relationship,
             consent_by,
@@ -135,22 +136,22 @@ fn pessoa(c: &Container, cmd: PessoaCmd) -> CliResult {
                     consent_granted_by: consent_by,
                 })
                 .map_err(app_err)?;
-            println!("Pessoa cadastrada: {} (id: {})", s.name, s.id);
-            println!("Consentimento: {}", s.consent.statement);
+            println!("Person registered: {} (id: {})", s.name, s.id);
+            println!("Consent: {}", s.consent.statement);
         }
-        PessoaCmd::Listar => {
+        PersonCmd::List => {
             for s in c.speakers.list().map_err(|e| e.to_string())? {
                 let voice = c.profiles.find(&s.id).map_err(|e| e.to_string())?;
                 println!(
-                    "{}  {}{}  — voz: {}",
+                    "{}  {}{}  — voice: {}",
                     s.id,
                     s.name,
                     s.relationship
                         .map(|r| format!(" ({r})"))
                         .unwrap_or_default(),
                     voice
-                        .map(|v| format!("gerada, sotaque {}", v.accent.label))
-                        .unwrap_or("não gerada".into())
+                        .map(|v| format!("generated, accent {}", v.accent.label))
+                        .unwrap_or("not generated".into())
                 );
             }
         }
@@ -164,9 +165,9 @@ fn sidecar(audio: &Path, ext: &str) -> Option<String> {
         .map(|s| s.trim().to_string())
 }
 
-fn amostra(c: &Container, cmd: AmostraCmd) -> CliResult {
+fn sample(c: &Container, cmd: SampleCmd) -> CliResult {
     match cmd {
-        AmostraCmd::Adicionar {
+        SampleCmd::Add {
             speaker,
             audio,
             transcript,
@@ -182,26 +183,26 @@ fn amostra(c: &Container, cmd: AmostraCmd) -> CliResult {
                     observed_ipa: observed_ipa.or_else(|| sidecar(&audio, "ipa")),
                 })
                 .map_err(app_err)?;
-            println!("Amostra {} adicionada ({:.1}s)", s.id, s.duration_secs);
-            println!("  Texto:    {}", s.transcript);
-            println!("  Citação:  /{}/", s.canonical.ipa());
+            println!("Sample {} added ({:.1}s)", s.id, s.duration_secs);
+            println!("  Text:      {}", s.transcript);
+            println!("  Citation:  /{}/", s.canonical.ipa());
             match &s.observed {
                 Some(o) => println!(
-                    "  Ouvido:   /{}/",
+                    "  Heard:     /{}/",
                     o.iter().map(|p| p.symbol()).collect::<String>()
                 ),
                 None => println!(
-                    "  Ouvido:   (sem fonemas — o sotaque não será aprendido desta amostra)"
+                    "  Heard:     (no phonemes — the accent will not be learned from this sample)"
                 ),
             }
             println!(
-                "  Pitch médio {:.0} Hz, variação {:.0} Hz, pausas {:.0}%",
+                "  Mean pitch {:.0} Hz, spread {:.0} Hz, pauses {:.0}%",
                 s.features.mean_pitch_hz,
                 s.features.pitch_spread_hz,
                 s.features.pause_ratio * 100.0
             );
         }
-        AmostraCmd::Listar { speaker } => {
+        SampleCmd::List { speaker } => {
             for s in c
                 .samples
                 .list_by_speaker(&SpeakerId::new(speaker))
@@ -214,53 +215,50 @@ fn amostra(c: &Container, cmd: AmostraCmd) -> CliResult {
     Ok(())
 }
 
-fn phenomenon_pt(p: RulePhenomenon) -> &'static str {
+fn phenomenon_label(p: RulePhenomenon) -> &'static str {
     match p {
-        RulePhenomenon::Segmental => "pronúncia",
-        RulePhenomenon::WordEnding => "término",
-        RulePhenomenon::Juncture => "junção",
+        RulePhenomenon::Segmental => "letters",
+        RulePhenomenon::WordEnding => "ending",
+        RulePhenomenon::Juncture => "junction",
     }
 }
 
-fn voz(c: &Container, cmd: VozCmd) -> CliResult {
+fn voice(c: &Container, cmd: VoiceCmd) -> CliResult {
     match cmd {
-        VozCmd::Gerar { speaker } => {
+        VoiceCmd::Generate { speaker } => {
             let out = c
                 .build_voice_profile()
                 .execute(&SpeakerId::new(speaker))
                 .map_err(app_err)?;
             let p = &out.profile;
             println!(
-                "Voz gerada no motor {}: {}",
+                "Voice generated with the {} engine: {}",
                 c.engine_name, p.engine_voice_id
             );
             println!(
-                "Material: {} amostra(s), {:.1}s",
+                "Material: {} sample(s), {:.1}s",
                 p.sample_count, p.total_audio_secs
             );
             println!(
-                "Prosódia: pitch {:.0} Hz (±{:.0}), {:.1} sílabas/s, pausas {:.0}%",
+                "Prosody: pitch {:.0} Hz (±{:.0}), {:.1} syllables/s, pauses {:.0}%",
                 p.prosody.mean_pitch_hz,
                 p.prosody.pitch_spread_hz / 2.0,
                 p.prosody.syllables_per_second,
                 p.prosody.pause_ratio * 100.0
             );
             match &out.accent_analysis {
-                None => println!("Sotaque: nenhuma amostra com fonemas; usando pronúncia neutra."),
+                None => println!("Accent: no sample with phonemes; using a neutral pronunciation."),
                 Some(a) => {
-                    println!("Sotaque: {}", p.accent.label);
+                    println!("Accent: {}", p.accent.label);
                     if let Some((name, score)) = &a.closest_preset {
-                        println!(
-                            "  Mais próximo de: {name} ({:.0}% de semelhança)",
-                            score * 100.0
-                        );
+                        println!("  Closest to: {name} ({:.0}% similarity)", score * 100.0);
                     }
-                    println!("  {:<4} {:<11} {:>10}  fenômeno", "", "tipo", "frequência");
+                    println!("  {:<4} {:<11} {:>10}  phenomenon", "", "kind", "frequency");
                     for e in a.evidence.iter().filter(|e| e.opportunities > 0) {
                         println!(
                             "  {:<4} {:<11} {:>4}/{:<5}  {}",
                             if e.adopted { "✔" } else { "·" },
-                            phenomenon_pt(e.phenomenon),
+                            phenomenon_label(e.phenomenon),
                             e.realizations,
                             e.opportunities,
                             e.description
@@ -269,23 +267,29 @@ fn voz(c: &Container, cmd: VozCmd) -> CliResult {
                 }
             }
         }
-        VozCmd::Mostrar { speaker } => {
+        VoiceCmd::Show { speaker } => {
             let p = c
                 .profiles
                 .find(&SpeakerId::new(&speaker))
                 .map_err(|e| e.to_string())?
-                .ok_or(format!("voz de '{speaker}' ainda não gerada"))?;
-            println!("Sotaque: {}", p.accent.label);
+                .ok_or(format!(
+                    "the voice of '{speaker}' has not been generated yet"
+                ))?;
+            println!("Accent: {}", p.accent.label);
             for r in &p.accent.segment_rules {
                 println!(
                     "  [{}] {:.0}%  {}",
-                    phenomenon_pt(r.phenomenon),
+                    phenomenon_label(r.phenomenon),
                     r.confidence * 100.0,
                     r.description
                 );
             }
             for r in &p.accent.juncture_rules {
-                println!("  [junção] {:.0}%  {}", r.confidence * 100.0, r.description);
+                println!(
+                    "  [junction] {:.0}%  {}",
+                    r.confidence * 100.0,
+                    r.description
+                );
             }
         }
     }
@@ -294,12 +298,12 @@ fn voz(c: &Container, cmd: VozCmd) -> CliResult {
 
 fn describe(s: &Schedule) -> String {
     let rule = match &s.recurrence {
-        Recurrence::Once { at } => format!("uma vez em {}", at.format("%d/%m/%Y %H:%M")),
-        Recurrence::Daily { at } => format!("todo dia às {}", at.format("%H:%M")),
+        Recurrence::Once { at } => format!("once at {}", at.format("%Y-%m-%d %H:%M")),
+        Recurrence::Daily { at } => format!("every day at {}", at.format("%H:%M")),
         Recurrence::Weekly { days, at } => format!(
-            "{} às {}",
+            "{} at {}",
             days.iter()
-                .map(|d| parse::weekday_pt(*d))
+                .map(|d| parse::weekday_short(*d))
                 .collect::<Vec<_>>()
                 .join(","),
             at.format("%H:%M")
@@ -308,10 +312,10 @@ fn describe(s: &Schedule) -> String {
             every_minutes,
             within,
         } => format!(
-            "a cada {every_minutes} min{}",
+            "every {every_minutes} min{}",
             within
                 .map(|w| format!(
-                    " entre {}-{}",
+                    " between {}-{}",
                     w.start.format("%H:%M"),
                     w.end.format("%H:%M")
                 ))
@@ -319,14 +323,14 @@ fn describe(s: &Schedule) -> String {
         ),
     };
     let what = match &s.content {
-        MessageContent::Category(c) => format!("tema {c}"),
+        MessageContent::Category(c) => format!("theme {c}"),
         MessageContent::FixedText(t) => format!("\"{t}\""),
     };
     let quiet = s
         .quiet_hours
         .map(|q| {
             format!(
-                ", silêncio {}-{}",
+                ", quiet {}-{}",
                 q.start.format("%H:%M"),
                 q.end.format("%H:%M")
             )
@@ -340,16 +344,16 @@ fn describe(s: &Schedule) -> String {
     let tone = s
         .tone
         .map(|t| t.to_string())
-        .unwrap_or_else(|| "sugerido pelo tema".into());
+        .unwrap_or_else(|| "suggested by the theme".into());
     format!(
-        "{}  pessoa {}  {rule}{quiet}  {what}  tom: {tone}  próxima: {next}",
+        "{}  person {}  {rule}{quiet}  {what}  tone: {tone}  next: {next}",
         s.id, s.speaker_id
     )
 }
 
-fn agenda(c: &Container, cmd: AgendaCmd, listener: Option<String>) -> CliResult {
+fn schedule(c: &Container, cmd: ScheduleCmd, listener: Option<String>) -> CliResult {
     match cmd {
-        AgendaCmd::Criar(a) => {
+        ScheduleCmd::Create(a) => {
             let recurrence = if let Some(t) = &a.daily {
                 Recurrence::Daily {
                     at: parse::time(t)?,
@@ -377,20 +381,20 @@ fn agenda(c: &Container, cmd: AgendaCmd, listener: Option<String>) -> CliResult 
                     quiet_hours: a.quiet.as_deref().map(parse::window).transpose()?,
                 })
                 .map_err(app_err)?;
-            println!("Agendado: {}", describe(&s));
+            println!("Scheduled: {}", describe(&s));
         }
-        AgendaCmd::Listar => {
+        ScheduleCmd::List => {
             for s in c.list_schedules().execute().map_err(app_err)? {
                 println!("{}", describe(&s));
             }
         }
-        AgendaCmd::Remover { id } => {
+        ScheduleCmd::Remove { id } => {
             c.remove_schedule()
                 .execute(&ScheduleId::new(id))
                 .map_err(app_err)?;
-            println!("Removido.");
+            println!("Removed.");
         }
-        AgendaCmd::Executar {
+        ScheduleCmd::Run {
             watch,
             interval_secs,
             intensity,
@@ -408,7 +412,7 @@ fn agenda(c: &Container, cmd: AgendaCmd, listener: Option<String>) -> CliResult 
                             m.message.text(),
                             m.receipt
                         ),
-                        Err(e) => eprintln!("[{}] falhou: {e}", o.schedule_id),
+                        Err(e) => eprintln!("[{}] failed: {e}", o.schedule_id),
                     }
                 }
                 if !watch {

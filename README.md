@@ -5,9 +5,11 @@ you love**. Ask for a message right now or schedule them with your own rules.
 
 Written in **Rust**, following **Clean Architecture** and **SOLID**, and
 developed in an **agile** way (backlog, sprints, Definition of Done — see
-[`docs/agile`](docs/agile)). The app targets Brazilian Portuguese speakers, so
-its user interface (CLI and Android) is in Portuguese; code and documentation
-are in English.
+[`docs/agile`](docs/agile)). The interface (CLI and Android), code and
+documentation are in English. The **spoken messages are in Brazilian
+Portuguese**: the voice, the pronunciation model (G2P) and the accent rules are
+built for pt-BR, so the message catalog and any free text you type are
+Portuguese.
 
 ## Highlights
 
@@ -24,10 +26,9 @@ are in English.
   samples, the closest regional accent (Carioca, Paulistano, Mineiro,
   Nordestino, Gaúcho, Caipira, European Portuguese) and personal traits
   discovered outside the catalog.
-* **Tone of voice per message**: natural, warm (*carinhoso*), cheerful
-  (*animado*), calm (*calmo*), firm (*firme*) or whisper (*sussurrado*), plus a
-  fine pitch adjustment (±6 semitones). Each theme suggests an initial tone
-  (e.g. *calma* → calm) that the user can change.
+* **Tone of voice per message**: natural, warm, cheerful, calm, firm or
+  whisper, plus a fine pitch adjustment (±6 semitones). Each theme suggests an
+  initial tone (e.g. calm → calm, celebration → cheerful) that the user can change.
 * Messages by theme (motivation, confidence, gratitude, calm, celebration,
   good morning), personalized with your name.
 * Schedules: daily, on weekdays, every N minutes inside a time window, once;
@@ -78,40 +79,46 @@ export FRIENDLY_VOICE_ME="Evandro"       # your name in the messages
 export FRIENDLY_VOICE_PLAYER="aplay"     # optional: play the audio (afplay on macOS)
 
 # Register the person (consent is mandatory)
-fv pessoa adicionar --nome "Vó Lúcia" --relacao avó --consentimento-de "Lúcia"
-#   Pessoa cadastrada: Vó Lúcia (id: spk-...)
+fv person add --name "Vó Lúcia" --relationship avó --consent-by "Lúcia"
+#   Person registered: Vó Lúcia (id: spk-...)
 
 # Upload .wav or .flac recordings (≥ 2 s, ≥ 16 kHz). Optionally, next to each file:
 #    recording.txt → what was said      recording.ipa → what was heard (IPA)
-fv amostra adicionar --pessoa spk-... --audio recording1.flac
-fv amostra adicionar --pessoa spk-... --audio recording2.wav \
-   --texto "Os amigos de verdade vão falar com você" \
-   --fonemas "uz amiguʃ dʒi vehdadʒi vãw fala kũ vose"
+fv sample add --person spk-... --audio recording1.flac
+fv sample add --person spk-... --audio recording2.wav \
+   --transcript "Os amigos de verdade vão falar com você" \
+   --phonemes "uz amiguʃ dʒi vehdadʒi vãw fala kũ vose"
 
 # Generate the voice (timbre + accent + prosody)
-fv voz gerar --pessoa spk-...
+fv voice generate --person spk-...
 
 # Check the pronunciation and ask for messages
-fv pronuncia --pessoa spk-... "Você é forte, mas às vezes esquece."
-#   Forma de citação: /vose ɛ foɾte mas as vezes eskese/
-#   Com sotaque:      /vose ɛ fohtʃi maz aʃ veziz eʃkesi/
-fv falar --pessoa spk-... --tema bom-dia
-fv falar --pessoa spk-... --texto "Respira fundo, vai dar tudo certo." --intensidade 0.5
-fv tons                                                     # list the tones of voice
-fv falar --pessoa spk-... --tema confianca --tom carinhoso --ajuste-tom -1
+fv pronounce --person spk-... "Você é forte, mas às vezes esquece."
+#   Citation form:  /vose ɛ foɾte mas as vezes eskese/
+#   With accent:    /vose ɛ fohtʃi maz aʃ veziz eʃkesi/
+fv speak --person spk-... --theme good-morning
+fv speak --person spk-... --text "Respira fundo, vai dar tudo certo." --intensity 0.5
+fv tones                                                   # list the tones of voice
+fv themes                                                  # list the message themes
+fv speak --person spk-... --theme confidence --tone warm --pitch-shift -1
 
 # Schedule
-fv agenda criar --pessoa spk-... --diario 07:30 --tema bom-dia
-fv agenda criar --pessoa spk-... --semanal seg,qua,sex@12:00 --tema confianca
-fv agenda criar --pessoa spk-... --a-cada 120 --entre 09:00-18:00 --tema calma --silencio 12:00-13:00
-fv agenda criar --pessoa spk-... --em "2026-12-24 20:00" --texto "Feliz Natal!" --tom animado
-fv agenda criar --pessoa spk-... --diario 22:30 --tema gratidao --tom sussurrado
-fv agenda listar
-fv agenda executar --continuo      # keep it running (or call it from cron without --continuo)
+fv schedule create --person spk-... --daily 07:30 --theme good-morning
+fv schedule create --person spk-... --weekly mon,wed,fri@12:00 --theme confidence
+fv schedule create --person spk-... --every 120 --between 09:00-18:00 --theme calm --quiet 12:00-13:00
+fv schedule create --person spk-... --at "2026-12-24 20:00" --text "Feliz Natal!" --tone cheerful
+fv schedule create --person spk-... --daily 22:30 --theme gratitude --tone whisper
+fv schedule list
+fv schedule run --watch      # keep it running (or call it from cron without --watch)
 ```
 
+Themes, tones and weekdays accept English or Portuguese values (`good-morning`
+or `bom-dia`, `warm` or `carinhoso`, `mon` or `seg`). The former Portuguese
+command and option names (`pessoa adicionar --nome`, `falar --tema`, ...) are
+still accepted as hidden aliases, so existing scripts keep working.
+
 Generated audio files and a note with the text, pronunciation and SSML are
-written to `.friendly-voice/saida/`.
+written to `.friendly-voice/outbox/`.
 
 Without `--features http-engine` / `FRIENDLY_VOICE_ENGINE_URL`, the app uses a
 **local prosody sketch engine**: it renders audio with the person's rhythm and
@@ -177,7 +184,7 @@ scripts/engine-e2e.sh                    # CLI ⇄ running engine, end to end
 ## Responsible use
 
 Only use voices of people who gave their consent. Data stays local, in the
-`--dados` folder and in the engine's voices folder. The app is meant for
+`--data-dir` folder and in the engine's voices folder. The app is meant for
 personal, private messages.
 
 ## Third-party models

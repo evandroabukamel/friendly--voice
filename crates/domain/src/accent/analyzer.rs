@@ -154,8 +154,8 @@ impl AccentAnalyzer {
         let closest = RuleCatalog::closest_preset(&codes).map(|(n, s)| (n.to_string(), s));
         profile.label = match &closest {
             Some((name, score)) if *score >= 0.5 => name.clone(),
-            _ if codes.is_empty() => "Neutro".into(),
-            _ => "Personalizado".into(),
+            _ if codes.is_empty() => "Neutral".into(),
+            _ => "Custom".into(),
         };
 
         if self.config.discover_new_rules {
@@ -258,7 +258,7 @@ impl AccentAnalyzer {
                 };
                 let position = pos.position();
                 let code = format!("learned:{from}>{shown}@{position:?}");
-                let description = format!("padrão aprendido: '{from}' → '{shown}' ({position:?})");
+                let description = format!("learned pattern: '{from}' → '{shown}' ({position:?})");
                 let rule = PronunciationRule {
                     code: code.clone(),
                     description: description.clone(),

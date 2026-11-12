@@ -46,7 +46,7 @@ pub fn to_ssml(script: &SpeechScript) -> String {
         String::new()
     };
     format!(
-        "<speak version=\"1.1\" xml:lang=\"pt-BR\"><!-- tom: {} --><prosody rate=\"{}%\"{pitch}{volume}>{body}</prosody></speak>",
+        "<speak version=\"1.1\" xml:lang=\"pt-BR\"><!-- tone: {} --><prosody rate=\"{}%\"{pitch}{volume}>{body}</prosody></speak>",
         script.tone,
         rate_percent(p.syllables_per_second)
     )
@@ -79,7 +79,7 @@ mod tests {
         assert!(s.contains("<phoneme alphabet=\"ipa\" ph=\"nojtʃi\">noite</phoneme>"));
         assert!(s.contains("rate=\"100%\"") && s.contains("pitch=\"210Hz\""));
         assert!(
-            s.contains("volume=\"-3dB\"") && s.contains("tom: calmo"),
+            s.contains("volume=\"-3dB\"") && s.contains("tone: calm"),
             "{s}"
         );
     }

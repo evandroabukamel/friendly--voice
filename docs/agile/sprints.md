@@ -11,7 +11,7 @@ One-week sprints. Every sprint delivers a **usable, tested increment**
 | 3 | Messages and schedules end to end in the CLI | US-05, US-06, US-07, US-08, US-09 | 14 |
 | 4 | Tone of voice per message and Android app with CI/CD | US-18, US-19, US-20 | 21 |
 | 5 | Real timbre cloning (OpenVoice) and English documentation | US-11, US-21 | 11 |
-| 6 | FLAC input | US-24 | 2 |
+| 6 | FLAC input; CLI commands and output in English | US-24, US-25, US-26 | 7 |
 
 Average velocity (sprints 1–5): **~14 pts/sprint**.
 
@@ -35,7 +35,7 @@ Average velocity (sprints 1–5): **~14 pts/sprint**.
   *r* was dropped before linking). **Action:** `blocked_before_vowel_word` context.
 
 ## Sprint 2 — Cloning with accent
-**Increment:** `amostra adicionar` + `voz gerar` working with the local engine.
+**Increment:** `sample add` + `voice generate` working with the local engine.
 * WAV decoding, DSP analysis (autocorrelation pitch, pauses).
 * pt-BR G2P (citation form) with stress, digraphs, nasals and diphthongs.
 * `AccentAnalyzer`: opportunities × realizations per phenomenon; discovers
@@ -50,7 +50,7 @@ Average velocity (sprints 1–5): **~14 pts/sprint**.
 ## Sprint 3 — Messages and schedules
 **Increment:** full flow in the CLI, covered by acceptance tests.
 * Message catalog by theme, personalized with the listener's name.
-* `falar`, `pronuncia` (with intensity), `agenda criar/listar/remover/executar`.
+* `speak`, `pronounce` (with intensity), `schedule create/list/remove/run`.
 * Schedules with windows, weekdays, quiet hours and a single catch-up firing
   when the app was off.
 
@@ -109,3 +109,19 @@ learned accent and the chosen tone; documentation and comments in English.
   adapter converts FLAC references to WAV, so the engine contract is unchanged.
 * Tests generate FLAC with `flacenc`; also checked against ffmpeg-encoded
   files (24-bit stereo 48 kHz and 16-bit mono) through the OpenVoice engine.
+
+## Sprint 6 (continued) — CLI commands in English
+* Commands and options renamed to English (`person add --name`,
+  `sample add --transcript`, `voice generate`, `speak --theme --tone
+  --pitch-shift`, `schedule create --weekly`, `schedule run --watch`...).
+* The Portuguese names are kept as hidden clap aliases, covered by an
+  acceptance test, so existing scripts and cron jobs keep working.
+* Themes, tones and weekdays accept English values too (`good-morning`,
+  `warm`, `mon`).
+* Then all output was translated (US-26): CLI help, messages and reports,
+  errors from every layer, accent labels and rule descriptions, schedule
+  descriptions, delivery notes and the Android screens. English names became
+  canonical for themes and tones (`warm`, `good-morning`); the Portuguese ones
+  remain accepted. The spoken message catalog stays in pt-BR, because the
+  voice and pronunciation model are Portuguese.
+* The default branch is now `main`.

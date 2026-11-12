@@ -45,7 +45,7 @@ impl CreateSchedule {
     pub fn execute(&self, input: CreateScheduleInput) -> AppResult<Schedule> {
         self.speakers
             .find(&input.speaker_id)?
-            .ok_or_else(|| AppError::not_found("pessoa", &input.speaker_id))?;
+            .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?;
         let schedule = Schedule::new(
             ScheduleId::new(self.ids.next_id("sch")),
             input.speaker_id,
@@ -87,7 +87,7 @@ impl RemoveSchedule {
         if self.schedules.delete(id)? {
             Ok(())
         } else {
-            Err(AppError::not_found("agendamento", id))
+            Err(AppError::not_found("schedule", id))
         }
     }
 }

@@ -17,7 +17,7 @@ impl TimeWindow {
     pub fn new(start: NaiveTime, end: NaiveTime) -> Result<Self, DomainError> {
         if start == end {
             return Err(DomainError::InvalidSchedule(
-                "a janela de horário não pode ter início igual ao fim".into(),
+                "the time window cannot start and end at the same time".into(),
             ));
         }
         Ok(Self { start, end })
@@ -82,24 +82,24 @@ impl Schedule {
         match &recurrence {
             Recurrence::Weekly { days, .. } if days.is_empty() => {
                 return Err(DomainError::InvalidSchedule(
-                    "informe ao menos um dia da semana".into(),
+                    "provide at least one weekday".into(),
                 ))
             }
             Recurrence::Interval { every_minutes, .. } if *every_minutes < 1 => {
                 return Err(DomainError::InvalidSchedule(
-                    "intervalo mínimo de 1 minuto".into(),
+                    "the minimum interval is 1 minute".into(),
                 ))
             }
             Recurrence::Once { at } if *at <= created_at => {
                 return Err(DomainError::InvalidSchedule(
-                    "a data precisa estar no futuro".into(),
+                    "the date must be in the future".into(),
                 ))
             }
             _ => {}
         }
         if let MessageContent::FixedText(t) = &content {
             if t.trim().is_empty() {
-                return Err(DomainError::InvalidSchedule("texto fixo vazio".into()));
+                return Err(DomainError::InvalidSchedule("empty fixed text".into()));
             }
         }
         let schedule = Self {
@@ -115,7 +115,7 @@ impl Schedule {
         };
         if schedule.next_occurrence_after(created_at).is_none() {
             return Err(DomainError::InvalidSchedule(
-                "a regra nunca dispara (conflito com o horário de silêncio?)".into(),
+                "the rule never fires (conflict with the quiet hours?)".into(),
             ));
         }
         Ok(schedule)

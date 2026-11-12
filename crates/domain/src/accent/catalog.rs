@@ -34,7 +34,7 @@ impl RuleCatalog {
             // ---- Word endings ----
             r(
                 "final-e-raising",
-                "'e' átono final soa como 'i' (leite → leiti)",
+                "unstressed final 'e' sounds like 'i' (leite → leiti)",
                 WordEnding,
                 ex("e"),
                 &["i"],
@@ -42,7 +42,7 @@ impl RuleCatalog {
             ),
             r(
                 "final-e-centralization",
-                "'e' átono final reduzido a 'ɨ' (português europeu)",
+                "unstressed final 'e' reduced to 'ɨ' (European Portuguese)",
                 WordEnding,
                 ex("e"),
                 &["ɨ"],
@@ -50,7 +50,7 @@ impl RuleCatalog {
             ),
             r(
                 "final-o-raising",
-                "'o' átono final soa como 'u' (gato → gatu)",
+                "unstressed final 'o' sounds like 'u' (gato → gatu)",
                 WordEnding,
                 ex("o"),
                 &["u"],
@@ -58,7 +58,7 @@ impl RuleCatalog {
             ),
             r(
                 "final-a-reduction",
-                "'a' átono final reduzido a 'ɐ'",
+                "unstressed final 'a' reduced to 'ɐ'",
                 WordEnding,
                 ex("a"),
                 &["ɐ"],
@@ -66,7 +66,7 @@ impl RuleCatalog {
             ),
             r(
                 "word-final-r-deletion",
-                "'r' final cai (falar → falá)",
+                "final 'r' is dropped (falar → falá)",
                 WordEnding,
                 ex("ɾ"),
                 &[],
@@ -75,7 +75,7 @@ impl RuleCatalog {
             // ---- Pronunciation of letters/sounds ----
             r(
                 "t-palatalization",
-                "'t' antes de 'i' vira 'tʃ' (tia → tchia)",
+                "'t' before 'i' becomes 'tʃ' (tia → tchia)",
                 Segmental,
                 ex("t"),
                 &["tʃ"],
@@ -83,7 +83,7 @@ impl RuleCatalog {
             ),
             r(
                 "d-palatalization",
-                "'d' antes de 'i' vira 'dʒ' (dia → djia)",
+                "'d' before 'i' becomes 'dʒ' (dia → djia)",
                 Segmental,
                 ex("d"),
                 &["dʒ"],
@@ -91,7 +91,7 @@ impl RuleCatalog {
             ),
             r(
                 "coda-l-vocalization",
-                "'l' em final de sílaba vira 'w' (Brasil → Brasiu)",
+                "syllable-final 'l' becomes 'w' (Brasil → Brasiu)",
                 Segmental,
                 ex("l"),
                 &["w"],
@@ -99,7 +99,7 @@ impl RuleCatalog {
             ),
             r(
                 "coda-s-voiced-palatalization",
-                "'s' antes de consoante sonora vira 'ʒ' (mesmo → meʒmo)",
+                "'s' before a voiced consonant becomes 'ʒ' (mesmo → meʒmo)",
                 Segmental,
                 ex("s"),
                 &["ʒ"],
@@ -108,7 +108,7 @@ impl RuleCatalog {
             ),
             r(
                 "coda-s-palatalization",
-                "'s' em final de sílaba chiado 'ʃ' (festa → feʃta)",
+                "syllable-final 's' hushed as 'ʃ' (festa → feʃta)",
                 Segmental,
                 ex("s"),
                 &["ʃ"],
@@ -116,7 +116,7 @@ impl RuleCatalog {
             ),
             r(
                 "coda-r-aspiration",
-                "'r' em final de sílaba aspirado 'h' (porta → pohta)",
+                "syllable-final 'r' aspirated as 'h' (porta → pohta)",
                 Segmental,
                 ex("ɾ"),
                 &["h"],
@@ -124,7 +124,7 @@ impl RuleCatalog {
             ),
             r(
                 "coda-r-retroflex",
-                "'r' em final de sílaba retroflexo 'ɻ' (porta → poɻta, caipira)",
+                "syllable-final 'r' retroflex 'ɻ' (porta → poɻta, caipira)",
                 Segmental,
                 ex("ɾ"),
                 &["ɻ"],
@@ -132,7 +132,7 @@ impl RuleCatalog {
             ),
             r(
                 "strong-r-glottal",
-                "'r' forte/inicial aspirado 'h' (rato → hato)",
+                "strong/initial 'r' aspirated as 'h' (rato → hato)",
                 Segmental,
                 ex("x"),
                 &["h"],
@@ -140,7 +140,7 @@ impl RuleCatalog {
             ),
             r(
                 "strong-r-trill",
-                "'r' forte vibrante 'r' (rato → rrato)",
+                "strong 'r' trilled 'r' (rato → rrato)",
                 Segmental,
                 ex("x"),
                 &["r"],
@@ -148,7 +148,7 @@ impl RuleCatalog {
             ),
             r(
                 "lh-yeism",
-                "'lh' vira 'i' (mulher → muié)",
+                "'lh' becomes 'i' (mulher → muié)",
                 Segmental,
                 ex("ʎ"),
                 &["j"],
@@ -156,7 +156,7 @@ impl RuleCatalog {
             ),
             r(
                 "pretonic-e-opening",
-                "'e' pretônico aberto 'ɛ' (relógio → rélógio)",
+                "open pretonic 'e' as 'ɛ' (relógio → rélógio)",
                 Segmental,
                 ex("e"),
                 &["ɛ"],
@@ -164,7 +164,7 @@ impl RuleCatalog {
             ),
             r(
                 "pretonic-o-opening",
-                "'o' pretônico aberto 'ɔ' (morena → mórena)",
+                "open pretonic 'o' as 'ɔ' (morena → mórena)",
                 Segmental,
                 ex("o"),
                 &["ɔ"],
@@ -176,21 +176,21 @@ impl RuleCatalog {
         let juncture_rules = vec![
             j(
                 "sibilant-voicing",
-                "'s' final + vogal vira 'z' (os amigos → uzamigus)",
+                "final 's' + vowel becomes 'z' (os amigos → uzamigus)",
                 PhoneMatcher::one_of(&["s", "ʃ"]),
                 vowel(),
                 JunctureEffect::ReplaceLeft(vec![Phoneme::new("z")]),
             ),
             j(
                 "rhotic-linking",
-                "'r' final + vogal vira tepe (mar azul → maɾazul)",
+                "final 'r' + vowel becomes a tap (mar azul → maɾazul)",
                 PhoneMatcher::one_of(&["h", "ɻ", "x"]),
                 vowel(),
                 JunctureEffect::ReplaceLeft(vec![Phoneme::new("ɾ")]),
             ),
             j(
                 "vowel-elision",
-                "vogal 'a' átona final some antes de vogal (casa amarela → casamarela)",
+                "unstressed final 'a' is elided before a vowel (casa amarela → casamarela)",
                 PhoneMatcher::one_of(&["a", "ɐ"]),
                 vowel(),
                 JunctureEffect::DeleteLeft,
@@ -198,7 +198,7 @@ impl RuleCatalog {
             .left_unstressed(),
             j(
                 "high-vowel-gliding",
-                "'i' átono final vira semivogal (de outro → djoutro)",
+                "unstressed final 'i' becomes a glide (de outro → djoutro)",
                 PhoneMatcher::exact("i"),
                 vowel(),
                 JunctureEffect::ReplaceLeft(vec![Phoneme::new("j")]),
@@ -206,7 +206,7 @@ impl RuleCatalog {
             .left_unstressed(),
             j(
                 "sibilant-degemination",
-                "'s' + 's' se fundem (mas sempre → masempre)",
+                "'s' + 's' merge (mas sempre → masempre)",
                 PhoneMatcher::one_of(&["s", "ʃ", "z"]),
                 PhoneMatcher::exact("s"),
                 JunctureEffect::DeleteLeft,
@@ -253,7 +253,7 @@ impl RuleCatalog {
                 ],
             },
             AccentPreset {
-                name: "Caipira / interior",
+                name: "Caipira (countryside)",
                 codes: &[
                     "final-e-raising",
                     "final-o-raising",
@@ -309,7 +309,7 @@ impl RuleCatalog {
                 ],
             },
             AccentPreset {
-                name: "Português europeu (PT)",
+                name: "European Portuguese (PT)",
                 codes: &[
                     "final-e-centralization",
                     "final-o-raising",

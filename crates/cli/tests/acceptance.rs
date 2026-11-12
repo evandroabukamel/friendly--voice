@@ -92,16 +92,9 @@ fn full_flow_learns_accent_and_speaks() {
     let env = Env::new("flow");
 
     // US-01: consent is mandatory
-    let (ok, out) = env.run(&["pessoa", "adicionar", "--nome", "Vó"]);
-    assert!(!ok && out.contains("consentimento"), "{out}");
-    let id = speaker_id(&env.ok(&[
-        "pessoa",
-        "adicionar",
-        "--nome",
-        "Vó",
-        "--consentimento-de",
-        "Vó",
-    ]));
+    let (ok, out) = env.run(&["person", "add", "--name", "Vó"]);
+    assert!(!ok && out.contains("consent"), "{out}");
+    let id = speaker_id(&env.ok(&["person", "add", "--name", "Vó", "--consent-by", "Vó"]));
 
     // US-02: samples with transcript and phonemes (files next to the .wav)
     let samples = [
@@ -128,86 +121,86 @@ fn full_flow_learns_accent_and_speaks() {
         ),
     ];
     for s in &samples {
-        env.ok(&["amostra", "adicionar", "--pessoa", &id, "--audio", p(s)]);
+        env.ok(&["sample", "add", "--person", &id, "--audio", p(s)]);
     }
 
     // US-03/US-04: voice with the learned accent
-    let out = env.ok(&["voz", "gerar", "--pessoa", &id]);
+    let out = env.ok(&["voice", "generate", "--person", &id]);
     assert!(out.contains("Carioca"), "{out}");
-    assert!(out.contains("✔    término"), "{out}");
-    assert!(out.contains("✔    pronúncia"), "{out}");
+    assert!(out.contains("✔    ending"), "{out}");
+    assert!(out.contains("✔    letters"), "{out}");
 
     // US-06: pronunciation of new text with the accent
-    let out = env.ok(&["pronuncia", "--pessoa", &id, "Bom dia, você é forte!"]);
+    let out = env.ok(&["pronounce", "--person", &id, "Bom dia, você é forte!"]);
     assert!(out.contains("/bõ dʒia vose ɛ fohtʃi/"), "{out}");
 
     // US-05: an on-demand message produces audio
     let out = env.ok(&[
-        "--meu-nome",
+        "--my-name",
         "Evandro",
-        "falar",
-        "--pessoa",
+        "speak",
+        "--person",
         &id,
-        "--tema",
-        "celebracao",
+        "--theme",
+        "celebration",
     ]);
     assert!(out.contains("Evandro"), "{out}");
-    let saida = env.dir.join("data/saida");
-    assert!(std::fs::read_dir(&saida).unwrap().any(|e| e
+    let outbox = env.dir.join("data/outbox");
+    assert!(std::fs::read_dir(&outbox).unwrap().any(|e| e
         .unwrap()
         .path()
         .extension()
         .is_some_and(|x| x == "wav")));
 
     // US-18: the user picks the tone of voice of each message
-    let out = env.ok(&["falar", "--pessoa", &id, "--tema", "calma"]);
+    let out = env.ok(&["speak", "--person", &id, "--theme", "calm"]);
     assert!(
-        out.contains("tom: calmo"),
+        out.contains("tone: calm"),
         "initial tone suggested by the theme:\n{out}"
     );
     let out = env.ok(&[
-        "falar",
-        "--pessoa",
+        "speak",
+        "--person",
         &id,
-        "--tema",
-        "calma",
-        "--tom",
-        "animado",
-        "--ajuste-tom",
+        "--theme",
+        "calm",
+        "--tone",
+        "cheerful",
+        "--pitch-shift",
         "-2",
     ]);
-    assert!(out.contains("tom: animado (-2 st)"), "{out}");
-    let (ok, out) = env.run(&["falar", "--pessoa", &id, "--tom", "bravo"]);
-    assert!(!ok && out.contains("tom 'bravo' desconhecido"), "{out}");
-    let (ok, out) = env.run(&["falar", "--pessoa", &id, "--ajuste-tom", "9"]);
-    assert!(!ok && out.contains("semitons"), "{out}");
+    assert!(out.contains("tone: cheerful (-2 st)"), "{out}");
+    let (ok, out) = env.run(&["speak", "--person", &id, "--tone", "bravo"]);
+    assert!(!ok && out.contains("unknown tone 'bravo'"), "{out}");
+    let (ok, out) = env.run(&["speak", "--person", &id, "--pitch-shift", "9"]);
+    assert!(!ok && out.contains("semitones"), "{out}");
     let out = env.ok(&[
-        "agenda",
-        "criar",
-        "--pessoa",
-        &id,
-        "--diario",
-        "21:00",
-        "--tom",
-        "sussurrado",
+        "schedule", "create", "--person", &id, "--daily", "21:00", "--tone", "whisper",
     ]);
-    assert!(out.contains("tom: sussurrado"), "{out}");
+    assert!(out.contains("tone: whisper"), "{out}");
 
     // US-07/US-08: scheduling
     let out = env.ok(&[
-        "agenda",
-        "criar",
-        "--pessoa",
+        "schedule",
+        "create",
+        "--person",
         &id,
-        "--diario",
+        "--daily",
         "08:00",
-        "--silencio",
+        "--quiet",
         "22:00-07:00",
     ]);
-    assert!(out.contains("todo dia às 08:00"), "{out}");
-    let (ok, out) = env.run(&["agenda", "criar", "--pessoa", &id, "--semanal", "xyz@08:00"]);
-    assert!(!ok && out.contains("dia inválido"), "{out}");
-    env.ok(&["agenda", "executar"]);
+    assert!(out.contains("every day at 08:00"), "{out}");
+    let (ok, out) = env.run(&[
+        "schedule",
+        "create",
+        "--person",
+        &id,
+        "--weekly",
+        "xyz@08:00",
+    ]);
+    assert!(!ok && out.contains("invalid weekday"), "{out}");
+    env.ok(&["schedule", "run"]);
 }
 
 /// Voiced audio encoded as 24-bit stereo FLAC.
@@ -242,23 +235,16 @@ fn flac(path: &Path, secs: f32, f0: f32) {
 #[test]
 fn accepts_flac_samples() {
     let env = Env::new("flac");
-    let id = speaker_id(&env.ok(&[
-        "pessoa",
-        "adicionar",
-        "--nome",
-        "Mãe",
-        "--consentimento-de",
-        "Mãe",
-    ]));
+    let id = speaker_id(&env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]));
     for (name, f0) in [("f1", 200.0), ("f2", 190.0)] {
         let path = env.dir.join(format!("{name}.flac"));
         flac(&path, 6.0, f0);
         // Sidecar files work for FLAC too.
         std::fs::write(path.with_extension("txt"), "Leite quente de noite.").unwrap();
         std::fs::write(path.with_extension("ipa"), "lejtʃi kẽtʃi dʒi nojtʃi").unwrap();
-        let out = env.ok(&["amostra", "adicionar", "--pessoa", &id, "--audio", p(&path)]);
-        assert!(out.contains("adicionada (6.0s)"), "{out}");
-        assert!(out.contains("Ouvido:   /lejtʃikẽtʃidʒinojtʃi/"), "{out}");
+        let out = env.ok(&["sample", "add", "--person", &id, "--audio", p(&path)]);
+        assert!(out.contains("added (6.0s)"), "{out}");
+        assert!(out.contains("Heard:     /lejtʃikẽtʃidʒinojtʃi/"), "{out}");
     }
     // The original FLAC is kept, with the right extension.
     let audio_dir = env.dir.join("data/audio").join(&id);
@@ -272,45 +258,134 @@ fn accepts_flac_samples() {
             .all(|p| p.extension().is_some_and(|x| x == "flac")),
         "{stored:?}"
     );
-    env.ok(&["voz", "gerar", "--pessoa", &id]);
-    env.ok(&["falar", "--pessoa", &id, "--texto", "Boa noite."]);
+    env.ok(&["voice", "generate", "--person", &id]);
+    env.ok(&["speak", "--person", &id, "--text", "Boa noite."]);
 
     let ogg = env.dir.join("x.ogg");
     std::fs::write(&ogg, b"OggS\0\0\0\0\0\0\0\0 not supported").unwrap();
     let (ok, out) = env.run(&[
+        "sample",
+        "add",
+        "--person",
+        &id,
+        "--audio",
+        p(&ogg),
+        "--transcript",
+        "oi",
+    ]);
+    assert!(!ok && out.contains("WAV (PCM/float) or FLAC"), "{out}");
+}
+
+/// The former Portuguese command and option names still work (hidden aliases),
+/// so existing scripts and cron jobs are not broken.
+#[test]
+fn portuguese_aliases_still_work() {
+    let env = Env::new("aliases");
+    let id = speaker_id(&env.ok(&[
+        "pessoa",
+        "adicionar",
+        "--nome",
+        "Vó",
+        "--consentimento-de",
+        "Vó",
+    ]));
+    let wav = env.wav(
+        "a1",
+        12.0,
+        210.0,
+        "Leite quente de noite.",
+        "lejtʃi kẽtʃi dʒi nojtʃi",
+    );
+    env.ok(&[
         "amostra",
         "adicionar",
         "--pessoa",
         &id,
         "--audio",
-        p(&ogg),
+        p(&wav),
         "--texto",
-        "oi",
+        "Leite quente de noite.",
     ]);
-    assert!(!ok && out.contains("WAV (PCM/float) ou FLAC"), "{out}");
+    env.ok(&["amostra", "listar", "--pessoa", &id]);
+    env.ok(&["--meu-nome", "Ana", "voz", "gerar", "--pessoa", &id]);
+    let out = env.ok(&[
+        "falar",
+        "--pessoa",
+        &id,
+        "--tema",
+        "calma",
+        "--tom",
+        "carinhoso",
+        "--ajuste-tom",
+        "-1",
+    ]);
+    assert!(out.contains("tone: warm (-1 st)"), "{out}");
+    env.ok(&[
+        "agenda",
+        "criar",
+        "--pessoa",
+        &id,
+        "--semanal",
+        "seg,sex@07:30",
+        "--silencio",
+        "22:00-07:00",
+    ]);
+    env.ok(&["agenda", "executar"]);
+    env.ok(&["temas"]);
+    env.ok(&["tons"]);
+}
+
+/// English values are accepted for themes, tones and weekdays.
+#[test]
+fn english_values_are_accepted() {
+    let env = Env::new("english-values");
+    let id = speaker_id(&env.ok(&[
+        "person",
+        "add",
+        "--name",
+        "Grandma",
+        "--consent-by",
+        "Grandma",
+    ]));
+    let wav = env.wav(
+        "a1",
+        12.0,
+        210.0,
+        "Leite quente de noite.",
+        "lejtʃi kẽtʃi dʒi nojtʃi",
+    );
+    env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    env.ok(&["voice", "generate", "--person", &id]);
+    let out = env.ok(&[
+        "speak",
+        "--person",
+        &id,
+        "--theme",
+        "good-morning",
+        "--tone",
+        "whisper",
+    ]);
+    assert!(out.contains("tone: whisper"), "{out}");
+    let out = env.ok(&[
+        "schedule",
+        "create",
+        "--person",
+        &id,
+        "--weekly",
+        "mon,fri@07:30",
+        "--theme",
+        "calm",
+    ]);
+    assert!(out.contains("mon,fri at 07:30"), "{out}");
 }
 
 #[test]
 fn rejects_invalid_audio() {
     let env = Env::new("bad");
-    let id = speaker_id(&env.ok(&[
-        "pessoa",
-        "adicionar",
-        "--nome",
-        "Mãe",
-        "--consentimento-de",
-        "Mãe",
-    ]));
+    let id = speaker_id(&env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]));
     let short = env.wav("curto", 0.5, 200.0, "oi", "oj");
-    let (ok, out) = env.run(&[
-        "amostra",
-        "adicionar",
-        "--pessoa",
-        &id,
-        "--audio",
-        p(&short),
-    ]);
-    assert!(!ok && out.contains("muito curto"), "{out}");
-    let (ok, out) = env.run(&["voz", "gerar", "--pessoa", &id]);
-    assert!(!ok && out.contains("insuficiente"), "{out}");
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&short)]);
+    assert!(!ok && out.contains("too short"), "{out}");
+    let (ok, out) = env.run(&["voice", "generate", "--person", &id]);
+    assert!(!ok && out.contains("not enough"), "{out}");
 }

@@ -233,5 +233,5 @@ fn discovers_patterns_outside_catalog() {
 fn no_evidence_yields_neutral_profile() {
     let a = AccentAnalyzer::default().analyze(&[]);
     assert!(a.profile.segment_rules.is_empty());
-    assert_eq!(a.profile.label, "Neutro");
+    assert_eq!(a.profile.label, "Neutral");
 }

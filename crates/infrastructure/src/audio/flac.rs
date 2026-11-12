@@ -10,16 +10,16 @@ pub struct FlacDecoder;
 
 impl AudioDecoder for FlacDecoder {
     fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
-        let stream = flac_stream(bytes).ok_or_else(|| PortError::new("FLAC inválido"))?;
+        let stream = flac_stream(bytes).ok_or_else(|| PortError::new("invalid FLAC"))?;
         let mut reader = claxon::FlacReader::new(Cursor::new(stream))
-            .map_err(|e| PortError::new(format!("FLAC inválido: {e}")))?;
+            .map_err(|e| PortError::new(format!("invalid FLAC: {e}")))?;
         let info = reader.streaminfo();
         let channels = info.channels.max(1) as usize;
         let scale = (1i64 << (info.bits_per_sample - 1)) as f32;
         let mut mono = Vec::with_capacity(info.samples.unwrap_or(0) as usize / channels);
         let (mut acc, mut n) = (0.0f32, 0usize);
         for sample in reader.samples() {
-            let sample = sample.map_err(|e| PortError::new(format!("FLAC corrompido: {e}")))?;
+            let sample = sample.map_err(|e| PortError::new(format!("corrupted FLAC: {e}")))?;
             acc += sample as f32 / scale;
             n += 1;
             if n == channels {

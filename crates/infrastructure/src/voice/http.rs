@@ -25,7 +25,7 @@ const LANGUAGE: &str = "pt-BR";
 const NOT_IMPLEMENTED: u16 = 501;
 
 fn err(e: impl std::fmt::Display) -> PortError {
-    PortError::new(format!("servidor de voz: {e}"))
+    PortError::new(format!("voice server: {e}"))
 }
 
 /// Failure modes the adapters need to tell apart.
@@ -38,7 +38,7 @@ enum CallError {
 impl From<CallError> for PortError {
     fn from(e: CallError) -> Self {
         match e {
-            CallError::NotImplemented => err("recurso não disponível neste servidor"),
+            CallError::NotImplemented => err("feature not available on this server"),
             CallError::Other(e) => e,
         }
     }
@@ -180,7 +180,7 @@ struct SynthesizeRequest<'a> {
     ipa_words: Vec<String>,
     pitch_hz: f32,
     syllables_per_second: f32,
-    /// Chosen tone of voice (natural, carinhoso, animado, calmo, firme, sussurrado).
+    /// Chosen tone of voice (natural, warm, cheerful, calm, firm, whisper).
     style: &'a str,
     /// Tone adjustments relative to the person's natural prosody.
     pitch_shift_semitones: f32,
@@ -310,7 +310,7 @@ impl Transcriber for HttpTranscriber {
         match self.client.post_json::<TranscribeResponse>("v1/transcribe", &req) {
             Ok(res) => Ok(res.text),
             Err(CallError::NotImplemented) => Err(err(
-                "o servidor não faz transcrição; informe o texto do áudio (--texto ou arquivo .txt)",
+                "the server does not transcribe; provide the transcript (--transcript or a .txt file)",
             )),
             Err(e) => Err(e.into()),
         }
@@ -420,7 +420,7 @@ mod tests {
         );
         assert_eq!(sent["words"][0]["stress"], 1);
         assert_eq!(sent["words"][0]["pause_after"], true);
-        assert_eq!(sent["style"], "calmo");
+        assert_eq!(sent["style"], "calm");
         assert_eq!(sent["volume_db"], -3.0);
     }
 }

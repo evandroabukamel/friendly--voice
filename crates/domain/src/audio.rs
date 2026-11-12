@@ -13,7 +13,7 @@ impl AudioClip {
         if sample_rate == 0 {
             return Err(DomainError::invalid(
                 "sample_rate",
-                "deve ser maior que zero",
+                "must be greater than zero",
             ));
         }
         Ok(Self {
@@ -83,32 +83,30 @@ impl SampleQualityPolicy {
         let d = clip.duration_secs();
         if d < self.min_duration_secs {
             return Err(DomainError::SampleRejected(format!(
-                "áudio muito curto ({d:.1}s); mínimo {:.1}s",
+                "audio too short ({d:.1}s); minimum {:.1}s",
                 self.min_duration_secs
             )));
         }
         if d > self.max_duration_secs {
             return Err(DomainError::SampleRejected(format!(
-                "áudio muito longo ({d:.1}s); máximo {:.1}s — divida em trechos",
+                "audio too long ({d:.1}s); maximum {:.1}s — split it into parts",
                 self.max_duration_secs
             )));
         }
         if clip.sample_rate() < self.min_sample_rate {
             return Err(DomainError::SampleRejected(format!(
-                "taxa de amostragem {} Hz abaixo do mínimo {} Hz",
+                "sample rate {} Hz below the minimum {} Hz",
                 clip.sample_rate(),
                 self.min_sample_rate
             )));
         }
         if clip.clipping_ratio() > self.max_clipping_ratio {
             return Err(DomainError::SampleRejected(
-                "áudio saturado (clipping); grave com volume menor".into(),
+                "clipped audio; record at a lower volume".into(),
             ));
         }
         if clip.rms() < self.min_rms {
-            return Err(DomainError::SampleRejected(
-                "áudio praticamente silencioso".into(),
-            ));
+            return Err(DomainError::SampleRejected("audio is nearly silent".into()));
         }
         Ok(())
     }

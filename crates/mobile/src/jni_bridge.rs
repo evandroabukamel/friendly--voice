@@ -23,7 +23,7 @@ fn req(env: &mut JNIEnv, s: &JString) -> String {
 
 fn guarded(env: &mut JNIEnv, f: impl FnOnce() -> String) -> jstring {
     let json = catch_unwind(AssertUnwindSafe(f)).unwrap_or_else(|_| {
-        r#"{"ok":false,"error":"erro interno na biblioteca nativa"}"#.to_string()
+        r#"{"ok":false,"error":"internal error in the native library"}"#.to_string()
     });
     env.new_string(json)
         .map(|s| s.into_raw())

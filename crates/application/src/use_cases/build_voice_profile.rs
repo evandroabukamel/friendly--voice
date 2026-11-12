@@ -59,7 +59,7 @@ impl BuildVoiceProfile {
         let speaker = self
             .speakers
             .find(speaker_id)?
-            .ok_or_else(|| AppError::not_found("pessoa", speaker_id))?;
+            .ok_or_else(|| AppError::not_found("person", speaker_id))?;
         let samples = self.samples.list_by_speaker(speaker_id)?;
         self.policy.check(&samples)?;
 

@@ -29,7 +29,7 @@ impl Speaker {
     ) -> Result<Self, DomainError> {
         let name = name.trim();
         if name.is_empty() {
-            return Err(DomainError::invalid("name", "o nome não pode ser vazio"));
+            return Err(DomainError::invalid("name", "the name cannot be empty"));
         }
         let consent = consent.ok_or_else(|| DomainError::ConsentRequired(name.to_string()))?;
         if consent.granted_by.trim().is_empty() {
