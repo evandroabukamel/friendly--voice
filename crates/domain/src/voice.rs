@@ -82,7 +82,7 @@ impl EnrollmentPolicy {
         let total: f32 = samples.iter().map(|s| s.duration_secs).sum();
         if samples.len() < self.min_samples || total < self.min_total_secs {
             return Err(DomainError::InsufficientMaterial(format!(
-                "{} amostra(s), {total:.1}s no total; são necessárias ao menos {} amostra(s) e {:.0}s",
+                "{} sample(s), {total:.1}s in total; at least {} sample(s) and {:.0}s are required",
                 samples.len(),
                 self.min_samples,
                 self.min_total_secs

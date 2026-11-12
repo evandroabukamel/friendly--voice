@@ -37,7 +37,7 @@ impl RegisterSpeaker {
     pub fn execute(&self, input: RegisterSpeakerInput) -> AppResult<Speaker> {
         let consent = input.consent_granted_by.map(|by| Consent {
             statement: format!(
-                "{by} autorizou o uso da voz de {} para mensagens pessoais e privadas.",
+                "{by} authorized the use of {}'s voice for personal, private messages.",
                 input.name.trim()
             ),
             granted_by: by,

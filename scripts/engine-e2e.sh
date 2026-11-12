@@ -37,11 +37,11 @@ PY
 
 id=$("$FV" person add --name "Vó" --consent-by "Vó" | sed -n 's/.*id: \(.*\))/\1/p')
 for f in a1 a2 a3; do "$FV" sample add --person "$id" --audio "$WORK/$f.wav" >/dev/null; done
-"$FV" voice generate --person "$id" | grep -q "servidor neural (HTTP)"
+"$FV" voice generate --person "$id" | grep -q "neural server (HTTP)"
 "$FV" speak --person "$id" --theme good-morning --tone warm
 "$FV" speak --person "$id" --text "Respira fundo. Vai dar tudo certo." --tone calm --pitch-shift -1
 
-for wav in "$FRIENDLY_VOICE_DATA"/saida/*.wav; do
+for wav in "$FRIENDLY_VOICE_DATA"/outbox/*.wav; do
   python3 -c "import sys, wave; w = wave.open(sys.argv[1]); d = w.getnframes() / w.getframerate(); assert d > 1.0, d; print(f'{sys.argv[1]}: {d:.1f}s')" "$wav"
 done
 echo "engine end-to-end: OK"

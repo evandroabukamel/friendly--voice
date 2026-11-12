@@ -23,7 +23,8 @@ impl MessageCategory {
         Self::Celebration,
         Self::GoodMorning,
     ];
-    pub fn slug(self) -> &'static str {
+    /// Portuguese alias, also accepted on input (e.g. `--theme bom-dia`).
+    pub fn pt_slug(self) -> &'static str {
         match self {
             Self::Motivation => "motivacao",
             Self::Confidence => "confianca",
@@ -33,8 +34,8 @@ impl MessageCategory {
             Self::GoodMorning => "bom-dia",
         }
     }
-    /// English alias accepted on input (e.g. `--theme good-morning`).
-    pub fn english_slug(self) -> &'static str {
+    /// Canonical (English) name, used on input and output (e.g. `--theme good-morning`).
+    pub fn slug(self) -> &'static str {
         match self {
             Self::Motivation => "motivation",
             Self::Confidence => "confidence",
@@ -58,12 +59,12 @@ impl FromStr for MessageCategory {
         let s = s.trim().to_lowercase();
         Self::ALL
             .into_iter()
-            .find(|c| c.slug() == s || c.english_slug() == s)
+            .find(|c| c.slug() == s || c.pt_slug() == s)
             .ok_or_else(|| {
                 DomainError::invalid(
                     "category",
                     format!(
-                        "'{s}' desconhecida; use: {}",
+                        "unknown theme '{s}'; use: {}",
                         Self::ALL.map(|c| c.slug()).join(", ")
                     ),
                 )
@@ -84,12 +85,12 @@ impl MotivationalMessage {
     pub fn new(text: &str, category: Option<MessageCategory>) -> Result<Self, DomainError> {
         let text = text.trim();
         if text.is_empty() {
-            return Err(DomainError::invalid("text", "mensagem vazia"));
+            return Err(DomainError::invalid("text", "empty message"));
         }
         if text.chars().count() > MAX_MESSAGE_CHARS {
             return Err(DomainError::invalid(
                 "text",
-                format!("máximo de {MAX_MESSAGE_CHARS} caracteres"),
+                format!("at most {MAX_MESSAGE_CHARS} characters"),
             ));
         }
         Ok(Self {

@@ -164,7 +164,7 @@ impl JunctureRule {
 /// A person's accent profile.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct AccentProfile {
-    /// Friendly label (e.g. "Carioca (RJ)" or "Personalizado").
+    /// Friendly label (e.g. "Carioca (RJ)" or "Custom").
     pub label: String,
     /// Word-internal rules, in application order.
     pub segment_rules: Vec<PronunciationRule>,
@@ -176,7 +176,7 @@ impl AccentProfile {
     /// Profile without any rule: citation pronunciation.
     pub fn neutral() -> Self {
         Self {
-            label: "Neutro (sem amostras com fonemas)".into(),
+            label: "Neutral (no samples with phonemes)".into(),
             ..Self::default()
         }
     }

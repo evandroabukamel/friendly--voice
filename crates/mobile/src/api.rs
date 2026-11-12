@@ -49,9 +49,9 @@ fn to_value<T: Serialize>(v: &T) -> ApiResult {
 fn container() -> Result<Container, String> {
     let cfg = CONFIG
         .lock()
-        .map_err(|_| "estado interno inválido".to_string())?
+        .map_err(|_| "invalid internal state".to_string())?
         .clone()
-        .ok_or("chame configure() antes de usar o app")?;
+        .ok_or("call configure() before using the app")?;
     Container::new(&cfg.data_dir, cfg.engine_url.as_deref(), None)
 }
 
@@ -67,7 +67,7 @@ pub fn configure(data_dir: String, engine_url: Option<String>) -> String {
             engine_url: non_empty(engine_url),
         };
         let engine = Container::new(&cfg.data_dir, cfg.engine_url.as_deref(), None)?.engine_name;
-        *CONFIG.lock().map_err(|_| "estado interno inválido")? = Some(cfg);
+        *CONFIG.lock().map_err(|_| "invalid internal state")? = Some(cfg);
         Ok(json!({ "engine": engine }))
     })())
 }
@@ -235,12 +235,12 @@ pub fn speak(
 #[derive(Debug, Deserialize)]
 pub struct ScheduleRequest {
     pub speaker_id: String,
-    /// "diario" | "semanal" | "intervalo" | "uma-vez"
+    /// "daily" | "weekly" | "interval" | "once"
     pub kind: String,
-    /// "HH:MM" (daily/weekly) or "AAAA-MM-DD HH:MM" (once)
+    /// "HH:MM" (daily/weekly) or "YYYY-MM-DD HH:MM" (once)
     #[serde(default)]
     pub at: Option<String>,
-    /// "seg,qua,sex" (weekly)
+    /// "mon,wed,fri" (weekly)
     #[serde(default)]
     pub days: Option<String>,
     #[serde(default)]
@@ -261,34 +261,34 @@ pub struct ScheduleRequest {
 }
 
 fn recurrence(r: &ScheduleRequest) -> Result<Recurrence, String> {
-    let at = || r.at.as_deref().ok_or("informe o horário".to_string());
+    let at = || r.at.as_deref().ok_or("provide the time".to_string());
     Ok(match r.kind.as_str() {
-        "diario" => Recurrence::Daily {
+        "daily" | "diario" => Recurrence::Daily {
             at: parse::time(at()?)?,
         },
-        "semanal" => {
-            let days = r.days.as_deref().ok_or("informe os dias da semana")?;
+        "weekly" | "semanal" => {
+            let days = r.days.as_deref().ok_or("provide the weekdays")?;
             let (days, at) = parse::weekly(&format!("{days}@{}", at()?))?;
             Recurrence::Weekly { days, at }
         }
-        "intervalo" => Recurrence::Interval {
-            every_minutes: r.every_minutes.ok_or("informe o intervalo em minutos")?,
+        "interval" | "intervalo" => Recurrence::Interval {
+            every_minutes: r.every_minutes.ok_or("provide the interval in minutes")?,
             within: non_empty(r.within.clone())
                 .as_deref()
                 .map(parse::window)
                 .transpose()?,
         },
-        "uma-vez" => Recurrence::Once {
+        "once" | "uma-vez" => Recurrence::Once {
             at: parse::datetime(at()?)?,
         },
-        other => return Err(format!("tipo de agendamento desconhecido: {other}")),
+        other => return Err(format!("unknown schedule kind: {other}")),
     })
 }
 
 pub fn create_schedule(request_json: String) -> String {
     respond((|| {
         let r: ScheduleRequest =
-            serde_json::from_str(&request_json).map_err(|e| format!("pedido inválido: {e}"))?;
+            serde_json::from_str(&request_json).map_err(|e| format!("invalid request: {e}"))?;
         let s = container()?
             .create_schedule()
             .execute(CreateScheduleInput {
@@ -321,7 +321,7 @@ pub fn list_schedules() -> String {
             v["tone_label"] = json!(s
                 .tone
                 .map(|t| t.to_string())
-                .unwrap_or("sugerido pelo tema".into()));
+                .unwrap_or("suggested by the theme".into()));
             out.push(v);
         }
         Ok(Value::Array(out))
@@ -447,7 +447,7 @@ mod tests {
             -1.0,
             Some("Evandro".into()),
         ));
-        assert_eq!(spoken["tone"], "sussurrado (-1 st)");
+        assert_eq!(spoken["tone"], "whisper (-1 st)");
         assert!(std::path::Path::new(spoken["audio_path"].as_str().unwrap()).exists());
         let default_tone = data(&speak(
             id.clone(),
@@ -457,12 +457,12 @@ mod tests {
             0.0,
             None,
         ));
-        assert_eq!(default_tone["tone"], "calmo");
+        assert_eq!(default_tone["tone"], "calm");
 
-        let req = json!({ "speaker_id": id, "kind": "semanal", "days": "seg,sex", "at": "07:30", "category": "bom-dia", "tone": "carinhoso" });
+        let req = json!({ "speaker_id": id, "kind": "weekly", "days": "mon,fri", "at": "07:30", "category": "good-morning", "tone": "warm" });
         let s = data(&create_schedule(req.to_string()));
         assert_eq!(s["tone"]["style"], "Warm");
-        assert_eq!(data(&list_schedules())[0]["tone_label"], "carinhoso");
+        assert_eq!(data(&list_schedules())[0]["tone_label"], "warm");
         data(&remove_schedule(s["id"].as_str().unwrap().into()));
         data(&run_due_schedules(None));
 

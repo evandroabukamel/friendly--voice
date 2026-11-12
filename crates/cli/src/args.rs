@@ -2,19 +2,19 @@
 //!
 //! Commands and options are in English. The former Portuguese names are kept
 //! as hidden aliases (e.g. `pessoa adicionar --nome`), so existing scripts and
-//! cron jobs keep working. Help texts are user-facing and stay in Portuguese.
+//! cron jobs keep working.
 use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(
-    about = "Friendly Voice — mensagens positivas com a voz de quem você ama.",
+    about = "Friendly Voice — positive messages in the voice of someone you love.",
     name = "friendly-voice",
     version
 )]
 pub struct Cli {
     #[arg(
-        help = "Pasta onde ficam os dados (pessoas, amostras, vozes, agenda, saída).",
+        help = "Folder for the data (people, samples, voices, schedules, output).",
         long = "data-dir",
         alias = "dados",
         env = "FRIENDLY_VOICE_DATA",
@@ -23,7 +23,7 @@ pub struct Cli {
     )]
     pub data_dir: PathBuf,
     #[arg(
-        help = "URL do servidor de voz neural (requer build com `--features http-engine`).",
+        help = "URL of the neural voice server (requires building with `--features http-engine`).",
         long = "engine-url",
         alias = "motor-url",
         env = "FRIENDLY_VOICE_ENGINE_URL",
@@ -31,14 +31,14 @@ pub struct Cli {
     )]
     pub engine_url: Option<String>,
     #[arg(
-        help = "Comando para tocar o áudio gerado (ex.: \"aplay\", \"afplay\", \"ffplay -nodisp -autoexit\").",
+        help = "Command to play the generated audio (e.g. \"aplay\", \"afplay\", \"ffplay -nodisp -autoexit\").",
         long = "player",
         env = "FRIENDLY_VOICE_PLAYER",
         global = true
     )]
     pub player: Option<String>,
     #[arg(
-        help = "Seu nome, para personalizar as mensagens.",
+        help = "Your name, to personalize the messages.",
         long = "my-name",
         alias = "meu-nome",
         env = "FRIENDLY_VOICE_ME",
@@ -51,17 +51,17 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    #[command(about = "Pessoas cuja voz será usada.", alias = "pessoa")]
+    #[command(about = "People whose voice is used.", alias = "pessoa")]
     #[command(subcommand)]
     Person(PersonCmd),
-    #[command(about = "Amostras de áudio da pessoa.", alias = "amostra")]
+    #[command(about = "Audio samples of the person.", alias = "amostra")]
     #[command(subcommand)]
     Sample(SampleCmd),
-    #[command(about = "Geração da voz (timbre + sotaque + prosódia).", alias = "voz")]
+    #[command(about = "Voice generation (timbre + accent + prosody).", alias = "voz")]
     #[command(subcommand)]
     Voice(VoiceCmd),
     #[command(
-        about = "Mostra como um texto será pronunciado com o sotaque da pessoa.",
+        about = "Shows how a text will be pronounced with the person's accent.",
         alias = "pronuncia"
     )]
     Pronounce {
@@ -71,40 +71,40 @@ pub enum Command {
         intensity: f32,
         text: String,
     },
-    #[command(about = "Pede uma mensagem agora.", alias = "falar")]
+    #[command(about = "Asks for a message right now.", alias = "falar")]
     Speak(SpeakArgs),
-    #[command(about = "Mensagens agendadas.", alias = "agenda")]
+    #[command(about = "Scheduled messages.", alias = "agenda")]
     #[command(subcommand)]
     Schedule(ScheduleCmd),
-    #[command(about = "Lista os temas de mensagens disponíveis.", alias = "temas")]
+    #[command(about = "Lists the available message themes.", alias = "temas")]
     Themes,
-    #[command(about = "Lista os tons de voz disponíveis.", alias = "tons")]
+    #[command(about = "Lists the available tones of voice.", alias = "tons")]
     Tones,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum PersonCmd {
-    #[command(about = "Cadastra a pessoa da voz.", alias = "adicionar")]
+    #[command(about = "Registers the person of the voice.", alias = "adicionar")]
     Add {
         #[arg(long = "name", alias = "nome")]
         name: String,
         #[arg(long = "relationship", alias = "relacao")]
         relationship: Option<String>,
         #[arg(
-            help = "Nome de quem autorizou o uso da voz (obrigatório).",
+            help = "Name of who authorized the use of the voice (required).",
             long = "consent-by",
             alias = "consentimento-de"
         )]
         consent_by: Option<String>,
     },
-    #[command(about = "Lista as pessoas cadastradas.", alias = "listar")]
+    #[command(about = "Lists the registered people.", alias = "listar")]
     List,
 }
 
 #[derive(Debug, Subcommand)]
 pub enum SampleCmd {
     #[command(
-        about = "Adiciona um áudio .wav ou .flac. Se existirem `<arquivo>.txt` (transcrição) ou `<arquivo>.ipa` (fonemas ouvidos) ao lado, eles são usados.",
+        about = "Adds a .wav or .flac recording. If `<file>.txt` (transcript) or `<file>.ipa` (heard phonemes) exist next to it, they are used.",
         alias = "adicionar"
     )]
     Add {
@@ -112,16 +112,20 @@ pub enum SampleCmd {
         speaker: String,
         #[arg(long = "audio")]
         audio: PathBuf,
-        #[arg(help = "O que é dito no áudio.", long = "transcript", alias = "texto")]
+        #[arg(
+            help = "What is said in the recording.",
+            long = "transcript",
+            alias = "texto"
+        )]
         transcript: Option<String>,
         #[arg(
-            help = "Transcrição fonética (IPA) do que foi ouvido, ex.: \"lejtʃi kẽtʃi\".",
+            help = "Phonetic transcription (IPA) of what was heard, e.g. \"lejtʃi kẽtʃi\".",
             long = "phonemes",
             alias = "fonemas"
         )]
         observed_ipa: Option<String>,
     },
-    #[command(about = "Lista as amostras da pessoa.", alias = "listar")]
+    #[command(about = "Lists the person's samples.", alias = "listar")]
     List {
         #[arg(long = "person", alias = "pessoa")]
         speaker: String,
@@ -130,12 +134,15 @@ pub enum SampleCmd {
 
 #[derive(Debug, Subcommand)]
 pub enum VoiceCmd {
-    #[command(about = "Analisa as amostras e gera a voz.", alias = "gerar")]
+    #[command(
+        about = "Analyzes the samples and generates the voice.",
+        alias = "gerar"
+    )]
     Generate {
         #[arg(long = "person", alias = "pessoa")]
         speaker: String,
     },
-    #[command(about = "Mostra o perfil de voz/sotaque gerado.", alias = "mostrar")]
+    #[command(about = "Shows the generated voice/accent profile.", alias = "mostrar")]
     Show {
         #[arg(long = "person", alias = "pessoa")]
         speaker: String,
@@ -145,28 +152,32 @@ pub enum VoiceCmd {
 #[derive(Debug, Args)]
 pub struct ContentArgs {
     #[arg(
-        help = "Tema (veja `themes`). Padrão: motivacao.",
+        help = "Theme (see `themes`). Default: motivation.",
         long = "theme",
         alias = "tema",
         conflicts_with = "text"
     )]
     pub category: Option<String>,
-    #[arg(help = "Texto fixo.", long = "text", alias = "texto")]
+    #[arg(
+        help = "Fixed text (in Portuguese, the language of the voice).",
+        long = "text",
+        alias = "texto"
+    )]
     pub text: Option<String>,
 }
 
 /// Tone of voice of the message. Without `--tone`, the initial tone suggested
-/// by the theme is used (e.g. calma → calmo, celebracao → animado; free text → natural).
+/// by the theme is used (e.g. calm → calm, celebration → cheerful; free text → natural).
 #[derive(Debug, Args)]
 pub struct ToneArgs {
     #[arg(
-        help = "natural, carinhoso, animado, calmo, firme ou sussurrado (veja `tones`).",
+        help = "natural, warm, cheerful, calm, firm or whisper (see `tones`).",
         long = "tone",
         alias = "tom"
     )]
     pub style: Option<String>,
     #[arg(
-        help = "Deixa a voz mais aguda (+) ou mais grave (-), em semitons (-6 a +6).",
+        help = "Makes the voice higher (+) or lower (-), in semitones (-6 to +6).",
         long = "pitch-shift",
         alias = "ajuste-tom",
         allow_hyphen_values = true
@@ -183,7 +194,7 @@ pub struct SpeakArgs {
     #[command(flatten)]
     pub tone: ToneArgs,
     #[arg(
-        help = "0.0 (sem sotaque) a 1.0 (sotaque completo).",
+        help = "0.0 (no accent) to 1.0 (full accent).",
         long = "intensity",
         alias = "intensidade",
         default_value_t = 1.0
@@ -193,22 +204,22 @@ pub struct SpeakArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum ScheduleCmd {
-    #[command(about = "Cria um agendamento.", alias = "criar")]
+    #[command(about = "Creates a schedule.", alias = "criar")]
     Create(Box<CreateScheduleArgs>),
-    #[command(about = "Lista os agendamentos.", alias = "listar")]
+    #[command(about = "Lists the schedules.", alias = "listar")]
     List,
-    #[command(about = "Remove um agendamento.", alias = "remover")]
+    #[command(about = "Removes a schedule.", alias = "remover")]
     Remove { id: String },
-    #[command(about = "Dispara os agendamentos vencidos.", alias = "executar")]
+    #[command(about = "Fires the schedules that are due.", alias = "executar")]
     Run {
         #[arg(
-            help = "Fica rodando e verificando periodicamente.",
+            help = "Keeps running and checking periodically.",
             long = "watch",
             alias = "continuo"
         )]
         watch: bool,
         #[arg(
-            help = "Intervalo de verificação em segundos (modo contínuo).",
+            help = "Check interval in seconds (with --watch).",
             long = "interval",
             alias = "intervalo",
             default_value_t = 30
@@ -224,34 +235,30 @@ pub enum ScheduleCmd {
 pub struct CreateScheduleArgs {
     #[arg(long = "person", alias = "pessoa")]
     pub speaker: String,
-    #[arg(
-        help = "Todo dia em um horário: 08:00",
-        long = "daily",
-        alias = "diario"
-    )]
+    #[arg(help = "Every day at a time: 08:00", long = "daily", alias = "diario")]
     pub daily: Option<String>,
     #[arg(
-        help = "Dias da semana e horário: seg,qua,sex@07:30 (ou mon,wed,fri@07:30)",
+        help = "Weekdays and time: mon,wed,fri@07:30",
         long = "weekly",
         alias = "semanal"
     )]
     pub weekly: Option<String>,
-    #[arg(help = "A cada N minutos.", long = "every", alias = "a-cada")]
+    #[arg(help = "Every N minutes.", long = "every", alias = "a-cada")]
     pub every: Option<u32>,
     #[arg(
-        help = "Janela para `--every`: 08:00-20:00",
+        help = "Time window for `--every`: 08:00-20:00",
         long = "between",
         alias = "entre",
         requires = "every"
     )]
     pub within: Option<String>,
-    #[arg(
-        help = "Uma única vez: \"2026-11-20 09:00\"",
-        long = "at",
-        alias = "em"
-    )]
+    #[arg(help = "Only once: \"2026-11-20 09:00\"", long = "at", alias = "em")]
     pub once: Option<String>,
-    #[arg(help = "Não perturbe: 22:00-07:00", long = "quiet", alias = "silencio")]
+    #[arg(
+        help = "Do not disturb: 22:00-07:00",
+        long = "quiet",
+        alias = "silencio"
+    )]
     pub quiet: Option<String>,
     #[command(flatten)]
     pub content: ContentArgs,

@@ -4,13 +4,13 @@ use friendly_voice_domain::schedule::TimeWindow;
 
 pub fn time(s: &str) -> Result<NaiveTime, String> {
     NaiveTime::parse_from_str(s.trim(), "%H:%M")
-        .map_err(|_| format!("horário inválido '{s}' (use HH:MM)"))
+        .map_err(|_| format!("invalid time '{s}' (use HH:MM)"))
 }
 
 pub fn window(s: &str) -> Result<TimeWindow, String> {
     let (a, b) = s
         .split_once('-')
-        .ok_or_else(|| format!("janela inválida '{s}' (use HH:MM-HH:MM)"))?;
+        .ok_or_else(|| format!("invalid time window '{s}' (use HH:MM-HH:MM)"))?;
     TimeWindow::new(time(a)?, time(b)?).map_err(|e| e.to_string())
 }
 
@@ -25,7 +25,7 @@ pub fn weekday(s: &str) -> Result<Weekday, String> {
         "dom" | "domingo" | "sun" | "sunday" => Weekday::Sun,
         other => {
             return Err(format!(
-                "dia inválido '{other}' (use seg, ter, qua, qui, sex, sab, dom ou mon..sun)"
+                "invalid weekday '{other}' (use mon, tue, wed, thu, fri, sat, sun)"
             ))
         }
     };
@@ -36,7 +36,7 @@ pub fn weekday(s: &str) -> Result<Weekday, String> {
 pub fn weekly(s: &str) -> Result<(Vec<Weekday>, NaiveTime), String> {
     let (days, at) = s
         .split_once('@')
-        .ok_or_else(|| format!("use dias@HH:MM, ex.: seg,qua@07:30 (recebi '{s}')"))?;
+        .ok_or_else(|| format!("use days@HH:MM, e.g. mon,wed@07:30 (got '{s}')"))?;
     let days = days
         .split(',')
         .map(weekday)
@@ -46,18 +46,18 @@ pub fn weekly(s: &str) -> Result<(Vec<Weekday>, NaiveTime), String> {
 
 pub fn datetime(s: &str) -> Result<NaiveDateTime, String> {
     NaiveDateTime::parse_from_str(s.trim(), "%Y-%m-%d %H:%M")
-        .map_err(|_| format!("data inválida '{s}' (use AAAA-MM-DD HH:MM)"))
+        .map_err(|_| format!("invalid date '{s}' (use YYYY-MM-DD HH:MM)"))
 }
 
-pub fn weekday_pt(d: Weekday) -> &'static str {
+pub fn weekday_short(d: Weekday) -> &'static str {
     match d {
-        Weekday::Mon => "seg",
-        Weekday::Tue => "ter",
-        Weekday::Wed => "qua",
-        Weekday::Thu => "qui",
-        Weekday::Fri => "sex",
-        Weekday::Sat => "sáb",
-        Weekday::Sun => "dom",
+        Weekday::Mon => "mon",
+        Weekday::Tue => "tue",
+        Weekday::Wed => "wed",
+        Weekday::Thu => "thu",
+        Weekday::Fri => "fri",
+        Weekday::Sat => "sat",
+        Weekday::Sun => "sun",
     }
 }
 

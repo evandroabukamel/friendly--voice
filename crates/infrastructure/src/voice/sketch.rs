@@ -25,7 +25,7 @@ pub struct LocalVoiceBank;
 impl VoiceCloningEngine for LocalVoiceBank {
     fn enroll(&self, speaker: &Speaker, references: &[ReferenceAudio]) -> PortResult<String> {
         if references.is_empty() {
-            return Err(PortError::new("nenhuma referência de áudio"));
+            return Err(PortError::new("no reference audio"));
         }
         Ok(format!("local:{}:{}", speaker.id, references.len()))
     }

@@ -9,8 +9,9 @@ choose.
 
 Prioritization: **MoSCoW** · Estimation: **story points (Fibonacci)** · Stories
 in the *As a… I want… so that…* format, with acceptance criteria in Gherkin.
-Product texts quoted in the criteria (commands, messages, themes, tones) are in
-Portuguese, because that is the product's language.
+Spoken messages are in Brazilian Portuguese (the voice and accent model are
+pt-BR); the interface is in English. Some criteria written before Sprint 6
+quote the former Portuguese interface texts.
 
 ---
 
@@ -149,6 +150,21 @@ Scenario: English commands and values
 Scenario: backwards compatibility
   When I run the former "pessoa adicionar --nome Vó --consentimento-de Vó"
   Then it still works
+```
+
+### US-26 · Interface output in English — *Should* · 3 pts · ✅ Sprint 6
+> As a user, I want the help, messages, errors and reports of the CLI and the
+> Android app in English, while the spoken messages stay in Portuguese.
+
+```gherkin
+Scenario: English output
+  When I run "person add --name Grandma"
+  Then I get "the consent of 'Grandma' must be recorded before cloning the voice"
+
+Scenario: English names for themes and tones
+  When I ask for a message of the theme "calm"
+  Then the output shows "tone: calm"
+  And the Portuguese names ("calma", "calmo") are still accepted on input
 ```
 
 ## Epic E3 — Messages

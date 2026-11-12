@@ -29,7 +29,7 @@ Response: `{ "voice_id": "3eb6a366...", "reference_count": 3, "reference_seconds
   "ipa_words": ["bõ", "dʒia", "evãdɾu"],
   "ssml": "<speak ...><prosody rate=\"95%\" pitch=\"210Hz\"><phoneme alphabet=\"ipa\" ph=\"bõ\">bom</phoneme> ...",
   "pitch_hz": 210.0, "syllables_per_second": 5.2,
-  "style": "carinhoso", "pitch_shift_semitones": -0.5, "volume_db": -2.0 }
+  "style": "warm", "pitch_shift_semitones": -0.5, "volume_db": -2.0 }
 ```
 Response: `audio/wav` bytes.
 
@@ -39,7 +39,7 @@ Response: `audio/wav` bytes.
   phonemes rather than re-reading `text`. `ipa_words` and `ssml` carry the same
   pronunciation for engines that only accept IPA strings or SSML.
 * `pitch_hz` and `syllables_per_second` already include the effect of the
-  chosen tone. `style` (natural, carinhoso, animado, calmo, firme, sussurrado)
+  chosen tone. `style` (natural, warm, cheerful, calm, firm, whisper)
   can be mapped to the model's emotion/style control when there is one;
   `pitch_shift_semitones` and `volume_db` are the tone's adjustments relative
   to the person's natural voice.

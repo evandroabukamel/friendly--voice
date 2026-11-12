@@ -11,7 +11,7 @@ One-week sprints. Every sprint delivers a **usable, tested increment**
 | 3 | Messages and schedules end to end in the CLI | US-05, US-06, US-07, US-08, US-09 | 14 |
 | 4 | Tone of voice per message and Android app with CI/CD | US-18, US-19, US-20 | 21 |
 | 5 | Real timbre cloning (OpenVoice) and English documentation | US-11, US-21 | 11 |
-| 6 | FLAC input; CLI commands in English | US-24, US-25 | 4 |
+| 6 | FLAC input; CLI commands and output in English | US-24, US-25, US-26 | 7 |
 
 Average velocity (sprints 1–5): **~14 pts/sprint**.
 
@@ -117,5 +117,11 @@ learned accent and the chosen tone; documentation and comments in English.
 * The Portuguese names are kept as hidden clap aliases, covered by an
   acceptance test, so existing scripts and cron jobs keep working.
 * Themes, tones and weekdays accept English values too (`good-morning`,
-  `warm`, `mon`). Help texts and messages stay in Portuguese.
+  `warm`, `mon`).
+* Then all output was translated (US-26): CLI help, messages and reports,
+  errors from every layer, accent labels and rule descriptions, schedule
+  descriptions, delivery notes and the Android screens. English names became
+  canonical for themes and tones (`warm`, `good-morning`); the Portuguese ones
+  remain accepted. The spoken message catalog stays in pt-BR, because the
+  voice and pronunciation model are Portuguese.
 * The default branch is now `main`.

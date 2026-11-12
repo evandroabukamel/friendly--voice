@@ -33,7 +33,7 @@ impl PreviewPronunciation {
         let profile = self
             .profiles
             .find(speaker)?
-            .ok_or_else(|| AppError::not_found("perfil de voz", speaker))?;
+            .ok_or_else(|| AppError::not_found("voice profile", speaker))?;
         let citation = self.phonemizer.phonemize(text);
         let accented = AccentRenderer.render(&profile.accent, &citation, intensity);
         Ok(PronunciationPreview {

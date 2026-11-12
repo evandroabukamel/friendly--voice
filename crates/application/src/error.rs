@@ -7,9 +7,9 @@ use crate::ports::PortError;
 pub enum AppError {
     #[error(transparent)]
     Domain(#[from] DomainError),
-    #[error("falha em dependência externa: {0}")]
+    #[error("external dependency failed: {0}")]
     Port(#[from] PortError),
-    #[error("{entity} '{id}' não encontrado(a)")]
+    #[error("{entity} '{id}' not found")]
     NotFound { entity: &'static str, id: String },
     #[error("{0}")]
     Precondition(String),

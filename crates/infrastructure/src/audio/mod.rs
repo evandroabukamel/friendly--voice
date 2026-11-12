@@ -22,7 +22,7 @@ impl AudioDecoder for AudioFileDecoder {
             Some(AudioFormat::Wav) => WavDecoder.decode(bytes),
             Some(AudioFormat::Flac) => FlacDecoder.decode(bytes),
             None => Err(PortError::new(format!(
-                "formato de áudio não suportado; use {}",
+                "unsupported audio format; use {}",
                 AudioFormat::SUPPORTED
             ))),
         }

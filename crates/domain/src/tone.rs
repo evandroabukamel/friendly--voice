@@ -54,7 +54,8 @@ impl ToneStyle {
         Self::Whisper,
     ];
 
-    pub fn slug(self) -> &'static str {
+    /// Portuguese alias, also accepted on input (e.g. `--tone carinhoso`).
+    pub fn pt_slug(self) -> &'static str {
         match self {
             Self::Natural => "natural",
             Self::Warm => "carinhoso",
@@ -65,8 +66,8 @@ impl ToneStyle {
         }
     }
 
-    /// English alias accepted on input (e.g. `--tone warm`).
-    pub fn english_slug(self) -> &'static str {
+    /// Canonical (English) name, used on input and output (e.g. `--tone warm`).
+    pub fn slug(self) -> &'static str {
         match self {
             Self::Natural => "natural",
             Self::Warm => "warm",
@@ -79,12 +80,12 @@ impl ToneStyle {
 
     pub fn description(self) -> &'static str {
         match self {
-            Self::Natural => "como a pessoa fala normalmente",
-            Self::Warm => "suave e acolhedor",
-            Self::Cheerful => "alegre, um pouco mais rápido e melódico",
-            Self::Calm => "lento, mais grave e estável",
-            Self::Firm => "seguro e enfático",
-            Self::Whisper => "baixinho, como quem conta um segredo",
+            Self::Natural => "the way the person normally speaks",
+            Self::Warm => "soft and caring",
+            Self::Cheerful => "happy, a bit faster and more melodic",
+            Self::Calm => "slow, lower and steady",
+            Self::Firm => "confident and emphatic",
+            Self::Whisper => "very quiet, like telling a secret",
         }
     }
 
@@ -132,12 +133,12 @@ impl FromStr for ToneStyle {
         let s = s.trim().to_lowercase();
         Self::ALL
             .into_iter()
-            .find(|t| t.slug() == s || t.english_slug() == s)
+            .find(|t| t.slug() == s || t.pt_slug() == s)
             .ok_or_else(|| {
                 DomainError::invalid(
                     "tone",
                     format!(
-                        "tom '{s}' desconhecido; use: {}",
+                        "unknown tone '{s}'; use: {}",
                         Self::ALL.map(|t| t.slug()).join(", ")
                     ),
                 )
@@ -165,7 +166,7 @@ impl VoiceTone {
         {
             return Err(DomainError::invalid(
                 "pitch_shift",
-                format!("o ajuste de tom deve ficar entre -{MAX_PITCH_SHIFT_SEMITONES} e +{MAX_PITCH_SHIFT_SEMITONES} semitons"),
+                format!("the pitch shift must be between -{MAX_PITCH_SHIFT_SEMITONES} and +{MAX_PITCH_SHIFT_SEMITONES} semitones"),
             ));
         }
         Ok(Self {

@@ -23,7 +23,7 @@ import org.json.JSONObject
 
 /**
  * Single screen: person → samples → voice → message (with tone) → schedule.
- * Every business rule lives in the Rust core; this is UI only (user-facing text in Portuguese).
+ * Every business rule lives in the Rust core; this is UI only.
  */
 class MainActivity : Activity() {
 
@@ -74,60 +74,60 @@ class MainActivity : Activity() {
         status = TextView(this).apply { setPadding(0, 0, 0, dp(8)) }
         root.addView(status)
 
-        section("Configurações")
-        val listener = edit("Seu nome (para personalizar as mensagens)", prefs.listener)
-        val engine = edit("URL do servidor de voz neural (opcional)", prefs.engineUrl, InputType.TYPE_TEXT_VARIATION_URI)
-        button("Salvar configurações") {
+        section("Settings")
+        val listener = edit("Your name (to personalize the messages)", prefs.listener)
+        val engine = edit("Neural voice server URL (optional)", prefs.engineUrl, InputType.TYPE_TEXT_VARIATION_URI)
+        button("Save settings") {
             prefs.listener = listener.text.toString()
             prefs.engineUrl = engine.text.toString()
             configureAndLoad()
         }
 
-        section("1. Pessoa da voz")
-        val name = edit("Nome (ex.: Vó Lúcia)")
-        val relationship = edit("Relação (ex.: avó)")
-        val consent = edit("Quem autorizou o uso da voz (obrigatório)")
-        button("Cadastrar pessoa") {
+        section("1. Person of the voice")
+        val name = edit("Name (e.g. Grandma Lucia)")
+        val relationship = edit("Relationship (e.g. grandmother)")
+        val consent = edit("Who authorized the use of the voice (required)")
+        button("Register person") {
             callNative({ NativeBridge.registerSpeaker(name.text.toString(), relationship.text.toString(), consent.text.toString()) }) {
-                show("Pessoa cadastrada: ${it.obj().getString("name")}")
+                show("Person registered: ${it.obj().getString("name")}")
                 loadSpeakers()
             }
         }
         speakerSpinner = Spinner(this)
-        root.addView(label("Pessoa selecionada"))
+        root.addView(label("Selected person"))
         root.addView(speakerSpinner)
 
-        section("2. Amostras de áudio")
-        button("Escolher arquivo .wav ou .flac") {
+        section("2. Audio samples")
+        button("Choose a .wav or .flac file") {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "audio/*"
             }
             startActivityForResult(intent, PICK_WAV)
         }
-        val transcript = edit("O que é dito no áudio")
-        val ipa = edit("Fonemas ouvidos em IPA (opcional, ex.: lejtʃi kẽtʃi)")
-        button("Adicionar amostra") {
-            val wav = pickedWav ?: return@button show("Escolha um arquivo .wav ou .flac primeiro.")
+        val transcript = edit("What is said in the recording (Portuguese)")
+        val ipa = edit("Heard phonemes in IPA (optional, e.g. lejtʃi kẽtʃi)")
+        button("Add sample") {
+            val wav = pickedWav ?: return@button show("Choose a .wav or .flac file first.")
             val id = selectedSpeaker() ?: return@button
             callNative({ NativeBridge.addSample(id, wav, transcript.text.toString(), ipa.text.toString()) }) {
                 val s = it.obj()
-                show("Amostra adicionada (%.1fs): /%s/".format(s.getDouble("duration_secs"), s.getString("citation_ipa")))
+                show("Sample added (%.1fs): /%s/".format(s.getDouble("duration_secs"), s.getString("citation_ipa")))
                 pickedWav = null
             }
         }
-        button("Gerar voz (timbre + sotaque)") {
+        button("Generate voice (timbre + accent)") {
             val id = selectedSpeaker() ?: return@button
             callNative({ NativeBridge.buildVoice(id) }) { show(describeVoice(it.obj())) }
         }
 
-        section("3. Mensagem")
+        section("3. Message")
         categorySpinner = Spinner(this)
-        root.addView(label("Tema"))
+        root.addView(label("Theme"))
         root.addView(categorySpinner)
-        val text = edit("Ou um texto seu (opcional)")
+        val text = edit("Or your own text, in Portuguese (optional)")
         toneSpinner = Spinner(this)
-        root.addView(label("Tom de voz"))
+        root.addView(label("Tone of voice"))
         root.addView(toneSpinner)
         toneHint = label("")
         root.addView(toneHint)
@@ -148,29 +148,29 @@ class MainActivity : Activity() {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) = updateToneHint()
             override fun onNothingSelected(p: AdapterView<*>?) {}
         }
-        button("Falar agora") {
+        button("Speak now") {
             val id = selectedSpeaker() ?: return@button
             callNative({
                 NativeBridge.speak(id, selectedCategory(), text.text.toString(), selectedTone(), pitchShift(), prefs.listener)
             }) {
                 val m = it.obj()
-                show("💬 ${m.getString("text")}\nTom: ${m.getString("tone")}\n/${m.getString("ipa")}/")
+                show("💬 ${m.getString("text")}\nTone: ${m.getString("tone")}\n/${m.getString("ipa")}/")
                 play(m.getString("audio_path"))
             }
         }
 
-        section("4. Agendar (usa o tema, texto e tom acima)")
-        val kinds = listOf("diario", "semanal", "intervalo", "uma-vez")
+        section("4. Schedule (uses the theme, text and tone above)")
+        val kinds = listOf("daily", "weekly", "interval", "once")
         val kind = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, kinds)
         }
         root.addView(kind)
-        val at = edit("Horário: HH:MM (ou AAAA-MM-DD HH:MM para uma vez)")
-        val days = edit("Dias (semanal): seg,qua,sex")
-        val every = edit("A cada quantos minutos (intervalo)", null, InputType.TYPE_CLASS_NUMBER)
-        val within = edit("Somente entre (intervalo): 09:00-18:00")
-        val quiet = edit("Não perturbe: 22:00-07:00")
-        button("Agendar") {
+        val at = edit("Time: HH:MM (or YYYY-MM-DD HH:MM for once)")
+        val days = edit("Days (weekly): mon,wed,fri")
+        val every = edit("Every how many minutes (interval)", null, InputType.TYPE_CLASS_NUMBER)
+        val within = edit("Only between (interval): 09:00-18:00")
+        val quiet = edit("Do not disturb: 22:00-07:00")
+        button("Schedule") {
             val id = selectedSpeaker() ?: return@button
             val request = JSONObject().apply {
                 put("speaker_id", id)
@@ -186,16 +186,16 @@ class MainActivity : Activity() {
                 put("pitch_shift", pitchShift().toDouble())
             }
             callNative({ NativeBridge.createSchedule(request.toString()) }) {
-                show("Agendado! Próxima: ${it.obj().optString("next_due", "—")}")
+                show("Scheduled! Next: ${it.obj().optString("next_due", "—")}")
                 loadSchedules()
             }
         }
         schedulesView = TextView(this).apply { setTextIsSelectable(true) }
         root.addView(schedulesView)
-        val removeId = edit("Id do agendamento para remover")
-        button("Remover agendamento") {
+        val removeId = edit("Id of the schedule to remove")
+        button("Remove schedule") {
             callNative({ NativeBridge.removeSchedule(removeId.text.toString().trim()) }) {
-                show("Removido.")
+                show("Removed.")
                 loadSchedules()
             }
         }
@@ -241,7 +241,7 @@ class MainActivity : Activity() {
 
     /** Native calls do I/O and DSP: they run off the UI thread. */
     private fun callNative(call: () -> String, onOk: (NativeResult) -> Unit) {
-        show("Processando…")
+        show("Processing…")
         Thread {
             val result = try {
                 NativeResult(call())
@@ -254,7 +254,7 @@ class MainActivity : Activity() {
 
     private fun configureAndLoad() {
         callNative({ NativeBridge.configure(filesDir.absolutePath, prefs.engineUrl) }) {
-            show("Motor de voz: ${it.obj().getString("engine")}")
+            show("Voice engine: ${it.obj().getString("engine")}")
             loadCatalog()
             loadSpeakers()
             loadSchedules()
@@ -271,7 +271,7 @@ class MainActivity : Activity() {
         val tones = c.getJSONArray("tones")
         val toneObjs = (0 until tones.length()).map { tones.getJSONObject(it) }
         toneSlugs = listOf<String?>(null) + toneObjs.map { it.getString("slug") }
-        val toneLabels = listOf("Sugerido pelo tema") + toneObjs.map { "${it.getString("slug")} — ${it.getString("description")}" }
+        val toneLabels = listOf("Suggested by the theme") + toneObjs.map { "${it.getString("slug")} — ${it.getString("description")}" }
         categorySpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, categories)
         toneSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, toneLabels)
         updateToneHint()
@@ -283,7 +283,7 @@ class MainActivity : Activity() {
             val items = (0 until arr.length()).map { i -> arr.getJSONObject(i) }
             speakerIds = items.map { s -> s.getString("id") }
             val labels = items.map { s ->
-                val voice = if (s.optBoolean("voice_ready")) "voz pronta · ${s.optString("accent")}" else "voz não gerada"
+                val voice = if (s.optBoolean("voice_ready")) "voice ready · ${s.optString("accent")}" else "voice not generated"
                 "${s.getString("name")} ($voice)"
             }
             speakerSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
@@ -294,11 +294,11 @@ class MainActivity : Activity() {
         callNative({ NativeBridge.listSchedules() }) {
             val arr = it.arr()
             schedulesView.text = if (arr.length() == 0) {
-                "Nenhum agendamento."
+                "No schedules."
             } else {
                 (0 until arr.length()).joinToString("\n") { i ->
                     val s = arr.getJSONObject(i)
-                    "• ${s.getString("id")} — tom: ${s.optString("tone_label")} — próxima: ${s.optString("next_due", "—")}"
+                    "• ${s.getString("id")} — tone: ${s.optString("tone_label")} — next: ${s.optString("next_due", "—")}"
                 }
             }
         }
@@ -307,7 +307,7 @@ class MainActivity : Activity() {
     private fun selectedSpeaker(): String? {
         val pos = speakerSpinner.selectedItemPosition
         if (pos < 0 || pos >= speakerIds.size) {
-            show("Cadastre e selecione uma pessoa primeiro.")
+            show("Register and select a person first.")
             return null
         }
         return speakerIds[pos]
@@ -322,19 +322,19 @@ class MainActivity : Activity() {
     private fun updatePitchLabel() {
         val v = pitchBar.progress - maxShift
         pitchLabel.text = when {
-            v > 0 -> "Ajuste de tom: +$v semitons (mais aguda)"
-            v < 0 -> "Ajuste de tom: $v semitons (mais grave)"
-            else -> "Ajuste de tom: 0 (altura natural da pessoa)"
+            v > 0 -> "Pitch shift: +$v semitones (higher)"
+            v < 0 -> "Pitch shift: $v semitones (lower)"
+            else -> "Pitch shift: 0 (the person's natural pitch)"
         }
     }
 
     private fun updateToneHint() {
         val suggested = selectedCategory()?.let { defaultTones[it] } ?: "natural"
-        toneHint.text = "Tom inicial sugerido para este tema: $suggested"
+        toneHint.text = "Initial tone suggested for this theme: $suggested"
     }
 
     private fun describeVoice(v: JSONObject): String {
-        val sb = StringBuilder("Voz gerada! Sotaque: ${v.getString("accent")}\n")
+        val sb = StringBuilder("Voice generated! Accent: ${v.getString("accent")}\n")
         val ev = v.getJSONArray("evidence")
         for (i in 0 until ev.length()) {
             val e = ev.getJSONObject(i)
@@ -359,7 +359,7 @@ class MainActivity : Activity() {
         val uri: Uri = data?.data ?: return
         if (requestCode == PICK_WAV && resultCode == RESULT_OK) {
             pickedWav = contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            show("Arquivo escolhido (${(pickedWav?.size ?: 0) / 1024} KB). Preencha o texto e adicione.")
+            show("File chosen (${(pickedWav?.size ?: 0) / 1024} KB). Fill in the text and add it.")
         }
     }
 

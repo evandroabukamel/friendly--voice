@@ -93,7 +93,7 @@ fn full_flow_learns_accent_and_speaks() {
 
     // US-01: consent is mandatory
     let (ok, out) = env.run(&["person", "add", "--name", "Vó"]);
-    assert!(!ok && out.contains("consentimento"), "{out}");
+    assert!(!ok && out.contains("consent"), "{out}");
     let id = speaker_id(&env.ok(&["person", "add", "--name", "Vó", "--consent-by", "Vó"]));
 
     // US-02: samples with transcript and phonemes (files next to the .wav)
@@ -127,8 +127,8 @@ fn full_flow_learns_accent_and_speaks() {
     // US-03/US-04: voice with the learned accent
     let out = env.ok(&["voice", "generate", "--person", &id]);
     assert!(out.contains("Carioca"), "{out}");
-    assert!(out.contains("✔    término"), "{out}");
-    assert!(out.contains("✔    pronúncia"), "{out}");
+    assert!(out.contains("✔    ending"), "{out}");
+    assert!(out.contains("✔    letters"), "{out}");
 
     // US-06: pronunciation of new text with the accent
     let out = env.ok(&["pronounce", "--person", &id, "Bom dia, você é forte!"]);
@@ -142,20 +142,20 @@ fn full_flow_learns_accent_and_speaks() {
         "--person",
         &id,
         "--theme",
-        "celebracao",
+        "celebration",
     ]);
     assert!(out.contains("Evandro"), "{out}");
-    let saida = env.dir.join("data/saida");
-    assert!(std::fs::read_dir(&saida).unwrap().any(|e| e
+    let outbox = env.dir.join("data/outbox");
+    assert!(std::fs::read_dir(&outbox).unwrap().any(|e| e
         .unwrap()
         .path()
         .extension()
         .is_some_and(|x| x == "wav")));
 
     // US-18: the user picks the tone of voice of each message
-    let out = env.ok(&["speak", "--person", &id, "--theme", "calma"]);
+    let out = env.ok(&["speak", "--person", &id, "--theme", "calm"]);
     assert!(
-        out.contains("tom: calmo"),
+        out.contains("tone: calm"),
         "initial tone suggested by the theme:\n{out}"
     );
     let out = env.ok(&[
@@ -163,28 +163,21 @@ fn full_flow_learns_accent_and_speaks() {
         "--person",
         &id,
         "--theme",
-        "calma",
+        "calm",
         "--tone",
-        "animado",
+        "cheerful",
         "--pitch-shift",
         "-2",
     ]);
-    assert!(out.contains("tom: animado (-2 st)"), "{out}");
+    assert!(out.contains("tone: cheerful (-2 st)"), "{out}");
     let (ok, out) = env.run(&["speak", "--person", &id, "--tone", "bravo"]);
-    assert!(!ok && out.contains("tom 'bravo' desconhecido"), "{out}");
+    assert!(!ok && out.contains("unknown tone 'bravo'"), "{out}");
     let (ok, out) = env.run(&["speak", "--person", &id, "--pitch-shift", "9"]);
-    assert!(!ok && out.contains("semitons"), "{out}");
+    assert!(!ok && out.contains("semitones"), "{out}");
     let out = env.ok(&[
-        "schedule",
-        "create",
-        "--person",
-        &id,
-        "--daily",
-        "21:00",
-        "--tone",
-        "sussurrado",
+        "schedule", "create", "--person", &id, "--daily", "21:00", "--tone", "whisper",
     ]);
-    assert!(out.contains("tom: sussurrado"), "{out}");
+    assert!(out.contains("tone: whisper"), "{out}");
 
     // US-07/US-08: scheduling
     let out = env.ok(&[
@@ -197,7 +190,7 @@ fn full_flow_learns_accent_and_speaks() {
         "--quiet",
         "22:00-07:00",
     ]);
-    assert!(out.contains("todo dia às 08:00"), "{out}");
+    assert!(out.contains("every day at 08:00"), "{out}");
     let (ok, out) = env.run(&[
         "schedule",
         "create",
@@ -206,7 +199,7 @@ fn full_flow_learns_accent_and_speaks() {
         "--weekly",
         "xyz@08:00",
     ]);
-    assert!(!ok && out.contains("dia inválido"), "{out}");
+    assert!(!ok && out.contains("invalid weekday"), "{out}");
     env.ok(&["schedule", "run"]);
 }
 
@@ -250,8 +243,8 @@ fn accepts_flac_samples() {
         std::fs::write(path.with_extension("txt"), "Leite quente de noite.").unwrap();
         std::fs::write(path.with_extension("ipa"), "lejtʃi kẽtʃi dʒi nojtʃi").unwrap();
         let out = env.ok(&["sample", "add", "--person", &id, "--audio", p(&path)]);
-        assert!(out.contains("adicionada (6.0s)"), "{out}");
-        assert!(out.contains("Ouvido:   /lejtʃikẽtʃidʒinojtʃi/"), "{out}");
+        assert!(out.contains("added (6.0s)"), "{out}");
+        assert!(out.contains("Heard:     /lejtʃikẽtʃidʒinojtʃi/"), "{out}");
     }
     // The original FLAC is kept, with the right extension.
     let audio_dir = env.dir.join("data/audio").join(&id);
@@ -280,7 +273,7 @@ fn accepts_flac_samples() {
         "--transcript",
         "oi",
     ]);
-    assert!(!ok && out.contains("WAV (PCM/float) ou FLAC"), "{out}");
+    assert!(!ok && out.contains("WAV (PCM/float) or FLAC"), "{out}");
 }
 
 /// The former Portuguese command and option names still work (hidden aliases),
@@ -326,7 +319,7 @@ fn portuguese_aliases_still_work() {
         "--ajuste-tom",
         "-1",
     ]);
-    assert!(out.contains("tom: carinhoso (-1 st)"), "{out}");
+    assert!(out.contains("tone: warm (-1 st)"), "{out}");
     env.ok(&[
         "agenda",
         "criar",
@@ -372,7 +365,7 @@ fn english_values_are_accepted() {
         "--tone",
         "whisper",
     ]);
-    assert!(out.contains("tom: sussurrado"), "{out}");
+    assert!(out.contains("tone: whisper"), "{out}");
     let out = env.ok(&[
         "schedule",
         "create",
@@ -383,7 +376,7 @@ fn english_values_are_accepted() {
         "--theme",
         "calm",
     ]);
-    assert!(out.contains("seg,sex às 07:30"), "{out}");
+    assert!(out.contains("mon,fri at 07:30"), "{out}");
 }
 
 #[test]
@@ -392,7 +385,7 @@ fn rejects_invalid_audio() {
     let id = speaker_id(&env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]));
     let short = env.wav("curto", 0.5, 200.0, "oi", "oj");
     let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&short)]);
-    assert!(!ok && out.contains("muito curto"), "{out}");
+    assert!(!ok && out.contains("too short"), "{out}");
     let (ok, out) = env.run(&["voice", "generate", "--person", &id]);
-    assert!(!ok && out.contains("insuficiente"), "{out}");
+    assert!(!ok && out.contains("not enough"), "{out}");
 }

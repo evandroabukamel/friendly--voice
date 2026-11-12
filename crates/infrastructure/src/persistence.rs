@@ -52,7 +52,7 @@ impl<T: Serialize + DeserializeOwned + Clone> JsonRepository<T> {
         let _g = self
             .lock
             .lock()
-            .map_err(|_| PortError::new("lock envenenado"))?;
+            .map_err(|_| PortError::new("poisoned lock"))?;
         let mut all = self.read()?;
         match all.iter().position(&same) {
             Some(i) => all[i] = item.clone(),
@@ -65,7 +65,7 @@ impl<T: Serialize + DeserializeOwned + Clone> JsonRepository<T> {
         let _g = self
             .lock
             .lock()
-            .map_err(|_| PortError::new("lock envenenado"))?;
+            .map_err(|_| PortError::new("poisoned lock"))?;
         self.read()
     }
 }
@@ -115,7 +115,7 @@ impl ScheduleRepository for JsonRepository<Schedule> {
         let _g = self
             .lock
             .lock()
-            .map_err(|_| PortError::new("lock envenenado"))?;
+            .map_err(|_| PortError::new("poisoned lock"))?;
         let mut all = self.read()?;
         let before = all.len();
         all.retain(|s| &s.id != id);
@@ -141,7 +141,7 @@ impl FileAudioStore {
                 .all(|c| matches!(c, Component::Normal(_)))
             && !part.contains(['/', '\\']);
         ok.then_some(part)
-            .ok_or_else(|| PortError::new(format!("identificador inválido: {part}")))
+            .ok_or_else(|| PortError::new(format!("invalid identifier: {part}")))
     }
 }
 
@@ -165,7 +165,7 @@ impl AudioStore for FileAudioStore {
             .components()
             .any(|c| !matches!(c, Component::Normal(_)))
         {
-            return Err(PortError::new("localizador inválido"));
+            return Err(PortError::new("invalid locator"));
         }
         fs::read(self.root.join(locator)).map_err(PortError::new)
     }

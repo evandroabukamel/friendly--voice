@@ -8,7 +8,7 @@ pub enum AudioFormat {
 }
 
 impl AudioFormat {
-    pub const SUPPORTED: &'static str = "WAV (PCM/float) ou FLAC";
+    pub const SUPPORTED: &'static str = "WAV (PCM/float) or FLAC";
 
     /// Detects the format of an in-memory file.
     pub fn detect(bytes: &[u8]) -> Option<Self> {

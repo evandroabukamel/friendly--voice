@@ -3,15 +3,15 @@ use thiserror::Error;
 /// Business rule violations.
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum DomainError {
-    #[error("valor inválido para '{field}': {reason}")]
+    #[error("invalid value for '{field}': {reason}")]
     InvalidValue { field: &'static str, reason: String },
-    #[error("é obrigatório registrar o consentimento de '{0}' para clonar a voz")]
+    #[error("the consent of '{0}' must be recorded before cloning the voice")]
     ConsentRequired(String),
-    #[error("amostra de áudio rejeitada: {0}")]
+    #[error("audio sample rejected: {0}")]
     SampleRejected(String),
-    #[error("material de voz insuficiente: {0}")]
+    #[error("not enough voice material: {0}")]
     InsufficientMaterial(String),
-    #[error("agendamento inválido: {0}")]
+    #[error("invalid schedule: {0}")]
     InvalidSchedule(String),
 }
 

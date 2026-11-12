@@ -76,7 +76,7 @@ impl AddVoiceSample {
     pub fn execute(&self, input: AddVoiceSampleInput) -> AppResult<VoiceSample> {
         self.speakers
             .find(&input.speaker_id)?
-            .ok_or_else(|| AppError::not_found("pessoa", &input.speaker_id))?;
+            .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?;
 
         let clip = self.decoder.decode(&input.audio)?;
         self.policy.validate(&clip)?;
@@ -89,14 +89,14 @@ impl AddVoiceSample {
             (None, Some(tr)) => tr.transcribe(&clip)?,
             (None, None) => {
                 return Err(AppError::Precondition(
-                    "informe a transcrição do áudio (nenhum reconhecedor de fala configurado)"
+                    "provide the transcript of the audio (no speech recognizer is configured)"
                         .into(),
                 ))
             }
         };
         let canonical = self.phonemizer.phonemize(&transcript);
         if canonical.words.is_empty() {
-            return Err(AppError::Precondition("transcrição sem palavras".into()));
+            return Err(AppError::Precondition("the transcript has no words".into()));
         }
 
         let observed = match (
