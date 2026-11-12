@@ -1,0 +1,4 @@
+/target
+/.friendly-voice
+*.wav
+!tests/fixtures/*.wav
