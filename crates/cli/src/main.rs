@@ -1,6 +1,5 @@
 //! Interface de linha de comando (camada de apresentação).
 mod args;
-mod parse;
 
 use args::*;
 use clap::Parser;
@@ -8,7 +7,7 @@ use friendly_voice_application::{
     use_cases::{AddVoiceSampleInput, CreateScheduleInput, RegisterSpeakerInput, SpeakRequest},
     AppError,
 };
-use friendly_voice_bootstrap::Container;
+use friendly_voice_bootstrap::{parse, Container};
 use friendly_voice_domain::{
     accent::RulePhenomenon,
     ids::{ScheduleId, SpeakerId},

@@ -1,0 +1,24 @@
+[package]
+name = "friendly-voice-mobile"
+description = "Biblioteca nativa do app Android: ponte JNI sobre os casos de uso."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "friendly_voice_mobile"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+http-engine = ["friendly-voice-bootstrap/http-engine"]
+
+[dependencies]
+friendly-voice-domain.workspace = true
+friendly-voice-application.workspace = true
+friendly-voice-bootstrap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+jni.workspace = true
+
+[dev-dependencies]
+hound.workspace = true

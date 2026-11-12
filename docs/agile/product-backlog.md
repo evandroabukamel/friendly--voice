@@ -133,6 +133,31 @@ Cenário: valores inválidos
   Então recebo um erro explicando as opções válidas
 ```
 
+## Épico E5 — Android
+
+### US-19 · Build do app Android no CI/CD — *Must* · 8 pts · ✅ Sprint 4
+> Como mantenedor, quero que cada push gere o app Android (APK) a partir do
+> mesmo núcleo Rust e que cada tag publique uma release, para instalar e
+> distribuir o app sem passos manuais.
+
+```gherkin
+Cenário: build em todo push
+  Quando faço push em qualquer branch
+  Então o CI compila a biblioteca Rust para arm64-v8a, armeabi-v7a e x86_64
+  E gera o APK debug e release
+  E publica APKs, bibliotecas nativas e relatório de lint como artefatos
+
+Cenário: entrega contínua
+  Quando crio a tag "v1.2.0"
+  Então uma GitHub Release "v1.2.0" é publicada com os APKs (versionName 1.2.0)
+  E o APK é assinado se os secrets da keystore estiverem configurados
+```
+
+### US-20 · Usar o app no celular — *Should* · 8 pts · ✅ Sprint 4
+> Como usuário, quero cadastrar a pessoa, enviar áudios, gerar a voz, pedir
+> mensagens (escolhendo o tom) e agendar pelo celular, recebendo notificação
+> e áudio quando uma mensagem agendada chegar.
+
 ## Épico E4 — Agendamentos
 
 ### US-07 · Agendar mensagens com regras — *Must* · 5 pts · ✅ Sprint 3
@@ -163,7 +188,7 @@ Cenário: regra impossível
 | US-11 | Servidor de referência (Python) implementando `docs/engine-api.md` com XTTS + wav2vec2-phoneme | Should | 8 |
 | US-12 | Alinhamento forçado com timestamps para medir duração por fonema (ritmo silábico vs. acentual) | Could | 8 |
 | US-13 | Entonação por tipo de frase (pergunta, exclamação) aprendida das amostras | Could | 5 |
-| US-14 | App mobile/desktop com notificação push consumindo os casos de uso | Should | 13 |
+| US-14 | ~~App mobile com notificação consumindo os casos de uso~~ → entregue no Android (US-19) | — | — |
 | US-15 | Revogar consentimento apaga amostras e voz da pessoa | Must | 3 |
 | US-16 | Suporte a MP3/OGG/M4A na importação | Should | 3 |
 | US-17 | Evitar repetir a mesma mensagem em sequência (histórico) | Could | 2 |

@@ -6,6 +6,7 @@ members = [
     "crates/infrastructure",
     "crates/bootstrap",
     "crates/cli",
+    "crates/mobile",
 ]
 
 [workspace.package]
@@ -23,6 +24,7 @@ hound = "3.5"
 clap = { version = "4", features = ["derive", "env"] }
 ureq = { version = "3", features = ["json"] }
 base64 = "0.22"
+jni = "0.21"
 
 friendly-voice-domain = { path = "crates/domain" }
 friendly-voice-application = { path = "crates/application" }

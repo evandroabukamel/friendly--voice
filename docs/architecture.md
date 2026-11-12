@@ -28,7 +28,13 @@ e o `Cargo.toml` de `domain` não depende de nenhum outro crate do projeto;
 | `friendly-voice-domain` | Entidades, objetos de valor, serviços de domínio (sotaque, agenda) | `chrono`, `serde`, `thiserror` |
 | `friendly-voice-application` | Casos de uso e **portas** (traits) | `domain` |
 | `friendly-voice-infrastructure` | Implementações das portas | `domain`, `application`, `hound`, `serde_json`, (`ureq`) |
-| `friendly-voice` (cli) | Interface, *wiring* das dependências | todos |
+| `friendly-voice-bootstrap` | Composition root (*wiring* das dependências) | `domain`, `application`, `infrastructure` |
+| `friendly-voice` (cli) | Interface de linha de comando | `bootstrap` |
+| `friendly-voice-mobile` | Interface Android: ponte JNI com entrada/saída JSON | `bootstrap`, `jni` |
+
+O app Android (`android/`, Kotlin) é apenas mais uma camada de apresentação:
+chama `NativeBridge` → `crates/mobile` → casos de uso. Nenhuma regra de
+negócio é reescrita em Kotlin (ver ADR 0005).
 
 ## Fluxo da clonagem de voz com sotaque
 
@@ -101,4 +107,4 @@ pode sobrescrever em cada pedido ou agendamento.
 * **I** — portas pequenas: `Transcriber` e `PhoneRecognizer` são opcionais e
   separadas; repositórios por agregado.
 * **D** — casos de uso recebem `Arc<dyn Porta>`; só a composition root
-  (`crates/cli/src/container.rs`) conhece classes concretas.
+  (`crates/bootstrap`) conhece classes concretas — e é a mesma para CLI e Android.

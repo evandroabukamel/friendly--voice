@@ -9,8 +9,9 @@ Sprints de 1 semana. Cada sprint entrega um **incremento utilizável e testado**
 | 1 | Domínio puro: pessoas, fonética, modelo de sotaque | US-01 (+ base de US-03/04) | 2 |
 | 2 | Clonagem: amostras, aprendizado de sotaque e voz | US-02, US-03, US-04, US-10 | 24 |
 | 3 | Mensagens e agendamentos ponta a ponta na CLI | US-05, US-06, US-07, US-08, US-09 | 14 |
+| 4 | Tom de voz por mensagem e app Android com CI/CD | US-18, US-19, US-20 | 21 |
 
-Velocidade média (sprints 1–3): **~13 pts/sprint**.
+Velocidade média (sprints 1–4): **~15 pts/sprint**.
 
 ## Sprint 0 — Fundação
 * Workspace Cargo com 4 crates (`domain`, `application`, `infrastructure`, `cli`)
@@ -55,3 +56,21 @@ Velocidade média (sprints 1–3): **~13 pts/sprint**.
 * 👍 Testes de aceitação no binário real espelham os critérios Gherkin.
 * 👎 Janela de intervalo começava "fora do relógio" (09:30 em vez de 09:00).
   **Ação:** pular para o início da janela; teste de regressão adicionado.
+
+## Sprint 4 — Tom de voz e Android
+**Incremento:** tom de voz escolhido em cada mensagem (CLI e app) e APK
+gerado automaticamente pelo CI, com release a cada tag.
+* `VoiceTone`: seis estilos + ajuste de ±6 semitons, aplicados **sobre** a
+  prosódia natural da pessoa; tom inicial sugerido pelo tema.
+* Composition root extraída para `crates/bootstrap` (reuso CLI/Android).
+* `crates/mobile`: API JSON testável no host + wrappers JNI à prova de panic.
+* App Android em Kotlin (sem regras de negócio) e WorkManager para a agenda.
+* Workflow `android.yml`: cargo-ndk (3 ABIs), CLI para Termux, APK
+  debug/release, lint, artefatos e GitHub Release em tags `v*`.
+
+**Retrospectiva**
+* 👍 A Clean Architecture pagou o investimento: o Android só precisou de uma
+  nova camada de apresentação; nenhum caso de uso mudou.
+* 👎 O SDK Android não estava disponível no ambiente de desenvolvimento.
+  **Ação:** o Kotlin foi verificado compilando contra `android-all` (API 34);
+  o APK completo é validado no CI.

@@ -85,14 +85,44 @@ fv --motor-url http://localhost:8020 voz gerar --pessoa spk-...
 Com o servidor, a transcrição e os fonemas das amostras são obtidos
 automaticamente (não é preciso `.txt`/`.ipa`).
 
+## App Android
+
+O mesmo núcleo Rust roda no Android: `crates/mobile` expõe os casos de uso via
+JNI e `android/` é o app (Kotlin) com cadastro da pessoa, envio de amostras
+`.wav`, geração da voz, mensagem na hora com **escolha do tom** e agendamentos
+(executados pelo WorkManager a cada 15 min, com notificação e áudio).
+
+```bash
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+cargo install cargo-ndk
+export ANDROID_NDK_HOME=/caminho/do/ndk
+scripts/build-android.sh            # APK debug em android/app/build/outputs/apk/
+scripts/build-android.sh --release  # APK release (assinado se ANDROID_KEYSTORE_* definidos)
+```
+
+### CI/CD
+
+| Workflow | Quando | O que faz |
+|---|---|---|
+| `ci.yml` | todo push/PR | `fmt`, `clippy -D warnings`, todos os testes |
+| `android.yml` | todo push/PR | testa a ponte mobile, compila a biblioteca Rust para `arm64-v8a`, `armeabi-v7a` e `x86_64` (cargo-ndk), a CLI para Android/Termux (arm64), o APK debug e release (Gradle) e o lint; publica tudo como artefatos |
+| `android.yml` → `release` | tag `v*` | cria a GitHub Release com os APKs e o binário arm64 |
+
+Para assinar o APK de release, cadastre os secrets `ANDROID_KEYSTORE_BASE64`
+(keystore em base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e
+`ANDROID_KEY_PASSWORD`. Sem eles o release é gerado sem assinatura.
+
 ## Arquitetura
 
 ```
 crates/
-├── domain/          regras puras: Speaker, AudioClip, fonética, sotaque, agenda
+├── domain/          regras puras: Speaker, AudioClip, fonética, sotaque, tom, agenda
 ├── application/     casos de uso + portas (traits)
 ├── infrastructure/  WAV, DSP, G2P pt-BR, JSON, motores de voz, catálogo, saída
-└── cli/             interface + composition root
+├── bootstrap/       composition root compartilhada (CLI e Android)
+├── cli/             interface de linha de comando
+└── mobile/          biblioteca nativa do Android (JNI → casos de uso)
+android/             app Android (Kotlin) que usa a biblioteca nativa
 ```
 
 Detalhes em [`docs/architecture.md`](docs/architecture.md) e decisões em
