@@ -1,18 +1,19 @@
-# ADR 0003 — Timbre via motor neural externo atrás de portas
+# ADR 0003 — Timbre through an external neural engine behind ports
 
-**Status:** aceito · Sprint 2
+**Status:** accepted · Sprint 2
 
-## Contexto
-Clonar timbre exige modelos neurais pesados (XTTS, OpenVoice, F5-TTS), em
-Python/GPU, com licenças próprias.
+## Context
+Cloning a timbre needs heavy neural models (OpenVoice, XTTS, F5-TTS), written
+in Python and often run on GPUs, each with its own license.
 
-## Decisão
-Definir as portas `VoiceCloningEngine`, `SpeechSynthesizer`, `Transcriber` e
-`PhoneRecognizer` e um contrato HTTP simples (`docs/engine-api.md`), com
-adaptador Rust opcional (feature `http-engine`). Localmente, um sintetizador de
-**esboço de prosódia** valida ritmo/entonação e o fluxo ponta a ponta.
+## Decision
+Define the ports `VoiceCloningEngine`, `SpeechSynthesizer`, `Transcriber` and
+`PhoneRecognizer` and a simple HTTP contract (`docs/engine-api.md`), with an
+optional Rust adapter (feature `http-engine`). Locally, a **prosody sketch**
+synthesizer validates rhythm/intonation and the end-to-end flow.
 
-## Consequências
-* + O core Rust fica leve, sem dependências de ML.
-* + Qualquer modelo pode ser plugado implementando 4 endpoints.
-* − Sem o servidor, o áudio local não reproduz o timbre real.
+## Consequences
+* + The Rust core stays light, with no ML dependencies.
+* + Any model can be plugged in by implementing a few endpoints.
+* − Without the server, local audio does not reproduce the real timbre.
+* Follow-up: the reference server was added in Sprint 5 (ADR 0006).

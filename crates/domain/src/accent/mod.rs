@@ -1,24 +1,24 @@
-//! # Modelo de sotaque
+//! # Accent model
 //!
-//! O sotaque é modelado como um conjunto **ordenado** de regras fonológicas que
-//! transformam a forma de citação (pronúncia "de dicionário") na forma
-//! realizada pela pessoa. Três fenômenos são tratados explicitamente:
+//! The accent is modelled as an **ordered** set of phonological rules that
+//! turn the citation form (the "dictionary" pronunciation) into the form
+//! the person actually produces. Three phenomena are handled explicitly:
 //!
-//! 1. **Pronúncia de letras/sons** ([`RulePhenomenon::Segmental`]) — ex.: `t`
-//!    antes de `i` vira `tʃ` ("tia" → "tʃia"); `s` em coda vira `ʃ` (carioca);
-//!    `r` em coda vira `h`, `ɻ` (caipira)...
-//! 2. **Término de palavras** ([`RulePhenomenon::WordEnding`]) — ex.: `e`/`o`
-//!    átonos finais viram `i`/`u` ("leite" → "leiti"), `r` final cai
+//! 1. **Pronunciation of letters/sounds** ([`RulePhenomenon::Segmental`]) — e.g. `t`
+//!    before `i` becomes `tʃ` ("tia" → "tʃia"); coda `s` becomes `ʃ` (Rio de Janeiro);
+//!    coda `r` becomes `h`, `ɻ` (caipira)...
+//! 2. **Word endings** ([`RulePhenomenon::WordEnding`]) — e.g. unstressed final
+//!    `e`/`o` become `i`/`u` ("leite" → "leiti"), final `r` is dropped
 //!    ("falar" → "falá").
-//! 3. **Junção de palavras** ([`JunctureRule`]) — sândi externo: "os amigos"
+//! 3. **Word junctions** ([`JunctureRule`]) — external sandhi: "os amigos"
 //!    → "uz amigus", "casa amarela" → "casamarela", "mar azul" → "maɾazul".
 //!
-//! As regras são aplicadas em ordem, permitindo que uma alimente a outra
-//! ("noite": `e → i` cria o contexto para `t → tʃ`).
+//! Rules are applied in order, so one can feed another
+//! ("noite": `e → i` creates the context for `t → tʃ`).
 //!
-//! * [`AccentAnalyzer`] aprende o perfil a partir de pares
-//!   (pronúncia canônica, fonemas efetivamente ouvidos nas amostras).
-//! * [`AccentRenderer`] aplica o perfil aprendido a qualquer texto novo.
+//! * [`AccentAnalyzer`] learns the profile from pairs
+//!   (citation pronunciation, phonemes actually heard in the samples).
+//! * [`AccentRenderer`] applies the learned profile to any new text.
 
 mod alignment;
 mod analyzer;

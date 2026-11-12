@@ -1,4 +1,4 @@
-//! Alinhamento (Levenshtein ponderado) entre a sequência canônica e a ouvida.
+//! Alignment (weighted Levenshtein) between the citation sequence and the heard one.
 use crate::phonetics::Phoneme;
 
 fn substitution_cost(a: &Phoneme, b: &Phoneme) -> f32 {
@@ -16,8 +16,8 @@ fn substitution_cost(a: &Phoneme, b: &Phoneme) -> f32 {
 
 const GAP: f32 = 1.0;
 
-/// Para cada fonema canônico, devolve os fonemas observados correspondentes:
-/// vazio = apagamento; mais de um = inserção agregada ao fonema anterior.
+/// For each citation phoneme, returns the corresponding observed phonemes:
+/// empty = deletion; more than one = insertion attached to the previous phoneme.
 pub fn align(canonical: &[Phoneme], observed: &[Phoneme]) -> Vec<Vec<Phoneme>> {
     let (n, m) = (canonical.len(), observed.len());
     let mut dp = vec![vec![0.0f32; m + 1]; n + 1];
@@ -37,8 +37,8 @@ pub fn align(canonical: &[Phoneme], observed: &[Phoneme]) -> Vec<Vec<Phoneme>> {
     let mut result: Vec<Vec<Phoneme>> = vec![Vec::new(); n];
     let mut leading: Vec<Phoneme> = Vec::new();
     let (mut i, mut j) = (n, m);
-    // Inserções encontradas no backtrace ficam pendentes até achar o
-    // fonema canônico anterior (ao qual se agregam).
+    // Insertions found during the backtrace stay pending until the previous
+    // citation phoneme is found (they are attached to it).
     let mut pending: Vec<Phoneme> = Vec::new();
     while i > 0 || j > 0 {
         let eps = 1e-4;

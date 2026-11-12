@@ -3,8 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Assinatura do release via variáveis de ambiente (CI/CD). Sem elas, o
-// release sai sem assinatura (app-release-unsigned.apk).
+// Release signing via environment variables (CI/CD). Without them the
+// release build is unsigned (app-release-unsigned.apk).
 val keystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")
 
 android {
@@ -56,7 +56,7 @@ android {
     }
 
     lint {
-        // O relatório é publicado como artefato no CI; não bloqueia o build.
+        // The report is published as a CI artifact; it does not block the build.
         abortOnError = false
     }
 }
@@ -66,13 +66,13 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 }
 
-// A biblioteca Rust precisa ser compilada antes (scripts/build-android.sh).
+// The Rust library must be built first (scripts/build-android.sh).
 val checkNativeLibs by tasks.registering {
     val lib = file("src/main/jniLibs/arm64-v8a/libfriendly_voice_mobile.so")
     doLast {
         if (!lib.exists()) {
             throw GradleException(
-                "Biblioteca nativa ausente ($lib). Rode antes: scripts/build-android.sh --rust-only",
+                "Native library missing ($lib). Run first: scripts/build-android.sh --rust-only",
             )
         }
     }

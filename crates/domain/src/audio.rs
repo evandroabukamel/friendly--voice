@@ -1,7 +1,7 @@
 use crate::DomainError;
 use serde::{Deserialize, Serialize};
 
-/// Áudio mono normalizado em [-1.0, 1.0].
+/// Mono audio normalized to [-1.0, 1.0].
 #[derive(Debug, Clone, PartialEq)]
 pub struct AudioClip {
     sample_rate: u32,
@@ -44,19 +44,19 @@ impl AudioClip {
     }
 }
 
-/// Medidas acústicas extraídas de uma amostra (timbre/prosódia).
+/// Acoustic measurements extracted from a sample (timbre/prosody).
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub struct AcousticFeatures {
-    /// Frequência fundamental média (Hz) dos trechos vozeados.
+    /// Mean fundamental frequency (Hz) of the voiced parts.
     pub mean_pitch_hz: f32,
-    /// Dispersão do pitch (p90 - p10), indica quão "cantada" é a fala.
+    /// Pitch spread (p90 - p10): how "sing-song" the speech is.
     pub pitch_spread_hz: f32,
     pub rms_energy: f32,
-    /// Fração do tempo em silêncio/pausa.
+    /// Fraction of time in silence/pauses.
     pub pause_ratio: f32,
 }
 
-/// Regras para aceitar uma amostra como material de treino.
+/// Rules to accept a sample as training material.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SampleQualityPolicy {
     pub min_duration_secs: f32,

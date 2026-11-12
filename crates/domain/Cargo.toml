@@ -1,6 +1,6 @@
 [package]
 name = "friendly-voice-domain"
-description = "Regras de negócio puras: falantes, amostras de voz, fonética, sotaque e agendamentos."
+description = "Pure business rules: speakers, voice samples, phonetics, accent, tone and schedules."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

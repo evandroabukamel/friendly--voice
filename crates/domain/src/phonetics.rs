@@ -1,8 +1,8 @@
-//! Representação fonética em IPA (Alfabeto Fonético Internacional).
+//! Phonetic representation in IPA (International Phonetic Alphabet).
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// Um segmento sonoro (ex.: `t`, `tʃ`, `ɾ`, `ã`). Africadas são um único fonema.
+/// One speech sound (e.g. `t`, `tʃ`, `ɾ`, `ã`). Affricates are a single phoneme.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Phoneme(String);
@@ -48,7 +48,7 @@ impl fmt::Display for Phoneme {
     }
 }
 
-/// Classes naturais usadas nos contextos das regras.
+/// Natural classes used in rule contexts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PhoneClass {
     Any,
@@ -60,7 +60,7 @@ pub enum PhoneClass {
     HighFront,
 }
 
-/// Casa um fonema com um padrão.
+/// Matches a phoneme against a pattern.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PhoneMatcher {
     Exact(Phoneme),
@@ -92,13 +92,13 @@ impl PhoneMatcher {
     }
 }
 
-/// Palavra transcrita. `stress` aponta o índice do fonema da vogal tônica.
+/// Transcribed word. `stress` is the index of the stressed vowel phoneme.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PhoneticWord {
     pub orthography: String,
     pub phonemes: Vec<Phoneme>,
     pub stress: Option<usize>,
-    /// Há pausa (pontuação) depois da palavra: bloqueia a junção com a próxima.
+    /// There is a pause (punctuation) after the word: blocks the junction with the next one.
     #[serde(default)]
     pub pause_after: bool,
 }
@@ -128,7 +128,7 @@ impl PhoneticWord {
     }
 }
 
-/// Frase/enunciado: sequência de palavras faladas em um mesmo grupo prosódico.
+/// Sentence/utterance: words spoken in the same prosodic group.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct PhoneticUtterance {
     pub words: Vec<PhoneticWord>,
@@ -156,8 +156,8 @@ impl PhoneticUtterance {
     }
 }
 
-/// Converte uma string IPA em fonemas. Ignora espaços, marcas de acento
-/// (ˈ ˌ) e fronteiras silábicas; agrupa africadas (tʃ, dʒ, t͡ʃ) e diacríticos.
+/// Parses an IPA string into phonemes. Ignores spaces, stress marks
+/// (ˈ ˌ) and syllable boundaries; groups affricates (tʃ, dʒ, t͡ʃ) and diacritics.
 pub fn parse_ipa(input: &str) -> Vec<Phoneme> {
     let mut out: Vec<String> = Vec::new();
     let mut join_next = false;
@@ -201,7 +201,7 @@ pub fn parse_ipa(input: &str) -> Vec<Phoneme> {
     out.into_iter().map(Phoneme::new).collect()
 }
 
-/// Normaliza vogal + til combinante para a forma pré-composta (a + ◌̃ → ã).
+/// Normalizes vowel + combining tilde to the precomposed form (a + ◌̃ → ã).
 fn compose_tilde(base: &str) -> Option<String> {
     let composed = match base {
         "a" => "ã",

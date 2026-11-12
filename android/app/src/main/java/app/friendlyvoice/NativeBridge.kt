@@ -5,8 +5,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Funções da biblioteca Rust (crates/mobile). Toda resposta é um JSON
- * `{"ok": true, "data": ...}` ou `{"ok": false, "error": "..."}`.
+ * Functions of the Rust library (crates/mobile). Every response is JSON:
+ * `{"ok": true, "data": ...}` or `{"ok": false, "error": "..."}`.
  */
 object NativeBridge {
     init {
@@ -32,7 +32,7 @@ object NativeBridge {
     @JvmStatic external fun removeSchedule(id: String): String
     @JvmStatic external fun runDueSchedules(listener: String?): String
 
-    /** Aponta a biblioteca para a pasta privada do app e o servidor configurado. */
+    /** Points the library at the app's private folder and the configured server. */
     fun configure(context: Context): NativeResult {
         val prefs = Prefs(context)
         return NativeResult(configure(context.filesDir.absolutePath, prefs.engineUrl))
@@ -48,7 +48,7 @@ class NativeResult(json: String) {
     fun arr(): JSONArray = root.getJSONArray("data")
 }
 
-/** Preferências simples do usuário. */
+/** Simple user preferences. */
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("friendly_voice", Context.MODE_PRIVATE)
 

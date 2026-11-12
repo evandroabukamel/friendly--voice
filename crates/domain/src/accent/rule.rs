@@ -1,30 +1,30 @@
 use crate::phonetics::{PhoneMatcher, Phoneme};
 use serde::{Deserialize, Serialize};
 
-/// Qual aspecto do sotaque a regra descreve.
+/// Which aspect of the accent the rule describes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RulePhenomenon {
-    /// Jeito de pronunciar certas letras/sons.
+    /// How certain letters/sounds are pronounced.
     Segmental,
-    /// Término de palavras.
+    /// Word endings.
     WordEnding,
-    /// Junção de palavras (sândi externo).
+    /// Word junctions (external sandhi).
     Juncture,
 }
 
-/// Posição do fonema dentro da palavra.
+/// Position of the phoneme within the word.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Position {
     Anywhere,
     WordInitial,
     WordFinal,
-    /// Consoante em final de sílaba (antes de consoante ou fim de palavra).
+    /// Consonant at the end of a syllable (before a consonant or the end of the word).
     Coda,
-    /// Consoante em início de sílaba (antes de vogal/semivogal).
+    /// Consonant at the start of a syllable (before a vowel/glide).
     Onset,
-    /// Última vogal da palavra (seguida apenas de consoantes/semivogais).
+    /// Last vowel of the word (followed only by consonants/glides).
     FinalVowel,
-    /// Vogal antes da sílaba tônica.
+    /// Vowel before the stressed syllable.
     Pretonic,
 }
 
@@ -34,8 +34,8 @@ pub struct PhoneContext {
     pub preceding: Option<PhoneMatcher>,
     pub following: Option<PhoneMatcher>,
     pub unstressed_only: bool,
-    /// Bloqueia a regra no fim da palavra quando a próxima começa com vogal
-    /// (ex.: "falar" → "falá", mas "falar assim" → "falaɾ assim").
+    /// Blocks the rule at the end of a word when the next word starts with a vowel
+    /// (e.g. "falar" → "falá", but "falar assim" → "falaɾ assim").
     #[serde(default)]
     pub blocked_before_vowel_word: bool,
 }
@@ -68,8 +68,8 @@ impl PhoneContext {
     }
 }
 
-/// Regra intra-palavra: `target → replacement / context`.
-/// `replacement` vazio significa apagamento.
+/// Word-internal rule: `target → replacement / context`.
+/// An empty `replacement` means deletion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PronunciationRule {
     pub code: String,
@@ -78,7 +78,7 @@ pub struct PronunciationRule {
     pub target: PhoneMatcher,
     pub replacement: Vec<Phoneme>,
     pub context: PhoneContext,
-    /// Frequência com que a pessoa realiza a regra (0..=1).
+    /// How often the person applies the rule (0..=1).
     pub confidence: f32,
 }
 
@@ -107,14 +107,14 @@ impl PronunciationRule {
     }
 }
 
-/// O que acontece com o fim da palavra da esquerda na junção.
+/// What happens to the end of the left word at the junction.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum JunctureEffect {
     ReplaceLeft(Vec<Phoneme>),
     DeleteLeft,
 }
 
-/// Regra entre o último som de uma palavra e o primeiro da seguinte.
+/// Rule between the last sound of a word and the first sound of the next one.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JunctureRule {
     pub code: String,
@@ -152,7 +152,7 @@ impl JunctureRule {
         self.confidence = confidence.clamp(0.0, 1.0);
         self
     }
-    /// Fonemas esperados no lugar do fim da palavra esquerda.
+    /// Phonemes expected in place of the end of the left word.
     pub fn expected_left(&self) -> Vec<Phoneme> {
         match &self.effect {
             JunctureEffect::ReplaceLeft(p) => p.clone(),
@@ -161,19 +161,19 @@ impl JunctureRule {
     }
 }
 
-/// Perfil de sotaque de uma pessoa.
+/// A person's accent profile.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct AccentProfile {
-    /// Rótulo amigável (ex.: "Carioca (RJ)" ou "Personalizado").
+    /// Friendly label (e.g. "Carioca (RJ)" or "Personalizado").
     pub label: String,
-    /// Regras intra-palavra, na ordem de aplicação.
+    /// Word-internal rules, in application order.
     pub segment_rules: Vec<PronunciationRule>,
-    /// Regras de junção, na ordem de aplicação.
+    /// Juncture rules, in application order.
     pub juncture_rules: Vec<JunctureRule>,
 }
 
 impl AccentProfile {
-    /// Perfil sem nenhuma regra: pronúncia de citação.
+    /// Profile without any rule: citation pronunciation.
     pub fn neutral() -> Self {
         Self {
             label: "Neutro (sem amostras com fonemas)".into(),

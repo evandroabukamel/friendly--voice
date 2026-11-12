@@ -2,7 +2,7 @@ use friendly_voice_application::ports::{AudioDecoder, PortError, PortResult};
 use friendly_voice_domain::audio::AudioClip;
 use std::io::Cursor;
 
-/// Decodifica WAV PCM (8/16/24/32 bits ou float), mixando para mono.
+/// Decodes PCM WAV (8/16/24/32-bit or float), mixing down to mono.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct WavDecoder;
 
@@ -34,7 +34,7 @@ impl AudioDecoder for WavDecoder {
     }
 }
 
-/// Codifica um clipe mono em WAV PCM 16 bits.
+/// Encodes a mono clip as 16-bit PCM WAV.
 pub fn encode_wav(clip: &AudioClip) -> PortResult<Vec<u8>> {
     let spec = hound::WavSpec {
         channels: 1,

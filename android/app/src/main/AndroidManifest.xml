@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Servidor de voz neural (opcional). -->
+    <!-- Neural voice server (optional). -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Avisar quando uma mensagem agendada chegar. -->
+    <!-- Notify when a scheduled message arrives. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- usesCleartextTraffic: permite um servidor de voz na rede local (http://). -->
+    <!-- usesCleartextTraffic: allows a voice server on the local network (http://). -->
     <application
         android:allowBackup="false"
         android:icon="@android:drawable/sym_def_app_icon"

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-/// Tema da mensagem positiva.
+/// Theme of the positive message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MessageCategory {
     Motivation,
@@ -62,7 +62,7 @@ impl FromStr for MessageCategory {
 
 pub const MAX_MESSAGE_CHARS: usize = 600;
 
-/// Mensagem a ser falada.
+/// Message to be spoken.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MotivationalMessage {
     text: String,
@@ -94,12 +94,12 @@ impl MotivationalMessage {
     }
 }
 
-/// De onde vem o conteúdo de uma mensagem.
+/// Where the content of a message comes from.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MessageContent {
-    /// Sorteia uma mensagem do tema.
+    /// Picks a message from the theme.
     Category(MessageCategory),
-    /// Texto definido pelo usuário.
+    /// Text defined by the user.
     FixedText(String),
 }
 

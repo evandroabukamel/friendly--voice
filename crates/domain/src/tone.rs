@@ -1,9 +1,9 @@
-//! Tom de voz escolhido para cada mensagem.
+//! Tone of voice chosen for each message.
 //!
-//! O tom é um ajuste **sobre** a prosódia natural da pessoa (aprendida das
-//! amostras): não substitui o jeito dela de falar, apenas o colore — mais
-//! carinhoso, mais animado, mais calmo... O usuário pode ainda deslocar a
-//! altura (o "tom" no sentido musical) em semitons.
+//! The tone is an adjustment **on top of** the person's natural prosody (learned
+//! from the samples): it does not replace the way they speak, it only colours
+//! it — warmer, more cheerful, calmer... The user can also shift the pitch
+//! (the musical sense of "tone") in semitones.
 use crate::message::MessageCategory;
 use crate::voice::ProsodyProfile;
 use crate::DomainError;
@@ -11,36 +11,36 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 
-/// Estilos de tom disponíveis.
+/// Available tone styles.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub enum ToneStyle {
-    /// Como a pessoa fala normalmente.
+    /// How the person normally speaks.
     #[default]
     Natural,
-    /// Mais suave e acolhedor.
+    /// Softer and more caring.
     Warm,
-    /// Mais alegre, rápido e melódico.
+    /// Happier, faster and more melodic.
     Cheerful,
-    /// Lento, grave e estável.
+    /// Slow, lower and steady.
     Calm,
-    /// Seguro e enfático.
+    /// Confident and emphatic.
     Firm,
-    /// Baixinho, como um segredo.
+    /// Very quiet, like a secret.
     Whisper,
 }
 
-/// Quanto o tom altera a prosódia natural.
+/// How much the tone changes the natural prosody.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct ToneAdjustment {
-    /// Deslocamento da altura média, em semitons.
+    /// Shift of the mean pitch, in semitones.
     pub pitch_semitones: f32,
-    /// Multiplicador da velocidade de fala.
+    /// Speaking rate multiplier.
     pub rate_factor: f32,
-    /// Multiplicador da variação melódica (0 = monótono).
+    /// Melodic variation multiplier (0 = monotone).
     pub expressiveness: f32,
-    /// Ganho de volume em dB.
+    /// Volume gain in dB.
     pub volume_db: f32,
-    /// Voz soprosa (sem vibração das pregas vocais).
+    /// Breathy voice (no vocal fold vibration).
     pub breathy: bool,
 }
 
@@ -94,7 +94,7 @@ impl ToneStyle {
         }
     }
 
-    /// Tom inicial sugerido para o tema da mensagem (o usuário pode trocar).
+    /// Initial tone suggested for the message theme (the user can change it).
     pub fn default_for(category: Option<MessageCategory>) -> Self {
         match category {
             None => Self::Natural,
@@ -133,15 +133,15 @@ impl FromStr for ToneStyle {
     }
 }
 
-/// Maior deslocamento de altura aceito (em semitons) — além disso a voz
-/// deixa de soar como a pessoa.
+/// Largest accepted pitch shift (in semitones) — beyond it the voice
+/// stops sounding like the person.
 pub const MAX_PITCH_SHIFT_SEMITONES: f32 = 6.0;
 
-/// Tom escolhido para uma mensagem: estilo + ajuste fino de altura.
+/// Tone chosen for a message: style + fine pitch adjustment.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub struct VoiceTone {
     pub style: ToneStyle,
-    /// Ajuste extra de altura escolhido pelo usuário (semitons).
+    /// Extra pitch shift chosen by the user (semitones).
     #[serde(default)]
     pub pitch_shift_semitones: f32,
 }
@@ -169,14 +169,14 @@ impl VoiceTone {
         }
     }
 
-    /// Ajuste total (estilo + deslocamento do usuário).
+    /// Total adjustment (style + user shift).
     pub fn adjustment(&self) -> ToneAdjustment {
         let mut a = self.style.adjustment();
         a.pitch_semitones += self.pitch_shift_semitones;
         a
     }
 
-    /// Aplica o tom à prosódia natural da pessoa.
+    /// Applies the tone to the person's natural prosody.
     pub fn apply(&self, natural: ProsodyProfile) -> ProsodyProfile {
         let a = self.adjustment();
         let pitch_factor = 2f32.powf(a.pitch_semitones / 12.0);

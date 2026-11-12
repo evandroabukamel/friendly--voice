@@ -1,9 +1,9 @@
-//! Catálogo de fenômenos conhecidos do português e presets regionais.
+//! Catalog of known Portuguese phenomena and regional presets.
 //!
-//! O catálogo funciona como um conjunto de **hipóteses**: o analisador mede,
-//! nas amostras da pessoa, quantas vezes cada fenômeno teve oportunidade de
-//! ocorrer e quantas vezes de fato ocorreu. A ordem importa (regras podem
-//! alimentar umas às outras).
+//! The catalog works as a set of **hypotheses**: the analyzer measures, in the
+//! person's samples, how many times each phenomenon had the opportunity to
+//! occur and how many times it actually did. Order matters (rules can feed
+//! each other).
 use super::rule::{
     JunctureEffect, JunctureRule, PhoneContext, Position, PronunciationRule, RulePhenomenon,
 };
@@ -15,7 +15,7 @@ pub struct RuleCatalog {
     pub juncture_rules: Vec<JunctureRule>,
 }
 
-/// Conjunto de fenômenos típicos de uma região, usado para rotular o perfil.
+/// Set of phenomena typical of a region, used to label the profile.
 #[derive(Debug, Clone, PartialEq)]
 pub struct AccentPreset {
     pub name: &'static str,
@@ -23,7 +23,7 @@ pub struct AccentPreset {
 }
 
 impl RuleCatalog {
-    /// Fenômenos do português (variedades brasileiras e europeia).
+    /// Portuguese phenomena (Brazilian and European varieties).
     pub fn portuguese() -> Self {
         use Position::*;
         use RulePhenomenon::*;
@@ -31,7 +31,7 @@ impl RuleCatalog {
         let vowel = || PhoneMatcher::Class(PhoneClass::Vowel);
         let r = PronunciationRule::new;
         let segment_rules = vec![
-            // ---- Término de palavras ----
+            // ---- Word endings ----
             r(
                 "final-e-raising",
                 "'e' átono final soa como 'i' (leite → leiti)",
@@ -72,7 +72,7 @@ impl RuleCatalog {
                 &[],
                 PhoneContext::at(WordFinal).blocked_before_vowel_word(),
             ),
-            // ---- Pronúncia de letras/sons ----
+            // ---- Pronunciation of letters/sounds ----
             r(
                 "t-palatalization",
                 "'t' antes de 'i' vira 'tʃ' (tia → tchia)",
@@ -323,7 +323,7 @@ impl RuleCatalog {
         ]
     }
 
-    /// Preset mais parecido com o conjunto de regras adotadas (Jaccard).
+    /// Preset closest to the set of adopted rules (Jaccard similarity).
     pub fn closest_preset(codes: &[&str]) -> Option<(&'static str, f32)> {
         if codes.is_empty() {
             return None;

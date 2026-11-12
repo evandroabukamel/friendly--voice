@@ -1,8 +1,8 @@
-//! # Friendly Voice — Infraestrutura
+//! # Friendly Voice — Infrastructure
 //!
-//! Adaptadores que implementam as portas da camada de aplicação. Nenhuma
-//! regra de negócio vive aqui: apenas tradução entre o mundo externo
-//! (arquivos, áudio, HTTP, sistema) e o modelo do domínio.
+//! Adapters that implement the application layer's ports. No business rule
+//! lives here: only translation between the outside world (files, audio,
+//! HTTP, system) and the domain model.
 pub mod audio;
 pub mod delivery;
 pub mod messages;

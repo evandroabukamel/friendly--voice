@@ -1,9 +1,9 @@
-//! # Friendly Voice — Aplicação
+//! # Friendly Voice — Application
 //!
-//! Orquestra o domínio através de **casos de uso**. Depende apenas de
-//! abstrações ([`ports`]) — as implementações concretas (WAV, JSON, HTTP...)
-//! vivem na infraestrutura e são injetadas pela composition root (CLI).
-//! Isso aplica o Princípio da Inversão de Dependência (DIP).
+//! Orchestrates the domain through **use cases**. It depends only on
+//! abstractions ([`ports`]) — the concrete implementations (WAV, JSON, HTTP...)
+//! live in the infrastructure layer and are injected by the composition root.
+//! This applies the Dependency Inversion Principle (DIP).
 
 pub mod error;
 pub mod ports;

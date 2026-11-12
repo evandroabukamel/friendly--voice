@@ -14,12 +14,12 @@ pub struct CreateScheduleInput {
     pub speaker_id: SpeakerId,
     pub recurrence: Recurrence,
     pub content: MessageContent,
-    /// Tom de voz das mensagens deste agendamento (`None` = sugerido pelo tema).
+    /// Tone of voice for this schedule's messages (`None` = suggested by the theme).
     pub tone: Option<VoiceTone>,
     pub quiet_hours: Option<TimeWindow>,
 }
 
-/// US-07: agendar mensagens com regras definidas pelo usuário.
+/// US-07: schedule messages with user-defined rules.
 pub struct CreateSchedule {
     speakers: Arc<dyn SpeakerRepository>,
     schedules: Arc<dyn ScheduleRepository>,
@@ -98,7 +98,7 @@ pub struct ScheduleRunOutcome {
     pub result: AppResult<SpokenMessage>,
 }
 
-/// US-08: disparar os agendamentos vencidos.
+/// US-08: fire the schedules that are due.
 pub struct RunDueSchedules {
     schedules: Arc<dyn ScheduleRepository>,
     speak: Arc<SpeakMessage>,
@@ -130,8 +130,8 @@ impl RunDueSchedules {
         self
     }
 
-    /// Um agendamento com falha não impede os demais; o erro é reportado e
-    /// o agendamento é marcado como disparado para não repetir em loop.
+    /// A failing schedule does not block the others; the error is reported and
+    /// the schedule is marked as fired so it does not repeat in a loop.
     pub fn execute(&self) -> AppResult<Vec<ScheduleRunOutcome>> {
         let now = self.clock.now();
         let mut outcomes = Vec::new();
@@ -199,7 +199,10 @@ mod tests {
             spoken.script.tone.style,
             friendly_voice_domain::tone::ToneStyle::Whisper
         );
-        assert!(run.execute().unwrap().is_empty(), "não repete no mesmo dia");
+        assert!(
+            run.execute().unwrap().is_empty(),
+            "does not fire twice on the same day"
+        );
 
         f.clock.advance(Duration::days(1));
         assert_eq!(run.execute().unwrap().len(), 1);

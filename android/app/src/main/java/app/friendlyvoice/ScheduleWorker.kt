@@ -21,9 +21,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * Executa periodicamente os agendamentos vencidos (regras e tons definidos
- * pelo usuário ficam no núcleo Rust). O Android limita trabalhos periódicos a
- * no mínimo 15 minutos, então essa é a precisão dos disparos.
+ * Periodically fires the schedules that are due (user-defined rules and tones
+ * live in the Rust core). Android limits periodic work to at least 15 minutes,
+ * so that is the precision of the firings.
  */
 class ScheduleWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
@@ -69,7 +69,7 @@ class ScheduleWorker(context: Context, params: WorkerParameters) : Worker(contex
         NotificationManagerCompat.from(ctx).notify(1000 + id, notification)
     }
 
-    /** Toca o áudio e espera terminar (o worker não pode encerrar antes). */
+    /** Plays the audio and waits for it to finish (the worker must not end before). */
     private fun play(path: String) {
         val done = CountDownLatch(1)
         val player = MediaPlayer()
@@ -80,7 +80,7 @@ class ScheduleWorker(context: Context, params: WorkerParameters) : Worker(contex
             player.start()
             done.await(3, TimeUnit.MINUTES)
         } catch (e: Exception) {
-            // Sem áudio: a notificação já entregou o texto.
+            // No audio: the notification already delivered the text.
         } finally {
             player.release()
         }

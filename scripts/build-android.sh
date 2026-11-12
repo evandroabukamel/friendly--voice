@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Compila o app Android:
-#   1. biblioteca Rust (crates/mobile) para cada ABI, via cargo-ndk;
-#   2. APK via Gradle (android/).
+# Builds the Android app:
+#   1. the Rust library (crates/mobile) for each ABI, with cargo-ndk;
+#   2. the APK with Gradle (android/).
 #
-# Uso: scripts/build-android.sh [--rust-only] [--release] [--no-http-engine]
-# Requer: ANDROID_NDK_HOME, cargo-ndk (cargo install cargo-ndk), targets rustup
-#         aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android;
-#         para o APK: Android SDK (ANDROID_HOME) e Gradle 8.7+.
+# Usage: scripts/build-android.sh [--rust-only] [--release] [--no-http-engine]
+# Requires: ANDROID_NDK_HOME, cargo-ndk (cargo install cargo-ndk), rustup targets
+#           aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android;
+#           for the APK: Android SDK (ANDROID_HOME) and Gradle 8.7+.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,17 +21,17 @@ for arg in "$@"; do
     --rust-only) RUST_ONLY=true ;;
     --release) GRADLE_TASK=assembleRelease ;;
     --no-http-engine) FEATURES=() ;;
-    *) echo "argumento desconhecido: $arg" >&2; exit 2 ;;
+    *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
 
-: "${ANDROID_NDK_HOME:?defina ANDROID_NDK_HOME com o caminho do Android NDK}"
-command -v cargo-ndk >/dev/null || { echo "instale: cargo install cargo-ndk" >&2; exit 1; }
+: "${ANDROID_NDK_HOME:?set ANDROID_NDK_HOME to the Android NDK path}"
+command -v cargo-ndk >/dev/null || { echo "install it: cargo install cargo-ndk" >&2; exit 1; }
 
 targets=()
 for abi in "${ABIS[@]}"; do targets+=(-t "$abi"); done
 
-echo "==> Biblioteca nativa (${ABIS[*]})"
+echo "==> Native library (${ABIS[*]})"
 (cd "$ROOT" && cargo ndk "${targets[@]}" --platform "$MIN_SDK" \
   -o android/app/src/main/jniLibs \
   build --release -p friendly-voice-mobile "${FEATURES[@]}")

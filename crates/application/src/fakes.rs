@@ -1,5 +1,5 @@
-//! Dublês de teste (in-memory) para as portas. Mostram que os casos de uso
-//! são testáveis sem I/O — benefício direto da inversão de dependência.
+//! Test doubles (in-memory) for the ports. They show that the use cases
+//! are testable without I/O — a direct benefit of dependency inversion.
 use crate::ports::*;
 use crate::use_cases::SpeakMessage;
 use chrono::{Duration, NaiveDate, NaiveDateTime};
@@ -105,7 +105,7 @@ impl AudioStore for MemAudio {
     }
 }
 
-/// "Decodifica" bytes que contêm apenas a duração (f32 LE) em um tom de 16 kHz.
+/// "Decodes" bytes holding only the duration (f32 LE) into a 16 kHz tone.
 pub struct FakeDecoder;
 impl AudioDecoder for FakeDecoder {
     fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
@@ -128,7 +128,7 @@ impl AcousticAnalyzer for FakeAnalyzer {
     }
 }
 
-/// Mini-dicionário fonético.
+/// Tiny phonetic dictionary.
 pub struct FakePhonemizer;
 impl Phonemizer for FakePhonemizer {
     fn phonemize(&self, text: &str) -> PhoneticUtterance {

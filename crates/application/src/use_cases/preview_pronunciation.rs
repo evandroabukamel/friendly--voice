@@ -10,7 +10,7 @@ pub struct PronunciationPreview {
     pub accented_ipa: String,
 }
 
-/// US-06: ver como um texto será pronunciado com o sotaque da pessoa.
+/// US-06: see how a text will be pronounced with the person's accent.
 pub struct PreviewPronunciation {
     profiles: Arc<dyn VoiceProfileRepository>,
     phonemizer: Arc<dyn Phonemizer>,

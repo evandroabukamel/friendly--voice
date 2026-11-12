@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-/// Configuração definida pelo app ao iniciar.
+/// Configuration set by the app at startup.
 #[derive(Debug, Clone, Default)]
 pub struct Config {
     pub data_dir: PathBuf,
@@ -59,7 +59,7 @@ fn non_empty(s: Option<String>) -> Option<String> {
     s.map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
 }
 
-/// Define a pasta de dados (ex.: `context.filesDir`) e o servidor neural opcional.
+/// Sets the data folder (e.g. `context.filesDir`) and the optional neural server.
 pub fn configure(data_dir: String, engine_url: Option<String>) -> String {
     respond((|| {
         let cfg = Config {
@@ -72,7 +72,7 @@ pub fn configure(data_dir: String, engine_url: Option<String>) -> String {
     })())
 }
 
-/// Temas, tons e tom inicial sugerido por tema (para montar a interface).
+/// Themes, tones and the initial tone suggested per theme (to build the UI).
 pub fn catalog() -> String {
     respond(Ok(json!({
         "categories": MessageCategory::ALL.iter().map(|c| json!({
@@ -180,7 +180,7 @@ pub fn build_voice(speaker_id: String) -> String {
     })())
 }
 
-/// Tom pedido pela interface: estilo vazio = sugerido pelo tema.
+/// Tone requested by the UI: empty style = suggested by the theme.
 fn tone(style: Option<String>, pitch_shift: f32) -> Result<Option<VoiceTone>, String> {
     match non_empty(style) {
         None if pitch_shift == 0.0 => Ok(None),
@@ -202,7 +202,7 @@ fn content(category: Option<String>, text: Option<String>) -> Result<MessageCont
     })
 }
 
-/// Fala uma mensagem agora. Devolve o caminho do WAV gerado.
+/// Speaks a message now. Returns the path of the generated WAV.
 pub fn speak(
     speaker_id: String,
     category: Option<String>,
@@ -231,16 +231,16 @@ pub fn speak(
     })())
 }
 
-/// Pedido de agendamento vindo do app (JSON).
+/// Schedule request coming from the app (JSON).
 #[derive(Debug, Deserialize)]
 pub struct ScheduleRequest {
     pub speaker_id: String,
     /// "diario" | "semanal" | "intervalo" | "uma-vez"
     pub kind: String,
-    /// "HH:MM" (diário/semanal) ou "AAAA-MM-DD HH:MM" (uma vez)
+    /// "HH:MM" (daily/weekly) or "AAAA-MM-DD HH:MM" (once)
     #[serde(default)]
     pub at: Option<String>,
-    /// "seg,qua,sex" (semanal)
+    /// "seg,qua,sex" (weekly)
     #[serde(default)]
     pub days: Option<String>,
     #[serde(default)]
@@ -338,7 +338,7 @@ pub fn remove_schedule(id: String) -> String {
     })())
 }
 
-/// Dispara os agendamentos vencidos (chamado pelo WorkManager).
+/// Fires the schedules that are due (called by WorkManager).
 pub fn run_due_schedules(listener: Option<String>) -> String {
     respond((|| {
         let outcomes = container()?
@@ -398,7 +398,7 @@ mod tests {
         cursor.into_inner()
     }
 
-    /// Fluxo do app: configurar → cadastrar → amostras → voz → falar com tom → agendar.
+    /// App flow: configure → register → samples → voice → speak with a tone → schedule.
     #[test]
     fn app_flow_through_the_bridge() {
         let dir = std::env::temp_dir().join(format!("fv-mobile-{}", std::process::id()));

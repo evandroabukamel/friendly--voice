@@ -2,8 +2,8 @@ use crate::{ids::SpeakerId, DomainError};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-/// Registro de consentimento. Clonar a voz de alguém sem autorização não é
-/// permitido pelo domínio — é uma invariante, não um detalhe de UI.
+/// Consent record. Cloning someone's voice without authorization is not
+/// allowed by the domain — it is an invariant, not a UI detail.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Consent {
     pub granted_by: String,
@@ -11,7 +11,7 @@ pub struct Consent {
     pub statement: String,
 }
 
-/// Pessoa escolhida para "falar" as mensagens (ex.: mãe, avó, um amigo).
+/// Person chosen to "speak" the messages (e.g. mom, grandma, a friend).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Speaker {
     pub id: SpeakerId,

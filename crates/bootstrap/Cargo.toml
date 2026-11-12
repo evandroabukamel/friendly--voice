@@ -1,6 +1,6 @@
 [package]
 name = "friendly-voice-bootstrap"
-description = "Composition root compartilhada (CLI, Android): monta casos de uso com os adaptadores."
+description = "Shared composition root (CLI, Android): wires the use cases with the adapters."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

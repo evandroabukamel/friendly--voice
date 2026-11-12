@@ -1,4 +1,4 @@
-//! Gera SSML com a pronúncia (IPA) de cada palavra já com o sotaque aplicado.
+//! Renders SSML with the (IPA) pronunciation of each word, accent already applied.
 use friendly_voice_domain::voice::SpeechScript;
 
 fn escape(s: &str) -> String {
@@ -8,7 +8,7 @@ fn escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-/// Ritmo relativo à fala média em pt-BR (~5,5 sílabas/s).
+/// Rate relative to average pt-BR speech (~5.5 syllables/s).
 fn rate_percent(syllables_per_second: f32) -> u32 {
     if syllables_per_second <= 0.0 {
         return 100;

@@ -1,4 +1,4 @@
-//! Identificadores fortemente tipados (evitam trocar um id por outro).
+//! Strongly typed identifiers (prevent mixing one id up with another).
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -27,14 +27,14 @@ macro_rules! id_type {
 }
 
 id_type!(
-    /// Identifica a pessoa cuja voz é usada.
+    /// Identifies the person whose voice is used.
     SpeakerId
 );
 id_type!(
-    /// Identifica uma amostra de áudio enviada.
+    /// Identifies an uploaded audio sample.
     SampleId
 );
 id_type!(
-    /// Identifica um agendamento.
+    /// Identifies a schedule.
     ScheduleId
 );

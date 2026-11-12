@@ -1,9 +1,9 @@
-//! Funções nativas de `app.friendlyvoice.NativeBridge` (Kotlin).
+//! Native functions of `app.friendlyvoice.NativeBridge` (Kotlin).
 //!
-//! Regras da fronteira FFI:
-//! * strings Java `null` viram `None`;
-//! * toda saída é uma string JSON (ver [`crate::api`]);
-//! * panics nunca atravessam para a JVM: viram `{"ok":false,...}`.
+//! FFI boundary rules:
+//! * Java `null` strings become `None`;
+//! * every output is a JSON string (see [`crate::api`]);
+//! * panics never cross into the JVM: they become `{"ok":false,...}`.
 use crate::api;
 use jni::objects::{JByteArray, JClass, JString};
 use jni::sys::{jfloat, jstring};

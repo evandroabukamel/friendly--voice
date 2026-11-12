@@ -1,16 +1,16 @@
-# ADR 0004 — Consentimento como invariante de domínio
+# ADR 0004 — Consent as a domain invariant
 
-**Status:** aceito · Sprint 1
+**Status:** accepted · Sprint 1
 
-## Contexto
-Clonar a voz de terceiros tem implicações éticas e legais (LGPD: dado
-biométrico/sensível).
+## Context
+Cloning a third party's voice has ethical and legal implications (in Brazil,
+LGPD treats voice as biometric/sensitive data).
 
-## Decisão
-`Speaker` não pode existir sem um registro de `Consent` (quem autorizou e
-quando). A regra fica no domínio, e não na UI, para valer em qualquer
-interface (CLI, app, API). Os dados ficam locais por padrão.
+## Decision
+A `Speaker` cannot exist without a `Consent` record (who authorized it and
+when). The rule lives in the domain, not in the UI, so that it holds for every
+interface (CLI, app, API). Data stays local by default.
 
-## Consequências
-* + Impossível cadastrar uma voz sem consentimento por qualquer caminho.
-* Próximo passo: revogação apagando amostras e voz (US-15).
+## Consequences
+* + It is impossible to register a voice without consent through any path.
+* Next step: revoking consent deletes the samples and the voice (US-15).

@@ -1,110 +1,118 @@
-# Arquitetura
+# Architecture
 
-## Camadas (Clean Architecture)
+## Layers (Clean Architecture)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ cli  (apresentação + composition root)                      │
+│ cli / mobile  (presentation)   bootstrap (composition root) │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │ infrastructure  (adaptadores: WAV, DSP, G2P, JSON,    │  │
-│  │                  HTTP, catálogo, saída, relógio)      │  │
+│  │ infrastructure  (adapters: WAV, DSP, G2P, JSON,       │  │
+│  │                  HTTP, catalog, delivery, clock)      │  │
 │  │  ┌─────────────────────────────────────────────────┐  │  │
-│  │  │ application  (casos de uso + portas/traits)     │  │  │
+│  │  │ application  (use cases + ports/traits)         │  │  │
 │  │  │  ┌───────────────────────────────────────────┐  │  │  │
-│  │  │  │ domain  (entidades, regras, sotaque)      │  │  │  │
+│  │  │  │ domain  (entities, rules, accent, tone)   │  │  │  │
 │  │  │  └───────────────────────────────────────────┘  │  │  │
 │  │  └─────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
-          as dependências apontam sempre para dentro →
+          dependencies always point inwards →
 ```
 
-A **regra de dependência** é garantida pelo compilador: cada camada é um crate
-e o `Cargo.toml` de `domain` não depende de nenhum outro crate do projeto;
-`application` depende apenas de `domain`.
+The **dependency rule** is enforced by the compiler: each layer is a crate,
+the `Cargo.toml` of `domain` depends on no other crate of the project, and
+`application` depends only on `domain`.
 
-| Crate | Responsabilidade | Depende de |
-|-------|------------------|-----------|
-| `friendly-voice-domain` | Entidades, objetos de valor, serviços de domínio (sotaque, agenda) | `chrono`, `serde`, `thiserror` |
-| `friendly-voice-application` | Casos de uso e **portas** (traits) | `domain` |
-| `friendly-voice-infrastructure` | Implementações das portas | `domain`, `application`, `hound`, `serde_json`, (`ureq`) |
-| `friendly-voice-bootstrap` | Composition root (*wiring* das dependências) | `domain`, `application`, `infrastructure` |
-| `friendly-voice` (cli) | Interface de linha de comando | `bootstrap` |
-| `friendly-voice-mobile` | Interface Android: ponte JNI com entrada/saída JSON | `bootstrap`, `jni` |
+| Crate | Responsibility | Depends on |
+|-------|----------------|-----------|
+| `friendly-voice-domain` | Entities, value objects, domain services (accent, tone, schedules) | `chrono`, `serde`, `thiserror` |
+| `friendly-voice-application` | Use cases and **ports** (traits) | `domain` |
+| `friendly-voice-infrastructure` | Port implementations | `domain`, `application`, `hound`, `serde_json`, (`ureq`) |
+| `friendly-voice-bootstrap` | Composition root (dependency wiring) | `domain`, `application`, `infrastructure` |
+| `friendly-voice` (cli) | Command line interface | `bootstrap` |
+| `friendly-voice-mobile` | Android interface: JNI bridge with JSON in/out | `bootstrap`, `jni` |
 
-O app Android (`android/`, Kotlin) é apenas mais uma camada de apresentação:
-chama `NativeBridge` → `crates/mobile` → casos de uso. Nenhuma regra de
-negócio é reescrita em Kotlin (ver ADR 0005).
+The Android app (`android/`, Kotlin) is just another presentation layer:
+it calls `NativeBridge` → `crates/mobile` → use cases. No business rule is
+rewritten in Kotlin (see ADR 0005).
 
-## Fluxo da clonagem de voz com sotaque
+The voice engine (`engine/`, Python) is an external system behind the ports
+`VoiceCloningEngine`, `SpeechSynthesizer`, `Transcriber` and
+`PhoneRecognizer`, reached through the HTTP adapter (see ADR 0003 and 0006).
+
+## Voice cloning with accent — data flow
 
 ```
- WAV ──► WavDecoder ──► AudioClip ──► SampleQualityPolicy (domínio)
+ WAV ──► WavDecoder ──► AudioClip ──► SampleQualityPolicy (domain)
                               │
-                              ├──► DspAcousticAnalyzer ──► pitch, pausas
- texto ──► PortugueseG2p ──► forma de citação  /lejte kẽte/
- fonemas ouvidos (IPA ou PhoneRecognizer)  ──► /lejtʃi kẽtʃi/
+                              ├──► DspAcousticAnalyzer ──► pitch, pauses
+ text ──► PortugueseG2p ──► citation form  /lejte kẽte/
+ heard phonemes (IPA or PhoneRecognizer)  ──► /lejtʃi kẽtʃi/
                               │
                               ▼
-                     AccentAnalyzer (domínio)
-       alinhamento + oportunidades × realizações por fenômeno
+                     AccentAnalyzer (domain)
+       alignment + opportunities × realizations per phenomenon
                               │
-           AccentProfile (regras ordenadas + confiança)
+           AccentProfile (ordered rules + confidence)
                               │
- texto novo ─► G2P ─► AccentRenderer ─► SSML <phoneme ipa> ─► motor neural ─► WAV
+ new text ─► G2P ─► AccentRenderer ─► words (IPA, stress, pauses) + tone
+                                              │
+                                   HttpVoiceEngine (adapter)
+                                              │
+              engine: Piper pt-BR (speaks the phonemes) ─► OpenVoice V2 (timbre) ─► WAV
 ```
 
-O timbre (cor da voz) depende de um modelo neural, por isso fica atrás da porta
-`VoiceCloningEngine`/`SpeechSynthesizer`. **O sotaque é modelado no domínio**,
-de forma explicável e testável, e chega ao motor como pronúncia explícita
-(IPA por palavra) — assim o sotaque é preservado mesmo que o motor neural
-"puxe" para uma pronúncia padrão.
+The timbre (voice colour) needs a neural model, so it sits behind the ports.
+**The accent is modelled in the domain**, in an explainable and testable way,
+and reaches the engine as explicit pronunciation (phonemes per word) — so the
+accent is preserved even though neural models tend to pull towards a
+standard pronunciation.
 
-## Modelo de sotaque
+## Accent model
 
-Cada fenômeno é uma regra `alvo → substituição / contexto`:
+Each phenomenon is a `target → replacement / context` rule:
 
-| Aspecto pedido | Tipo | Exemplos de regras do catálogo |
+| Requested aspect | Kind | Examples of catalog rules |
 |---|---|---|
-| Jeito de pronunciar certas letras | `Segmental` | `t`→`tʃ` antes de /i/, `s`→`ʃ` em coda, `ɾ`→`h`/`ɻ` em coda, `x`→`h`/`r`, `ʎ`→`j`, vogais pretônicas abertas |
-| Término de palavras | `WordEnding` | `e`→`i` e `o`→`u` átonos finais, `a`→`ɐ`, `e`→`ɨ`, queda do `r` final |
-| Junção de palavras | `Juncture` | `s`+vogal→`z`, ligação do `r` (tepe), elisão de `a`, `i`→semivogal, degeminação `s`+`s` |
+| How certain letters are pronounced | `Segmental` | `t`→`tʃ` before /i/, coda `s`→`ʃ`, coda `ɾ`→`h`/`ɻ`, `x`→`h`/`r`, `ʎ`→`j`, open pretonic vowels |
+| Word endings | `WordEnding` | unstressed final `e`→`i` and `o`→`u`, `a`→`ɐ`, `e`→`ɨ`, dropping final `r` |
+| Word junctions | `Juncture` | `s`+vowel→`z`, `r` linking (tap), `a` elision, `i`→glide, `s`+`s` degemination |
 
-Contextos: posição (início, fim, coda, ataque, vogal final, pretônica),
-fonema anterior/seguinte (exato, conjunto ou classe natural), tonicidade e
-bloqueio diante de palavra iniciada por vogal.
+Contexts: position (initial, final, coda, onset, final vowel, pretonic),
+previous/next phoneme (exact, set or natural class), stress, and blocking
+before a vowel-initial word.
 
-**Aprendizado** (`AccentAnalyzer`):
-1. Alinha (Levenshtein ponderado) a forma de citação com os fonemas ouvidos.
-2. Percorre o catálogo **em ordem**; para cada regra conta oportunidades
-   (contexto satisfeito) e realizações (a pessoa de fato produziu a
-   substituição). Realizações são aplicadas à derivação, alimentando as regras
-   seguintes ("noite": `e→i` cria contexto para `t→tʃ`).
-3. Evidência mascarada por junção não penaliza regras de fim de palavra.
-4. Adota regras com oportunidades ≥ 2 e taxa ≥ 50%; guarda a taxa como
-   confiança (usada pela **intensidade** do sotaque).
-5. Descobre substituições recorrentes fora do catálogo (`learned:v>b@WordInitial`).
-6. Rotula o perfil com o preset regional mais próximo (Jaccard).
+**Learning** (`AccentAnalyzer`):
+1. Aligns (weighted Levenshtein) the citation form with the heard phonemes.
+2. Walks the catalog **in order**; for each rule it counts opportunities
+   (context satisfied) and realizations (the person actually produced the
+   replacement). Realizations are applied to the derivation, feeding the
+   following rules ("noite": `e→i` creates the context for `t→tʃ`).
+3. Evidence masked by a juncture does not penalize word-final rules.
+4. Adopts rules with ≥ 2 opportunities and a rate ≥ 50%; the rate is kept as
+   confidence (used by the accent **intensity**).
+5. Discovers recurring substitutions outside the catalog (`learned:v>b@WordInitial`).
+6. Labels the profile with the closest regional preset (Jaccard similarity).
 
-## Tom de voz
+## Tone of voice
 
-`VoiceTone` (domínio) = estilo (`ToneStyle`) + deslocamento de altura em
-semitons. Cada estilo é um `ToneAdjustment` (semitons, fator de velocidade,
-expressividade melódica, volume, voz soprosa) aplicado **sobre** a prosódia
-natural da pessoa — a voz continua sendo a dela, só muda a "cor". O tema da
-mensagem sugere o tom inicial (`ToneStyle::default_for`), que o usuário
-pode sobrescrever em cada pedido ou agendamento.
+`VoiceTone` (domain) = style (`ToneStyle`) + pitch shift in semitones. Each
+style is a `ToneAdjustment` (semitones, rate factor, melodic expressiveness,
+volume, breathiness) applied **on top of** the person's natural prosody — the
+voice is still theirs, only its colour changes. The message theme suggests the
+initial tone (`ToneStyle::default_for`), which the user can override on every
+request or schedule.
 
-## SOLID na prática
+## SOLID in practice
 
-* **S** — um caso de uso por arquivo (`RegisterSpeaker`, `AddVoiceSample`,
-  `BuildVoiceProfile`, `SpeakMessage`, ...); análise, renderização e
-  alinhamento do sotaque em módulos separados.
-* **O** — novos sotaques = novas regras no catálogo (dados), sem mudar o
-  analisador; novos motores/armazenamentos = novos adaptadores.
-* **L** — qualquer implementação de `SpeechSynthesizer` (sketch local, HTTP,
-  fake de teste) é intercambiável.
-* **I** — portas pequenas: `Transcriber` e `PhoneRecognizer` são opcionais e
-  separadas; repositórios por agregado.
-* **D** — casos de uso recebem `Arc<dyn Porta>`; só a composition root
-  (`crates/bootstrap`) conhece classes concretas — e é a mesma para CLI e Android.
+* **S** — one use case per file (`RegisterSpeaker`, `AddVoiceSample`,
+  `BuildVoiceProfile`, `SpeakMessage`, ...); accent analysis, rendering and
+  alignment in separate modules.
+* **O** — new accents = new catalog rules (data), without changing the
+  analyzer; new engines/storage = new adapters.
+* **L** — any `SpeechSynthesizer` implementation (local sketch, HTTP engine,
+  test fake) is interchangeable.
+* **I** — small ports: `Transcriber` and `PhoneRecognizer` are optional and
+  separate; one repository per aggregate.
+* **D** — use cases receive `Arc<dyn Port>`; only the composition root
+  (`crates/bootstrap`) knows concrete types — and it is the same for CLI and Android.

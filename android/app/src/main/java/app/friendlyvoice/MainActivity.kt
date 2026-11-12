@@ -22,8 +22,8 @@ import android.widget.TextView
 import org.json.JSONObject
 
 /**
- * Tela única: pessoa → amostras → voz → mensagem (com tom) → agenda.
- * Toda regra de negócio está no núcleo Rust; aqui só há interface.
+ * Single screen: person → samples → voice → message (with tone) → schedule.
+ * Every business rule lives in the Rust core; this is UI only (user-facing text in Portuguese).
  */
 class MainActivity : Activity() {
 
@@ -237,9 +237,9 @@ class MainActivity : Activity() {
         status.text = message
     }
 
-    // ------------------------------------------------------------ dados
+    // ------------------------------------------------------------ data
 
-    /** Chamadas nativas fazem I/O e DSP: rodam fora da thread de UI. */
+    /** Native calls do I/O and DSP: they run off the UI thread. */
     private fun callNative(call: () -> String, onOk: (NativeResult) -> Unit) {
         show("Processando…")
         Thread {
@@ -353,7 +353,7 @@ class MainActivity : Activity() {
         }
     }
 
-    @Deprecated("API de Activity sem AndroidX")
+    @Deprecated("Plain Activity API (no AndroidX)")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         val uri: Uri = data?.data ?: return

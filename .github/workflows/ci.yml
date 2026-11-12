@@ -16,9 +16,9 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Formatação
+      - name: Formatting
         run: cargo fmt --all -- --check
       - name: Lint
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-      - name: Testes (unitários, de caso de uso e de aceitação)
+      - name: Tests (unit, use case and acceptance)
         run: cargo test --workspace --all-features

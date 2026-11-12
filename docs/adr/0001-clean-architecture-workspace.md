@@ -1,18 +1,18 @@
-# ADR 0001 — Clean Architecture com um crate por camada
+# ADR 0001 — Clean Architecture with one crate per layer
 
-**Status:** aceito · Sprint 0
+**Status:** accepted · Sprint 0
 
-## Contexto
-Precisamos seguir Clean Architecture e SOLID, e trocar motores de voz e
-armazenamento sem reescrever regras de negócio.
+## Context
+We must follow Clean Architecture and SOLID, and be able to swap voice engines
+and storage without rewriting business rules.
 
-## Decisão
-Workspace Cargo com `domain`, `application`, `infrastructure` e `cli`. As
-dependências entre crates tornam a regra de dependência **verificada pelo
-compilador**. Injeção de dependência manual via `Arc<dyn Trait>` em uma única
-composition root.
+## Decision
+A Cargo workspace with `domain`, `application`, `infrastructure` and
+presentation crates. Dependencies between crates make the dependency rule
+**checked by the compiler**. Manual dependency injection with `Arc<dyn Trait>`
+in a single composition root.
 
-## Consequências
-* + Violações de camada viram erro de compilação.
-* + Casos de uso testados com fakes, sem I/O.
-* − Algum *boilerplate* de construtores.
+## Consequences
+* + Layer violations become compile errors.
+* + Use cases are tested with fakes, without I/O.
+* − Some constructor boilerplate.

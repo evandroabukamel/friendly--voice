@@ -1,4 +1,4 @@
-//! Interface de linha de comando (camada de apresentação).
+//! Command line interface (presentation layer). User-facing text is in Portuguese.
 mod args;
 
 use args::*;

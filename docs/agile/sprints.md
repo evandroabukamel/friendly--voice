@@ -1,76 +1,99 @@
 # Sprints
 
-Sprints de 1 semana. Cada sprint entrega um **incremento utilizável e testado**
-(ver [Definition of Done](definition-of-done.md)).
+One-week sprints. Every sprint delivers a **usable, tested increment**
+(see the [Definition of Done](definition-of-done.md)).
 
-| Sprint | Meta | Histórias | Pontos |
-|-------:|------|-----------|-------:|
-| 0 | Fundação: workspace em camadas, CI, backlog inicial | — (habilitadores) | — |
-| 1 | Domínio puro: pessoas, fonética, modelo de sotaque | US-01 (+ base de US-03/04) | 2 |
-| 2 | Clonagem: amostras, aprendizado de sotaque e voz | US-02, US-03, US-04, US-10 | 24 |
-| 3 | Mensagens e agendamentos ponta a ponta na CLI | US-05, US-06, US-07, US-08, US-09 | 14 |
-| 4 | Tom de voz por mensagem e app Android com CI/CD | US-18, US-19, US-20 | 21 |
+| Sprint | Goal | Stories | Points |
+|-------:|------|---------|-------:|
+| 0 | Foundation: layered workspace, CI, initial backlog | — (enablers) | — |
+| 1 | Pure domain: people, phonetics, accent model | US-01 (+ base of US-03/04) | 2 |
+| 2 | Cloning: samples, accent learning and voice | US-02, US-03, US-04, US-10 | 24 |
+| 3 | Messages and schedules end to end in the CLI | US-05, US-06, US-07, US-08, US-09 | 14 |
+| 4 | Tone of voice per message and Android app with CI/CD | US-18, US-19, US-20 | 21 |
+| 5 | Real timbre cloning (OpenVoice) and English documentation | US-11, US-21 | 11 |
 
-Velocidade média (sprints 1–4): **~15 pts/sprint**.
+Average velocity (sprints 1–5): **~14 pts/sprint**.
 
-## Sprint 0 — Fundação
-* Workspace Cargo com 4 crates (`domain`, `application`, `infrastructure`, `cli`)
-  e a regra de dependência imposta pelo `Cargo.toml` de cada crate.
-* Pipeline de CI: `fmt`, `clippy -D warnings`, testes.
-* Backlog priorizado e Definition of Done.
+## Sprint 0 — Foundation
+* Cargo workspace with one crate per layer, and the dependency rule enforced
+  by each crate's `Cargo.toml`.
+* CI pipeline: `fmt`, `clippy -D warnings`, tests.
+* Prioritized backlog and Definition of Done.
 
-## Sprint 1 — Domínio
-**Incremento:** biblioteca de domínio com 100% das regras testadas sem I/O.
-* Entidade `Speaker` com consentimento obrigatório (US-01).
-* Fonemas IPA, parser de IPA, palavras e enunciados.
-* Modelo de sotaque: regras segmentais, de término e de junção; derivação
-  ordenada; alinhamento canônico × ouvido.
+## Sprint 1 — Domain
+**Increment:** domain library with all rules tested without I/O.
+* `Speaker` entity with mandatory consent (US-01).
+* IPA phonemes, IPA parser, words and utterances.
+* Accent model: segmental, word-ending and juncture rules; ordered
+  derivation; citation × heard alignment.
 
-**Retrospectiva**
-* 👍 Modelar o sotaque como regras ordenadas deixou os testes legíveis
-  ("noite" → /nojtʃi/ prova a alimentação entre regras).
-* 👎 Juntar término de palavra e junção gerou conflito ("mar azul": o *r*
-  caía antes de ligar). **Ação:** contexto `blocked_before_vowel_word`.
+**Retrospective**
+* 👍 Modelling the accent as ordered rules made the tests readable
+  ("noite" → /nojtʃi/ proves rules feed each other).
+* 👎 Combining word endings with junctions caused a conflict ("mar azul": the
+  *r* was dropped before linking). **Action:** `blocked_before_vowel_word` context.
 
-## Sprint 2 — Clonagem com sotaque
-**Incremento:** `amostra adicionar` + `voz gerar` funcionando com motor local.
-* Decodificação WAV, análise DSP (pitch por autocorrelação, pausas).
-* G2P pt-BR (forma de citação) com tonicidade, dígrafos, nasais e ditongos.
-* `AccentAnalyzer`: mede oportunidades × realizações por fenômeno; descobre
-  padrões fora do catálogo; rotula o preset regional mais próximo.
-* Porta `VoiceCloningEngine` + adaptador HTTP para motor neural (feature).
+## Sprint 2 — Cloning with accent
+**Increment:** `amostra adicionar` + `voz gerar` working with the local engine.
+* WAV decoding, DSP analysis (autocorrelation pitch, pauses).
+* pt-BR G2P (citation form) with stress, digraphs, nasals and diphthongs.
+* `AccentAnalyzer`: opportunities × realizations per phenomenon; discovers
+  patterns outside the catalog; labels the closest regional preset.
+* `VoiceCloningEngine` port + HTTP adapter for a neural engine (feature).
 
-**Retrospectiva**
-* 👍 Fakes in-memory nas portas deixaram os casos de uso testáveis em ms.
-* 👎 Junções mascaravam regras de coda ("os amigos" → z contava como falha de
-  s → ʃ). **Ação:** evidência "explicada por junção" não conta contra a regra.
+**Retrospective**
+* 👍 In-memory fakes behind the ports made the use cases testable in ms.
+* 👎 Junctions masked coda rules ("os amigos" → z counted as a failure of
+  s → ʃ). **Action:** evidence "explained by a juncture" does not count against the rule.
 
-## Sprint 3 — Mensagens e agenda
-**Incremento:** fluxo completo pela CLI, coberto por testes de aceitação.
-* Catálogo de mensagens por tema com personalização pelo nome.
-* `falar`, `pronuncia` (com intensidade), `agenda criar/listar/remover/executar`.
-* Agendamento com janelas, dias da semana, horário de silêncio e *catch-up*
-  único quando o app estava desligado.
+## Sprint 3 — Messages and schedules
+**Increment:** full flow in the CLI, covered by acceptance tests.
+* Message catalog by theme, personalized with the listener's name.
+* `falar`, `pronuncia` (with intensity), `agenda criar/listar/remover/executar`.
+* Schedules with windows, weekdays, quiet hours and a single catch-up firing
+  when the app was off.
 
-**Retrospectiva**
-* 👍 Testes de aceitação no binário real espelham os critérios Gherkin.
-* 👎 Janela de intervalo começava "fora do relógio" (09:30 em vez de 09:00).
-  **Ação:** pular para o início da janela; teste de regressão adicionado.
+**Retrospective**
+* 👍 Acceptance tests on the real binary mirror the Gherkin criteria.
+* 👎 The interval window started "off the clock" (09:30 instead of 09:00).
+  **Action:** jump to the window start; regression test added.
 
-## Sprint 4 — Tom de voz e Android
-**Incremento:** tom de voz escolhido em cada mensagem (CLI e app) e APK
-gerado automaticamente pelo CI, com release a cada tag.
-* `VoiceTone`: seis estilos + ajuste de ±6 semitons, aplicados **sobre** a
-  prosódia natural da pessoa; tom inicial sugerido pelo tema.
-* Composition root extraída para `crates/bootstrap` (reuso CLI/Android).
-* `crates/mobile`: API JSON testável no host + wrappers JNI à prova de panic.
-* App Android em Kotlin (sem regras de negócio) e WorkManager para a agenda.
-* Workflow `android.yml`: cargo-ndk (3 ABIs), CLI para Termux, APK
-  debug/release, lint, artefatos e GitHub Release em tags `v*`.
+## Sprint 4 — Tone of voice and Android
+**Increment:** tone of voice chosen for each message (CLI and app) and the APK
+built automatically by CI, with a release on every tag.
+* `VoiceTone`: six styles + ±6 semitone shift, applied **on top of** the
+  person's natural prosody; initial tone suggested by the theme.
+* Composition root extracted to `crates/bootstrap` (reused by CLI/Android).
+* `crates/mobile`: JSON API testable on the host + panic-safe JNI wrappers.
+* Kotlin Android app (no business rules) and WorkManager for the schedules.
+* `android.yml` workflow: cargo-ndk (3 ABIs), CLI for Termux, debug/release
+  APK, lint, artifacts and a GitHub Release on `v*` tags.
 
-**Retrospectiva**
-* 👍 A Clean Architecture pagou o investimento: o Android só precisou de uma
-  nova camada de apresentação; nenhum caso de uso mudou.
-* 👎 O SDK Android não estava disponível no ambiente de desenvolvimento.
-  **Ação:** o Kotlin foi verificado compilando contra `android-all` (API 34);
-  o APK completo é validado no CI.
+**Retrospective**
+* 👍 Clean Architecture paid off: Android only needed a new presentation
+  layer; no use case changed.
+* 👎 The Android SDK was not available in the development environment.
+  **Action:** Kotlin was checked by compiling against `android-all` (API 34);
+  the full APK is validated in CI (green on the first run).
+
+## Sprint 5 — Timbre cloning and English documentation
+**Increment:** messages spoken with the cloned timbre of the person, the
+learned accent and the chosen tone; documentation and comments in English.
+* License review: OpenVoice V2 (MIT) chosen over XTTS v2 (non-commercial
+  only) — ADR 0006.
+* `engine/`: FastAPI server; Piper pt-BR speaks the accented phonemes and the
+  OpenVoice V2 tone color converter applies the person's timbre; weights
+  downloaded with SHA-256 verification; Dockerfile.
+* HTTP adapter sends phonemes per word with stress and pauses, reports the
+  server's error details and treats a missing phone recognizer (501) as
+  "no evidence" instead of failing.
+* `engine.yml` workflow: engine tests with the real models, CLI ⇄ engine
+  end-to-end test, Docker build.
+* README, docs, ADRs and code comments rewritten in English (US-21).
+
+**Retrospective**
+* 👍 Keeping pronunciation in the domain made the engine simple: it never
+  re-reads text, so the accent cannot be "normalized away".
+* 👎 The tests use synthetic reference audio; perceptual quality with real
+  recordings still has to be checked by listening. **Action:** add a
+  listening checklist to the Definition of Done for voice stories.

@@ -16,12 +16,12 @@ use std::sync::Arc;
 pub struct SpeakRequest {
     pub speaker_id: SpeakerId,
     pub content: MessageContent,
-    /// Nome de quem vai ouvir (personaliza a mensagem).
+    /// Name of the listener (personalizes the message).
     pub listener: Option<String>,
-    /// 0.0 = sem sotaque, 1.0 = sotaque completo aprendido.
+    /// 0.0 = no accent, 1.0 = full learned accent.
     pub accent_intensity: f32,
-    /// Tom de voz desta mensagem. `None` = tom inicial sugerido pelo tema
-    /// (ex.: "calma" → calmo, "celebracao" → animado; texto livre → natural).
+    /// Tone of voice of this message. `None` = initial tone suggested by the theme
+    /// (e.g. "calma" → calmo, "celebracao" → animado; free text → natural).
     pub tone: Option<VoiceTone>,
 }
 
@@ -32,7 +32,7 @@ pub struct SpokenMessage {
     pub receipt: String,
 }
 
-/// US-05: pedir uma mensagem na hora (também usado pelos agendamentos).
+/// US-05: ask for a message right now (also used by the schedules).
 pub struct SpeakMessage {
     speakers: Arc<dyn SpeakerRepository>,
     profiles: Arc<dyn VoiceProfileRepository>,
@@ -151,7 +151,7 @@ mod tests {
             })
             .unwrap();
         assert!(out.message.text().contains("Ana"));
-        // tom inicial sugerido pelo tema
+        // initial tone suggested by the theme
         assert_eq!(out.script.tone.style, ToneStyle::Cheerful);
     }
 
@@ -174,7 +174,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             out.script.tone, tone,
-            "escolha do usuário vence o tom do tema"
+            "the user's choice wins over the theme's tone"
         );
         assert_eq!(out.script.prosody, tone.apply(natural));
         assert!(out.script.prosody.mean_pitch_hz < natural.mean_pitch_hz);

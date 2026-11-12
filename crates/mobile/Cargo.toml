@@ -1,6 +1,6 @@
 [package]
 name = "friendly-voice-mobile"
-description = "Biblioteca nativa do app Android: ponte JNI sobre os casos de uso."
+description = "Native library of the Android app: JNI bridge over the use cases."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

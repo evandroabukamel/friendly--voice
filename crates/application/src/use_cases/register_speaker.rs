@@ -10,11 +10,11 @@ use std::sync::Arc;
 pub struct RegisterSpeakerInput {
     pub name: String,
     pub relationship: Option<String>,
-    /// Quem autorizou o uso da voz (a própria pessoa ou responsável legal).
+    /// Who authorized the use of the voice (the person or their legal guardian).
     pub consent_granted_by: Option<String>,
 }
 
-/// US-01: cadastrar a pessoa cuja voz será usada.
+/// US-01: register the person whose voice will be used.
 pub struct RegisterSpeaker {
     speakers: Arc<dyn SpeakerRepository>,
     ids: Arc<dyn IdGenerator>,

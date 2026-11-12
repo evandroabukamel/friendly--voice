@@ -1,7 +1,7 @@
-//! Portas (interfaces) que a aplicação exige do mundo externo.
+//! Ports (interfaces) the application requires from the outside world.
 //!
-//! Interfaces pequenas e coesas (ISP): cada adaptador implementa só o que
-//! precisa, e cada caso de uso depende só do que usa.
+//! Small, cohesive interfaces (ISP): each adapter implements only what it
+//! needs, and each use case depends only on what it uses.
 use chrono::NaiveDateTime;
 use friendly_voice_domain::{
     audio::{AcousticFeatures, AudioClip},
@@ -14,7 +14,7 @@ use friendly_voice_domain::{
 };
 use std::fmt;
 
-/// Erro genérico de um adaptador.
+/// Generic adapter error.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PortError(pub String);
 
@@ -33,7 +33,7 @@ impl PortError {
 
 pub type PortResult<T> = Result<T, PortError>;
 
-// ---------- Persistência ----------
+// ---------- Persistence ----------
 
 pub trait SpeakerRepository: Send + Sync {
     fn save(&self, speaker: &Speaker) -> PortResult<()>;
@@ -57,13 +57,13 @@ pub trait ScheduleRepository: Send + Sync {
     fn delete(&self, id: &ScheduleId) -> PortResult<bool>;
 }
 
-/// Guarda os arquivos de áudio originais.
+/// Stores the original audio files.
 pub trait AudioStore: Send + Sync {
     fn store(&self, speaker: &SpeakerId, sample: &SampleId, bytes: &[u8]) -> PortResult<String>;
     fn load(&self, locator: &str) -> PortResult<Vec<u8>>;
 }
 
-// ---------- Áudio e fonética ----------
+// ---------- Audio and phonetics ----------
 
 pub trait AudioDecoder: Send + Sync {
     fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip>;
@@ -73,31 +73,31 @@ pub trait AcousticAnalyzer: Send + Sync {
     fn analyze(&self, clip: &AudioClip) -> AcousticFeatures;
 }
 
-/// Converte texto em pronúncia de citação (G2P).
+/// Converts text into its citation pronunciation (G2P).
 pub trait Phonemizer: Send + Sync {
     fn phonemize(&self, text: &str) -> PhoneticUtterance;
 }
 
-/// Reconhecimento de fala (opcional): gera o transcript a partir do áudio.
+/// Speech recognition (optional): produces the transcript from the audio.
 pub trait Transcriber: Send + Sync {
     fn transcribe(&self, clip: &AudioClip) -> PortResult<String>;
 }
 
-/// Reconhecimento fonético (opcional): o que a pessoa *de fato* pronunciou.
+/// Phone recognition (optional): what the person *actually* pronounced.
 pub trait PhoneRecognizer: Send + Sync {
     fn recognize(&self, clip: &AudioClip, transcript: &str) -> PortResult<Vec<Phoneme>>;
 }
 
-// ---------- Voz ----------
+// ---------- Voice ----------
 
-/// Áudio de referência enviado ao motor de clonagem.
+/// Reference audio sent to the cloning engine.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReferenceAudio {
     pub bytes: Vec<u8>,
     pub transcript: String,
 }
 
-/// Cria a voz (timbre) no motor neural.
+/// Creates the voice (timbre) in the neural engine.
 pub trait VoiceCloningEngine: Send + Sync {
     fn enroll(&self, speaker: &Speaker, references: &[ReferenceAudio]) -> PortResult<String>;
 }
@@ -105,7 +105,7 @@ pub trait VoiceCloningEngine: Send + Sync {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SynthesizedAudio {
     pub wav: Vec<u8>,
-    /// Marcação enviada ao motor (ex.: SSML), útil para auditoria.
+    /// Markup sent to the engine (e.g. SSML), useful for auditing.
     pub markup: String,
 }
 
@@ -117,10 +117,10 @@ pub trait SpeechSynthesizer: Send + Sync {
     ) -> PortResult<SynthesizedAudio>;
 }
 
-// ---------- Mensagens ----------
+// ---------- Messages ----------
 
 pub trait MessageSource: Send + Sync {
-    /// `listener` é o nome de quem ouve, para personalização.
+    /// `listener` is the name of the person listening, for personalization.
     fn pick(
         &self,
         category: MessageCategory,
@@ -138,12 +138,12 @@ pub struct Delivery<'a> {
     pub at: NaiveDateTime,
 }
 
-/// Entrega a mensagem (tocar, salvar, notificar...). Devolve um recibo.
+/// Delivers the message (play, save, notify...). Returns a receipt.
 pub trait MessageDelivery: Send + Sync {
     fn deliver(&self, delivery: &Delivery<'_>) -> PortResult<String>;
 }
 
-// ---------- Sistema ----------
+// ---------- System ----------
 
 pub trait Clock: Send + Sync {
     fn now(&self) -> NaiveDateTime;

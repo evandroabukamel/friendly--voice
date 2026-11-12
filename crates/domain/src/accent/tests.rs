@@ -1,7 +1,7 @@
 use super::*;
 use crate::phonetics::{parse_ipa, PhoneticUtterance, PhoneticWord};
 
-/// Constrói uma palavra a partir de IPA; `stress` = índice do fonema tônico.
+/// Builds a word from IPA; `stress` = index of the stressed phoneme.
 fn w(orth: &str, ipa: &str, stress: Option<usize>) -> PhoneticWord {
     PhoneticWord::new(orth, parse_ipa(ipa), stress)
 }
@@ -21,7 +21,7 @@ fn adopted(a: &AccentAnalysis, code: &str) -> bool {
     a.profile.rule_codes().contains(&code)
 }
 
-/// Amostras de uma falante carioca.
+/// Samples from a speaker from Rio de Janeiro (carioca accent).
 fn carioca_evidence() -> Vec<AnalysisEvidence> {
     vec![
         // "leite quente" → lejtʃi kẽtʃi
@@ -91,18 +91,18 @@ fn carioca_evidence() -> Vec<AnalysisEvidence> {
 #[test]
 fn learns_word_endings_letters_and_junctures() {
     let a = AccentAnalyzer::default().analyze(&carioca_evidence());
-    // término de palavras
+    // word endings
     assert!(adopted(&a, "final-e-raising"), "{:#?}", a.evidence);
     assert!(adopted(&a, "final-o-raising"));
     assert!(adopted(&a, "word-final-r-deletion"));
-    // pronúncia de letras
+    // pronunciation of letters
     assert!(adopted(&a, "t-palatalization"));
     assert!(adopted(&a, "d-palatalization"));
     assert!(adopted(&a, "coda-s-palatalization"));
     assert!(adopted(&a, "coda-r-aspiration"));
-    // junção de palavras
+    // word junctions
     assert!(adopted(&a, "sibilant-voicing"));
-    // não adota o que a pessoa não faz
+    // does not adopt what the person does not do
     assert!(!adopted(&a, "coda-r-retroflex"));
     assert!(!adopted(&a, "final-e-centralization"));
     assert_eq!(a.profile.label, "Carioca (RJ)");
@@ -110,7 +110,7 @@ fn learns_word_endings_letters_and_junctures() {
 
 #[test]
 fn rules_feed_each_other_in_order() {
-    // "noite" só palataliza o t porque o e final virou i antes.
+    // "noite" only palatalizes the t because the final e became i first.
     let a = AccentAnalyzer::default().analyze(&carioca_evidence());
     let out = AccentRenderer.render(&a.profile, &utt(vec![w("noite", "nojte", Some(1))]), 1.0);
     assert_eq!(out.ipa(), "nojtʃi");
@@ -156,7 +156,7 @@ fn juncture_rhotic_linking_blocks_r_deletion() {
         w("a", "a", None),
         w("vida", "vida", Some(1)),
     ]);
-    // "amar a vida": r não cai antes de vogal e liga com tepe
+    // "amar a vida": the r is not dropped before a vowel and links as a tap
     assert_eq!(
         AccentRenderer.render(&profile, &text, 1.0).ipa(),
         "amaɾ a vida"
@@ -212,7 +212,7 @@ fn intensity_zero_keeps_citation_form() {
 
 #[test]
 fn discovers_patterns_outside_catalog() {
-    // Falante que troca 'v' inicial por 'b' (bida, bento, boz, bez).
+    // Speaker who replaces word-initial 'v' with 'b' (bida, bento, boz, bez).
     let samples = vec![
         ev(utt(vec![w("vida", "vida", Some(1))]), "bida"),
         ev(utt(vec![w("vento", "vẽto", Some(1))]), "bẽto"),

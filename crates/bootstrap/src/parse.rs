@@ -1,4 +1,4 @@
-//! Conversão de argumentos textuais em valores do domínio.
+//! Conversion of textual arguments into domain values.
 use chrono::{NaiveDateTime, NaiveTime, Weekday};
 use friendly_voice_domain::schedule::TimeWindow;
 

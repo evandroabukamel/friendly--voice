@@ -1,4 +1,4 @@
-//! Amostras de voz, perfil de voz clonada e roteiro de fala.
+//! Voice samples, cloned voice profile and speech script.
 use crate::accent::AccentProfile;
 use crate::audio::AcousticFeatures;
 use crate::ids::{SampleId, SpeakerId};
@@ -7,24 +7,24 @@ use crate::tone::VoiceTone;
 use crate::DomainError;
 use serde::{Deserialize, Serialize};
 
-/// Amostra de áudio enviada pelo usuário, já analisada.
+/// Audio sample uploaded by the user, already analyzed.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VoiceSample {
     pub id: SampleId,
     pub speaker_id: SpeakerId,
-    /// Localizador do áudio original no armazenamento.
+    /// Locator of the original audio in storage.
     pub audio_locator: String,
     pub duration_secs: f32,
-    /// O que foi dito na gravação.
+    /// What was said in the recording.
     pub transcript: String,
-    /// Pronúncia de citação do transcript.
+    /// Citation pronunciation of the transcript.
     pub canonical: PhoneticUtterance,
-    /// Fonemas efetivamente ouvidos (reconhecedor fonético ou anotação).
+    /// Phonemes actually heard (phone recognizer or annotation).
     pub observed: Option<Vec<Phoneme>>,
     pub features: AcousticFeatures,
 }
 
-/// Características prosódicas (melodia e ritmo) da pessoa.
+/// Prosodic traits (melody and rhythm) of the person.
 #[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub struct ProsodyProfile {
     pub mean_pitch_hz: f32,
@@ -34,7 +34,7 @@ pub struct ProsodyProfile {
 }
 
 impl ProsodyProfile {
-    /// Agrega as amostras ponderando pela duração.
+    /// Aggregates the samples weighting by duration.
     pub fn aggregate(samples: &[VoiceSample]) -> Self {
         let total: f32 = samples.iter().map(|s| s.duration_secs).sum();
         if total <= 0.0 {
@@ -61,7 +61,7 @@ impl ProsodyProfile {
     }
 }
 
-/// Requisitos mínimos para gerar uma voz.
+/// Minimum requirements to generate a voice.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EnrollmentPolicy {
     pub min_samples: usize,
@@ -92,11 +92,11 @@ impl EnrollmentPolicy {
     }
 }
 
-/// Voz gerada para uma pessoa: timbre (no motor de síntese) + sotaque + prosódia.
+/// Voice generated for a person: timbre (in the synthesis engine) + accent + prosody.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VoiceProfile {
     pub speaker_id: SpeakerId,
-    /// Identificador da voz no motor de clonagem.
+    /// Voice identifier in the cloning engine.
     pub engine_voice_id: String,
     pub accent: AccentProfile,
     pub prosody: ProsodyProfile,
@@ -104,8 +104,8 @@ pub struct VoiceProfile {
     pub total_audio_secs: f32,
 }
 
-/// Roteiro entregue ao sintetizador: texto + pronúncia com sotaque +
-/// prosódia (já colorida pelo tom escolhido).
+/// Script handed to the synthesizer: text + accented pronunciation +
+/// prosody (already coloured by the chosen tone).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SpeechScript {
     pub text: String,
@@ -145,7 +145,7 @@ mod tests {
             sample(6.0, 200.0, "papapapa"),
         ]);
         assert!((p.mean_pitch_hz - 175.0).abs() < 1e-3);
-        // 6 sílabas em 4s de fala
+        // 6 syllables in 4s of speech
         assert!((p.syllables_per_second - 1.5).abs() < 1e-3);
     }
 

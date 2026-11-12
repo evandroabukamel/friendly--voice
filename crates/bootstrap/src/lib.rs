@@ -1,9 +1,9 @@
 //! # Friendly Voice — Bootstrap
 //!
-//! Composition root: o único lugar que conhece as implementações concretas.
-//! É compartilhada por todas as interfaces (CLI, app Android via JNI).
-//! Trocar um adaptador (ex.: JSON → SQLite, sketch → motor neural) é mudar
-//! uma linha aqui — nenhum caso de uso é alterado (OCP + DIP).
+//! Composition root: the only place that knows the concrete implementations.
+//! It is shared by every interface (CLI, Android app via JNI).
+//! Swapping an adapter (e.g. JSON → SQLite, sketch → neural engine) means
+//! changing one line here — no use case changes (OCP + DIP).
 pub mod parse;
 
 use friendly_voice_application::{ports::*, use_cases::*};

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-/// Violações de regras de negócio.
+/// Business rule violations.
 #[derive(Debug, Clone, Error, PartialEq)]
 pub enum DomainError {
     #[error("valor inválido para '{field}': {reason}")]

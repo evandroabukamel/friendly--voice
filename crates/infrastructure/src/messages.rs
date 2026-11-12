@@ -1,4 +1,4 @@
-//! Catálogo curado de mensagens positivas em português.
+//! Curated catalog of positive messages in Portuguese.
 use friendly_voice_application::ports::{MessageSource, PortError, PortResult};
 use friendly_voice_domain::{
     message::{MessageCategory, MotivationalMessage},
@@ -78,7 +78,7 @@ impl Default for CuratedMessageCatalog {
     }
 }
 
-/// Substitui `{nome}`; sem nome, remove o vocativo de forma natural.
+/// Replaces `{nome}`; without a name, removes the vocative naturally.
 fn personalize(template: &str, listener: Option<&str>) -> String {
     match listener.map(str::trim).filter(|n| !n.is_empty()) {
         Some(name) => template.replace("{nome}", name),

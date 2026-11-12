@@ -1,17 +1,17 @@
-//! # Friendly Voice — Domínio
+//! # Friendly Voice — Domain
 //!
-//! Camada mais interna da Clean Architecture. Contém apenas regras de negócio
-//! puras: nenhuma dependência de I/O, banco, rede ou framework.
+//! Innermost layer of the Clean Architecture. It contains only pure business
+//! rules: no dependency on I/O, databases, network or frameworks.
 //!
-//! * [`speaker`]   — pessoa cuja voz será usada (com consentimento obrigatório).
-//! * [`audio`]     — clipe de áudio e política de qualidade das amostras.
-//! * [`phonetics`] — fonemas, palavras e enunciados fonéticos (IPA).
-//! * [`accent`]    — modelo de sotaque: pronúncia de letras, término de
-//!   palavras e junção entre palavras; analisador e renderizador.
-//! * [`voice`]     — amostras, perfil de voz, prosódia e roteiro de fala.
-//! * [`message`]   — mensagens motivacionais.
-//! * [`schedule`]  — regras de agendamento definidas pelo usuário.
-//! * [`tone`]      — tom de voz escolhido para cada mensagem.
+//! * [`speaker`]   — the person whose voice is used (consent is mandatory).
+//! * [`audio`]     — audio clip and sample quality policy.
+//! * [`phonetics`] — phonemes, words and phonetic utterances (IPA).
+//! * [`accent`]    — accent model: letter pronunciation, word endings and
+//!   word junctions; analyzer and renderer.
+//! * [`voice`]     — samples, voice profile, prosody and speech script.
+//! * [`message`]   — motivational messages.
+//! * [`schedule`]  — user-defined scheduling rules.
+//! * [`tone`]      — tone of voice chosen for each message.
 
 pub mod accent;
 pub mod audio;

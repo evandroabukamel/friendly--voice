@@ -1,23 +1,24 @@
-# ADR 0002 — Sotaque como regras fonológicas ordenadas no domínio
+# ADR 0002 — Accent as ordered phonological rules in the domain
 
-**Status:** aceito · Sprint 1
+**Status:** accepted · Sprint 1
 
-## Contexto
-A feature precisa considerar o sotaque: pronúncia de letras, término e junção
-de palavras. Motores neurais de clonagem copiam bem o timbre, mas tendem a
-"normalizar" a pronúncia para o padrão do idioma, e não são explicáveis.
+## Context
+The feature must take the accent into account: letter pronunciation, word
+endings and word junctions. Neural cloning engines copy the timbre well, but
+they tend to "normalize" pronunciation to the language standard, and they are
+not explainable.
 
-## Decisão
-Modelar o sotaque no **domínio** como regras `alvo → substituição / contexto`
-aplicadas em ordem (como na fonologia gerativa), em três tipos: segmental,
-término de palavra e junção. As regras são aprendidas comparando a forma de
-citação (G2P) com os fonemas ouvidos e entregues ao motor como IPA por palavra
-(SSML `<phoneme>`).
+## Decision
+Model the accent in the **domain** as `target → replacement / context` rules
+applied in order (as in generative phonology), of three kinds: segmental, word
+ending and juncture. Rules are learned by comparing the citation form (G2P)
+with the heard phonemes, and are handed to the engine as phonemes per word
+(and SSML `<phoneme>` for engines that only take SSML).
 
-## Consequências
-* + Explicável: o usuário vê cada fenômeno com a frequência medida.
-* + Controlável: intensidade do sotaque, edição de regras.
-* + Testável sem áudio.
-* − Depende de fonemas observados (anotação manual ou reconhecedor fonético).
-* − Fenômenos prosódicos finos (duração por fonema, entonação) ficam para
-  histórias futuras (US-12, US-13).
+## Consequences
+* + Explainable: the user sees each phenomenon with its measured frequency.
+* + Controllable: accent intensity, rule editing.
+* + Testable without audio.
+* − Needs observed phonemes (manual annotation or a phone recognizer).
+* − Fine prosodic phenomena (per-phoneme duration, intonation) are left for
+  future stories (US-12, US-13).

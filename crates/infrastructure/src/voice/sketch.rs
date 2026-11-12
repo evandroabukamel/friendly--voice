@@ -1,11 +1,11 @@
-//! Motor local, sem rede e sem rede neural.
+//! Local engine, with no network and no neural network.
 //!
-//! * [`LocalVoiceBank`] registra as referências da pessoa (o timbre real
-//!   exige um motor neural — ver `HttpVoiceEngine`).
-//! * [`ProsodySketchSynthesizer`] gera um "esboço sonoro" da fala: cada
-//!   sílaba vira um pulso vozeado no pitch médio da pessoa, no ritmo dela,
-//!   com tônicas mais longas/agudas, ruído nas fricativas e pausas na
-//!   pontuação. Serve para validar ritmo/entonação e o pipeline ponta a ponta.
+//! * [`LocalVoiceBank`] registers the person's references (the real timbre
+//!   needs a neural engine — see `HttpVoiceEngine`).
+//! * [`ProsodySketchSynthesizer`] renders a "sound sketch" of the speech: each
+//!   syllable becomes a voiced pulse at the person's mean pitch and rhythm,
+//!   with longer/higher stressed syllables, noise for fricatives and pauses at
+//!   punctuation. It validates rhythm/intonation and the end-to-end pipeline.
 use super::ssml::to_ssml;
 use crate::audio::encode_wav;
 use friendly_voice_application::ports::{
@@ -44,14 +44,14 @@ impl Default for ProsodySketchSynthesizer {
     }
 }
 
-/// Fonte sonora derivada do tom escolhido.
+/// Sound source derived from the chosen tone.
 #[derive(Debug, Clone, Copy)]
 struct Voicing {
     gain: f32,
     breathy: bool,
 }
 
-/// Ruído branco em [-0.5, 0.5].
+/// White noise in [-0.5, 0.5].
 fn xorshift(seed: &mut u32) -> f32 {
     *seed ^= *seed << 13;
     *seed ^= *seed >> 17;
@@ -84,8 +84,8 @@ impl ProsodySketchSynthesizer {
             let t = i as f32 / n.max(1) as f32;
             let f0 = f0_start + (f0_end - f0_start) * t;
             *phase += TAU * f0 / self.sample_rate as f32;
-            // Fonte glotal aproximada: harmônicos decrescentes; na voz
-            // soprosa (sussurro) a fonte é ruído modulado pelo pitch.
+            // Approximate glottal source: decaying harmonics; for a breathy
+            // voice (whisper) the source is noise modulated by the pitch.
             let harmonics: f32 = (1..=6).map(|k| (*phase * k as f32).sin() / k as f32).sum();
             let v = if voice.breathy {
                 xorshift(seed) * 3.0 * (0.6 + 0.4 * harmonics.abs().min(1.0))
@@ -142,7 +142,7 @@ impl ProsodySketchSynthesizer {
         for word in &script.pronunciation.words {
             for (i, ph) in word.phonemes.iter().enumerate() {
                 if ph.is_vowel() {
-                    // Declinação: a frase "desce" do início ao fim.
+                    // Declination: the sentence pitch "falls" from start to end.
                     let decl = base + spread * 0.5 * (1.0 - 2.0 * k / total);
                     let stressed = word.stress == Some(i);
                     let (dur, f0) = if stressed {

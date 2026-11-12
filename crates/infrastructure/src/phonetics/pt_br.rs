@@ -1,12 +1,12 @@
-//! G2P (grafema → fonema) por regras para o português brasileiro.
+//! Rule-based G2P (grapheme → phoneme) for Brazilian Portuguese.
 //!
-//! Gera a **forma de citação** — próxima da ortografia, sem traços regionais
-//! (`t` continua `t`, `e` final continua `e`, `s` em coda continua `s`). Os
-//! traços de sotaque são responsabilidade do domínio (`AccentRenderer`).
+//! Produces the **citation form** — close to the spelling, without regional traits
+//! (`t` stays `t`, final `e` stays `e`, coda `s` stays `s`). Accent traits are
+//! the domain's responsibility (`AccentRenderer`).
 use friendly_voice_application::ports::Phonemizer;
 use friendly_voice_domain::phonetics::{Phoneme, PhoneticUtterance, PhoneticWord};
 
-/// Palavras átonas (clíticos): sem acento próprio na frase.
+/// Unstressed words (clitics): no stress of their own in the sentence.
 const CLITICS: &[&str] = &[
     "o", "a", "os", "as", "e", "de", "do", "da", "dos", "das", "em", "no", "na", "nos", "nas",
     "um", "uns", "que", "se", "me", "te", "lhe", "lhes", "por", "com", "pra", "pro", "para", "mas",
@@ -77,9 +77,9 @@ fn classify(w: &[char]) -> Vec<Kind> {
         let prev = i.checked_sub(1).map(|p| w[p]);
         let next = w.get(i + 1).copied();
         let after_qg = c == 'u' && matches!(prev, Some('q' | 'g'));
-        // Ditongos nasais: "ão", "ãe", "õe".
+        // Nasal diphthongs: "ão", "ãe", "õe".
         let nasal_diphthong = matches!(prev, Some('ã' | 'õ')) && matches!(c, 'o' | 'e');
-        // Ditongos decrescentes: "pai", "meu", "muito" (exceto "rainha", "ruim").
+        // Falling diphthongs: "pai", "meu", "muito" (except "rainha", "ruim").
         let falling_diphthong = matches!(c, 'i' | 'u')
             && prev.is_some_and(|p| is_vowel(p) && base(p) != base(c))
             && kinds.last() == Some(&Kind::Nucleus)
@@ -99,7 +99,7 @@ fn classify(w: &[char]) -> Vec<Kind> {
     kinds
 }
 
-/// Índice (na palavra) da vogal tônica.
+/// Index (in the word) of the stressed vowel.
 fn stressed_letter(w: &[char], kinds: &[Kind], word: &str) -> Option<usize> {
     let nuclei: Vec<usize> = (0..w.len())
         .filter(|&i| kinds[i] == Kind::Nucleus)

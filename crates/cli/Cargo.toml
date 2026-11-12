@@ -1,6 +1,6 @@
 [package]
 name = "friendly-voice"
-description = "Interface de linha de comando (composition root)."
+description = "Friendly Voice — mensagens positivas com a voz de quem você ama (command line interface)."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

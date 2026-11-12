@@ -1,4 +1,4 @@
-//! Regras de agendamento definidas pelo usuário.
+//! User-defined scheduling rules.
 use crate::ids::{ScheduleId, SpeakerId};
 use crate::message::MessageContent;
 use crate::tone::VoiceTone;
@@ -6,7 +6,7 @@ use crate::DomainError;
 use chrono::{Datelike, Duration, NaiveDateTime, NaiveTime, Weekday};
 use serde::{Deserialize, Serialize};
 
-/// Janela de horário; aceita virar a meia-noite (ex.: 22:00–07:00).
+/// Time window; may wrap around midnight (e.g. 22:00–07:00).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TimeWindow {
     pub start: NaiveTime,
@@ -31,7 +31,7 @@ impl TimeWindow {
     }
 }
 
-/// Quando a mensagem deve tocar.
+/// When the message should play.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Recurrence {
     Once {
@@ -44,14 +44,14 @@ pub enum Recurrence {
         days: Vec<Weekday>,
         at: NaiveTime,
     },
-    /// A cada N minutos, opcionalmente só dentro de uma janela.
+    /// Every N minutes, optionally only inside a window.
     Interval {
         every_minutes: u32,
         within: Option<TimeWindow>,
     },
 }
 
-/// Horizonte máximo de busca da próxima ocorrência.
+/// Maximum horizon when searching for the next occurrence.
 const HORIZON_DAYS: i64 = 8;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -60,10 +60,10 @@ pub struct Schedule {
     pub speaker_id: SpeakerId,
     pub recurrence: Recurrence,
     pub content: MessageContent,
-    /// Tom escolhido; `None` = tom inicial sugerido pelo tema.
+    /// Chosen tone; `None` = initial tone suggested by the theme.
     #[serde(default)]
     pub tone: Option<VoiceTone>,
-    /// "Não perturbe": nunca dispara dentro desta janela.
+    /// "Do not disturb": never fires inside this window.
     pub quiet_hours: Option<TimeWindow>,
     pub enabled: bool,
     pub created_at: NaiveDateTime,
@@ -130,7 +130,7 @@ impl Schedule {
         !self.quiet_hours.is_some_and(|q| q.contains(t.time()))
     }
 
-    /// Próximo disparo estritamente após `after`.
+    /// Next firing strictly after `after`.
     pub fn next_occurrence_after(&self, after: NaiveDateTime) -> Option<NaiveDateTime> {
         match &self.recurrence {
             Recurrence::Once { at } => (*at > after && self.allowed(*at)).then_some(*at),
@@ -149,7 +149,7 @@ impl Schedule {
                 let mut c = after + step;
                 while c <= limit {
                     if let Some(w) = within.filter(|w| !w.contains(c.time())) {
-                        // Fora da janela: pula para o próximo início da janela.
+                        // Outside the window: jump to the next window start.
                         let start = c.date().and_time(w.start);
                         c = if start > c {
                             start
@@ -168,7 +168,7 @@ impl Schedule {
         }
     }
 
-    /// Momento de referência para calcular o próximo disparo.
+    /// Reference instant used to compute the next firing.
     fn anchor(&self) -> NaiveDateTime {
         self.last_fired_at.unwrap_or(self.created_at)
     }
@@ -177,7 +177,7 @@ impl Schedule {
         self.next_occurrence_after(self.anchor())
     }
 
-    /// Está na hora? (Se o app ficou desligado, dispara uma única vez.)
+    /// Is it time? (If the app was off, it fires only once.)
     pub fn is_due(&self, now: NaiveDateTime) -> bool {
         self.enabled && self.next_due().is_some_and(|t| t <= now)
     }
@@ -197,7 +197,7 @@ mod tests {
     use chrono::NaiveDate;
 
     fn dt(d: u32, h: u32, m: u32) -> NaiveDateTime {
-        // 2026-11-02 é uma segunda-feira
+        // 2026-11-02 is a Monday
         NaiveDate::from_ymd_opt(2026, 11, d)
             .unwrap()
             .and_hms_opt(h, m, 0)

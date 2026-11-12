@@ -1,18 +1,21 @@
 # Definition of Done
 
-Uma história só está **pronta** quando:
+A story is **done** when:
 
-1. Todos os critérios de aceitação estão cobertos por testes automatizados
-   (unitário no domínio, de caso de uso com fakes, ou de aceitação na CLI).
-2. `cargo fmt --check`, `cargo clippy -D warnings` e `cargo test` passam no CI.
-3. A regra de dependência da Clean Architecture é respeitada (domínio não
-   depende de nada; aplicação só do domínio; infraestrutura implementa portas).
-4. Regras de negócio novas vivem no domínio; I/O novo vive atrás de uma porta.
-5. Mensagens ao usuário em português, claras e acionáveis.
-6. Documentação (README/ADR/backlog) atualizada quando o comportamento muda.
-7. Revisada por outra pessoa (PR) antes do merge.
+1. All acceptance criteria are covered by automated tests (domain unit tests,
+   use case tests with fakes, or CLI/engine acceptance tests).
+2. `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test` and the
+   engine's `pytest` pass in CI.
+3. The Clean Architecture dependency rule holds (the domain depends on
+   nothing; the application only on the domain; infrastructure implements ports).
+4. New business rules live in the domain; new I/O lives behind a port.
+5. User-facing messages are in Portuguese, clear and actionable; code,
+   comments and documentation are in English.
+6. Documentation (README/ADR/backlog) is updated when behaviour changes.
+7. For voice stories: a person listened to the result with real recordings.
+8. Reviewed by someone else (PR) before merging.
 
 ## Definition of Ready
-* História no formato *Como… quero… para…*, com critérios de aceitação.
-* Estimada pelo time e pequena o bastante para caber em uma sprint.
-* Dependências externas (ex.: servidor de voz) identificadas.
+* Story in the *As a… I want… so that…* format, with acceptance criteria.
+* Estimated by the team and small enough to fit in a sprint.
+* External dependencies (e.g. the voice server, model licenses) identified.

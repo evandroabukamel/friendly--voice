@@ -1,6 +1,6 @@
-//! Motores de voz (timbre). A clonagem neural é delegada a um servidor
-//! externo (feature `http-engine`); localmente há um sintetizador de
-//! pré-visualização de prosódia, útil para desenvolvimento e testes.
+//! Voice engines (timbre). Neural cloning is delegated to an external
+//! server (feature `http-engine`, reference server in `engine/`); locally there
+//! is a prosody preview synthesizer, useful for development and tests.
 #[cfg(feature = "http-engine")]
 mod http;
 mod sketch;

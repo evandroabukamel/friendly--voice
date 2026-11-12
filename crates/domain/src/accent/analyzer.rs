@@ -1,4 +1,4 @@
-//! Aprendizado do sotaque a partir das amostras de voz.
+//! Learning the accent from the voice samples.
 use super::alignment::align;
 use super::catalog::RuleCatalog;
 use super::derivation::{Site, UtteranceDerivation};
@@ -7,7 +7,7 @@ use crate::phonetics::{PhoneMatcher, Phoneme, PhoneticUtterance};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 
-/// Uma amostra: o que foi dito (canônico) e o que se ouviu (fonemas).
+/// One sample: what was said (citation form) and what was heard (phonemes).
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnalysisEvidence {
     pub canonical: PhoneticUtterance,
@@ -16,11 +16,11 @@ pub struct AnalysisEvidence {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AnalyzerConfig {
-    /// Mínimo de oportunidades para julgar uma regra.
+    /// Minimum number of opportunities to judge a rule.
     pub min_opportunities: usize,
-    /// Taxa mínima de realização para adotar a regra no perfil.
+    /// Minimum realization rate to adopt the rule into the profile.
     pub adoption_threshold: f32,
-    /// Descobrir padrões fora do catálogo.
+    /// Discover patterns outside the catalog.
     pub discover_new_rules: bool,
     pub min_discovery_occurrences: usize,
 }
@@ -36,7 +36,7 @@ impl Default for AnalyzerConfig {
     }
 }
 
-/// Estatística de um fenômeno nas amostras.
+/// Statistics of one phenomenon across the samples.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RuleEvidence {
     pub code: String,
@@ -69,7 +69,7 @@ struct Item {
     realized: HashMap<Site, Vec<Phoneme>>,
 }
 
-/// Serviço de domínio que infere o [`AccentProfile`] de uma pessoa.
+/// Domain service that infers a person's [`AccentProfile`].
 #[derive(Debug, Clone)]
 pub struct AccentAnalyzer {
     catalog: RuleCatalog,
@@ -102,8 +102,8 @@ impl AccentAnalyzer {
                         real += 1;
                         item.derivation.set_surface(site, rule.replacement.clone());
                     } else if self.explained_by_juncture(item, site) {
-                        // A junção (ex.: "os amigos" → z) mascara a regra:
-                        // não conta, mas assume a forma subjacente.
+                        // The juncture (e.g. "os amigos" → z) masks the rule:
+                        // it does not count, but the underlying form is assumed.
                         if !rule.replacement.is_empty() {
                             item.derivation.set_surface(site, rule.replacement.clone());
                         }
@@ -218,7 +218,7 @@ impl AccentAnalyzer {
         ev
     }
 
-    /// Descobre substituições recorrentes que o catálogo não explica.
+    /// Discovers recurring substitutions the catalog does not explain.
     fn discover(&self, items: &[Item]) -> Vec<(PronunciationRule, RuleEvidence)> {
         type Key = (String, PositionKey);
         let mut opportunities: BTreeMap<Key, usize> = BTreeMap::new();

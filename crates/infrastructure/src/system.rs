@@ -11,7 +11,7 @@ impl Clock for SystemClock {
     }
 }
 
-/// Ids curtos, ordenáveis por tempo: `<prefixo>-<millis base36><contador>`.
+/// Short ids sortable by time: `<prefix>-<millis base36><counter>`.
 #[derive(Debug, Default)]
 pub struct TimeIdGenerator {
     counter: AtomicU32,

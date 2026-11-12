@@ -1,29 +1,30 @@
-# ADR 0005 — Android reutilizando o núcleo Rust via JNI
+# ADR 0005 — Android reusing the Rust core through JNI
 
-**Status:** aceito · Sprint 4
+**Status:** accepted · Sprint 4
 
-## Contexto
-Queremos o app no Android sem duplicar regras de negócio (sotaque, tom,
-agenda) em Kotlin, e com build automatizado no CI/CD.
+## Context
+We want the app on Android without duplicating business rules (accent, tone,
+schedules) in Kotlin, and with an automated CI/CD build.
 
-## Decisão
-* `crates/bootstrap` concentra a composition root, usada pela CLI e pelo app.
-* `crates/mobile` (cdylib) expõe os casos de uso ao Kotlin via JNI. A API é
-  "stringly typed" de propósito: entradas simples e saída JSON
-  (`{"ok":..,"data"|"error"}`), o que mantém a fronteira FFI mínima e permite
-  testar a ponte no host, sem emulador. Panics são capturados na fronteira.
-* O app Kotlin (`android/`) contém apenas interface, preferências,
-  notificações e o agendador periódico (WorkManager).
-* CI: `cargo-ndk` gera as `.so` para `arm64-v8a`, `armeabi-v7a`, `x86_64`
-  em `jniLibs/`; Gradle gera os APKs; tags `v*` publicam uma release.
+## Decision
+* `crates/bootstrap` holds the composition root, used by the CLI and the app.
+* `crates/mobile` (cdylib) exposes the use cases to Kotlin through JNI. The
+  API is deliberately "stringly typed": simple inputs and JSON output
+  (`{"ok":..,"data"|"error"}`), which keeps the FFI boundary minimal and lets
+  the bridge be tested on the host, without an emulator. Panics are caught at
+  the boundary.
+* The Kotlin app (`android/`) only contains UI, preferences, notifications and
+  the periodic scheduler (WorkManager).
+* CI: `cargo-ndk` builds the `.so` files for `arm64-v8a`, `armeabi-v7a` and
+  `x86_64` into `jniLibs/`; Gradle builds the APKs; `v*` tags publish a release.
 
-## Alternativas consideradas
-* **UniFFI** — gera bindings tipados, mas adiciona um passo de geração de
-  código e dependências no build; reavaliar se a API crescer.
-* **Reescrever em Kotlin** — duplicaria o modelo de sotaque e a agenda.
+## Alternatives considered
+* **UniFFI** — generates typed bindings, but adds a code generation step and
+  build dependencies; to be reconsidered if the API grows.
+* **Rewriting in Kotlin** — would duplicate the accent model and the schedules.
 
-## Consequências
-* + Uma única implementação das regras, testada uma vez.
-* + Mesmo binário de lógica no celular e na CLI.
-* − Precisão dos agendamentos no Android limitada a 15 min (WorkManager).
-* − Sem servidor neural configurado, o celular toca o esboço de prosódia.
+## Consequences
+* + A single implementation of the rules, tested once.
+* + The same logic on the phone and in the CLI.
+* − Schedule precision on Android is limited to 15 min (WorkManager).
+* − Without a configured voice engine, the phone plays the prosody sketch.

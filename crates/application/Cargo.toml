@@ -1,6 +1,6 @@
 [package]
 name = "friendly-voice-application"
-description = "Casos de uso e portas (interfaces) da aplicação."
+description = "Use cases and ports (interfaces) of the application."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,6 +1,6 @@
-//! Estrutura de derivação: mantém, para cada fonema canônico, sua realização
-//! atual ("superfície"). Permite aplicar regras em sequência sem perder o
-//! alinhamento com a forma canônica (necessário para o aprendizado).
+//! Derivation structure: keeps, for each citation phoneme, its current
+//! realization ("surface"). Rules can be applied in sequence without losing the
+//! alignment with the citation form (needed for learning).
 use super::rule::{JunctureRule, Position, PronunciationRule};
 use crate::phonetics::{Phoneme, PhoneticUtterance, PhoneticWord};
 
@@ -18,7 +18,7 @@ pub(crate) struct WordDerivation {
     pub pause_after: bool,
 }
 
-/// Endereço de um fonema canônico: (palavra, posição).
+/// Address of a citation phoneme: (word, position).
 pub type Site = (usize, usize);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,7 +48,7 @@ impl UtteranceDerivation {
         Self { words }
     }
 
-    /// Lista os endereços canônicos na ordem (para alinhar com o observado).
+    /// Lists the citation addresses in order (to align with the observed phonemes).
     pub fn sites(&self) -> Vec<Site> {
         self.words
             .iter()
@@ -94,7 +94,7 @@ impl UtteranceDerivation {
         }
     }
 
-    /// Locais onde a regra pode ser aplicada no estado atual da derivação.
+    /// Sites where the rule can be applied in the current state of the derivation.
     pub fn rule_sites(&self, rule: &PronunciationRule) -> Vec<Site> {
         let mut sites = Vec::new();
         for (w, word) in self.words.iter().enumerate() {
@@ -171,7 +171,7 @@ impl UtteranceDerivation {
             .rposition(|s| !s.surface.is_empty())
     }
 
-    /// Locais (fim da palavra esquerda) onde a regra de junção se aplica.
+    /// Sites (end of the left word) where the juncture rule applies.
     pub fn juncture_sites(&self, rule: &JunctureRule) -> Vec<Site> {
         let mut sites = Vec::new();
         for w in 0..self.words.len().saturating_sub(1) {
@@ -201,7 +201,7 @@ impl UtteranceDerivation {
         }
     }
 
-    /// Converte o estado atual de volta em um enunciado fonético.
+    /// Converts the current state back into a phonetic utterance.
     pub fn to_utterance(&self) -> PhoneticUtterance {
         let words = self
             .words

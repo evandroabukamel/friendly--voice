@@ -1,194 +1,227 @@
 # Product Backlog — Friendly Voice
 
-**Visão do produto:** receber mensagens positivas e motivacionais faladas com a
-voz (e o sotaque) de alguém querido — na hora em que eu pedir ou nos momentos
-que eu definir.
+**Product vision:** receive positive, motivational messages spoken in the
+voice (and accent) of someone dear — whenever I ask, or at the moments I
+choose.
 
-**Persona principal:** *Evandro*, que quer ouvir a voz da avó dizendo "bom dia"
-antes do trabalho e um "respira fundo" no meio da tarde.
+**Main persona:** *Evandro*, who wants to hear his grandmother's voice saying
+"bom dia" before work and "respira fundo" in the middle of the afternoon.
 
-Priorização: **MoSCoW** · Estimativa: **story points (Fibonacci)** · Histórias
-no formato *Como… quero… para…*, com critérios de aceitação em Gherkin.
-
----
-
-## Épico E1 — Pessoas e consentimento
-
-### US-01 · Cadastrar a pessoa da voz — *Must* · 2 pts · ✅ Sprint 1
-> Como usuário, quero cadastrar a pessoa cuja voz será usada, registrando o
-> consentimento dela, para usar a voz de forma ética.
-
-```gherkin
-Cenário: cadastro sem consentimento
-  Dado que informo apenas o nome "Vó"
-  Quando tento cadastrar
-  Então o cadastro é recusado com "é obrigatório registrar o consentimento"
-
-Cenário: cadastro com consentimento
-  Dado que informo o nome "Vó" e que "Vó" autorizou
-  Quando cadastro
-  Então recebo um id e a declaração de consentimento com data/hora
-```
-
-## Épico E2 — Clonagem de voz com sotaque
-
-### US-02 · Enviar arquivos de áudio — *Must* · 5 pts · ✅ Sprint 2
-> Como usuário, quero inserir áudios da pessoa para que a voz dela seja gerada.
-
-```gherkin
-Cenário: amostra válida
-  Dado um WAV de 6s, 16 kHz, com transcrição "Leite quente de noite"
-  Quando adiciono a amostra
-  Então ela é armazenada com duração, pitch médio, taxa de pausas
-  E com a pronúncia de citação /lejte kẽte de nojte/
-
-Cenário: amostra ruim
-  Dado um WAV com menos de 2s (ou saturado, silencioso, < 16 kHz)
-  Quando adiciono a amostra
-  Então ela é rejeitada explicando o motivo
-```
-
-### US-03 · Aprender o jeito de pronunciar letras/sons — *Must* · 8 pts · ✅ Sprint 2
-> Como usuário, quero que a voz gerada pronuncie as letras como a pessoa
-> pronuncia (ex.: "tia" → *tchia*, "festa" → *feshta*, "porta" → *pohta*).
-
-```gherkin
-Cenário: palatalização aprendida
-  Dado amostras em que a pessoa diz /tʃi/ e /dʒi/ onde a escrita tem "ti" e "di"
-  Quando gero a voz
-  Então o perfil contém as regras t → tʃ e d → dʒ antes de /i/ com sua frequência
-  E fenômenos que a pessoa não realiza (ex.: r retroflexo) não entram no perfil
-```
-
-### US-04 · Aprender o término e a junção de palavras — *Must* · 8 pts · ✅ Sprint 2
-> Como usuário, quero que a voz termine as palavras e junte as palavras como a
-> pessoa faz (ex.: "leite" → *leiti*, "falar" → *falá*, "os amigos" → *uzamigus*).
-
-```gherkin
-Cenário: término de palavras
-  Dado amostras em que "e"/"o" átonos finais soam /i/ e /u/
-  Então o perfil contém as regras de término correspondentes
-
-Cenário: junção de palavras
-  Dado amostras em que "s" final antes de vogal vira /z/
-  Então o perfil contém a regra de junção sibilant-voicing
-  E pontuação (pausa) bloqueia a junção
-
-Cenário: regras que se alimentam
-  Dado o perfil com "e final → i" e "t antes de i → tʃ"
-  Quando pronuncio "noite"
-  Então obtenho /nojtʃi/
-```
-
-### US-06 · Pré-visualizar a pronúncia — *Should* · 2 pts · ✅ Sprint 3
-> Como usuário, quero ver como um texto será pronunciado com o sotaque da
-> pessoa, para conferir antes de ouvir.
-
-### US-09 · Intensidade do sotaque — *Could* · 1 pt · ✅ Sprint 3
-> Como usuário, quero ajustar a intensidade (0 a 1) do sotaque aplicado.
-
-### US-10 · Descobrir traços fora do catálogo — *Could* · 3 pts · ✅ Sprint 2
-> Como usuário, quero que traços pessoais (ex.: "v" → "b") sejam descobertos
-> mesmo que não sejam de um sotaque regional conhecido.
-
-## Épico E3 — Mensagens
-
-### US-05 · Pedir uma mensagem na hora — *Must* · 3 pts · ✅ Sprint 3
-> Como usuário, quero pedir uma mensagem agora (por tema ou texto livre) e
-> ouvi-la com a voz da pessoa.
-
-```gherkin
-Cenário: mensagem por tema personalizada
-  Dado que a voz da "Vó" foi gerada e meu nome é "Evandro"
-  Quando peço uma mensagem do tema "bom-dia"
-  Então recebo um áudio WAV com uma mensagem que contém "Evandro"
-
-Cenário: voz ainda não gerada
-  Quando peço uma mensagem
-  Então sou orientado a enviar amostras e gerar a voz
-```
-
-### US-18 · Escolher o tom de voz de cada mensagem — *Must* · 5 pts · ✅ Sprint 4
-> Como usuário, quero escolher o tom de voz (natural, carinhoso, animado,
-> calmo, firme, sussurrado) e deixar a voz mais aguda ou grave em cada
-> mensagem — pedida na hora ou agendada — para que ela combine com o momento.
-
-```gherkin
-Cenário: tom inicial sugerido pelo tema
-  Quando peço uma mensagem do tema "calma" sem informar o tom
-  Então ela é falada no tom "calmo"
-
-Cenário: escolha do usuário
-  Quando peço uma mensagem do tema "calma" com tom "animado" e ajuste -2 semitons
-  Então ela é falada no tom "animado", 2 semitons mais grave
-  E a prosódia natural da pessoa (aprendida das amostras) é preservada como base
-
-Cenário: tom no agendamento
-  Dado um agendamento diário com tom "sussurrado"
-  Quando ele dispara
-  Então a mensagem é falada sussurrada
-
-Cenário: valores inválidos
-  Quando informo o tom "bravo" ou um ajuste de 9 semitons
-  Então recebo um erro explicando as opções válidas
-```
-
-## Épico E5 — Android
-
-### US-19 · Build do app Android no CI/CD — *Must* · 8 pts · ✅ Sprint 4
-> Como mantenedor, quero que cada push gere o app Android (APK) a partir do
-> mesmo núcleo Rust e que cada tag publique uma release, para instalar e
-> distribuir o app sem passos manuais.
-
-```gherkin
-Cenário: build em todo push
-  Quando faço push em qualquer branch
-  Então o CI compila a biblioteca Rust para arm64-v8a, armeabi-v7a e x86_64
-  E gera o APK debug e release
-  E publica APKs, bibliotecas nativas e relatório de lint como artefatos
-
-Cenário: entrega contínua
-  Quando crio a tag "v1.2.0"
-  Então uma GitHub Release "v1.2.0" é publicada com os APKs (versionName 1.2.0)
-  E o APK é assinado se os secrets da keystore estiverem configurados
-```
-
-### US-20 · Usar o app no celular — *Should* · 8 pts · ✅ Sprint 4
-> Como usuário, quero cadastrar a pessoa, enviar áudios, gerar a voz, pedir
-> mensagens (escolhendo o tom) e agendar pelo celular, recebendo notificação
-> e áudio quando uma mensagem agendada chegar.
-
-## Épico E4 — Agendamentos
-
-### US-07 · Agendar mensagens com regras — *Must* · 5 pts · ✅ Sprint 3
-> Como usuário, quero agendar mensagens com regras (diária, dias da semana,
-> a cada N minutos dentro de uma janela, uma única vez) e horário de silêncio.
-
-```gherkin
-Cenário: intervalo com janela e silêncio
-  Dado a regra "a cada 60 min entre 09:00-18:00" e silêncio "12:00-14:00"
-  Quando calculo os disparos a partir das 10:00
-  Então eles ocorrem às 11:00, 14:00, ..., 17:00 e depois 09:00 do dia seguinte
-
-Cenário: regra impossível
-  Dado a regra "todo dia 08:00" com silêncio "00:00-23:59"
-  Então o agendamento é recusado ("nunca dispara")
-```
-
-### US-08 · Disparar agendamentos vencidos — *Must* · 3 pts · ✅ Sprint 3
-> Como usuário, quero que as mensagens vencidas sejam faladas uma única vez,
-> mesmo que o app tenha ficado desligado.
+Prioritization: **MoSCoW** · Estimation: **story points (Fibonacci)** · Stories
+in the *As a… I want… so that…* format, with acceptance criteria in Gherkin.
+Product texts quoted in the criteria (commands, messages, themes, tones) are in
+Portuguese, because that is the product's language.
 
 ---
 
-## Próximas histórias (refinamento futuro)
+## Epic E1 — People and consent
 
-| Id | História | Prioridade | Pts |
-|----|----------|-----------|-----|
-| US-11 | Servidor de referência (Python) implementando `docs/engine-api.md` com XTTS + wav2vec2-phoneme | Should | 8 |
-| US-12 | Alinhamento forçado com timestamps para medir duração por fonema (ritmo silábico vs. acentual) | Could | 8 |
-| US-13 | Entonação por tipo de frase (pergunta, exclamação) aprendida das amostras | Could | 5 |
-| US-14 | ~~App mobile com notificação consumindo os casos de uso~~ → entregue no Android (US-19) | — | — |
-| US-15 | Revogar consentimento apaga amostras e voz da pessoa | Must | 3 |
-| US-16 | Suporte a MP3/OGG/M4A na importação | Should | 3 |
-| US-17 | Evitar repetir a mesma mensagem em sequência (histórico) | Could | 2 |
+### US-01 · Register the person of the voice — *Must* · 2 pts · ✅ Sprint 1
+> As a user, I want to register the person whose voice will be used, recording
+> their consent, so that the voice is used ethically.
+
+```gherkin
+Scenario: registration without consent
+  Given I only provide the name "Vó"
+  When I try to register
+  Then the registration is refused with "é obrigatório registrar o consentimento"
+
+Scenario: registration with consent
+  Given I provide the name "Vó" and that "Vó" authorized it
+  When I register
+  Then I get an id and the consent statement with date/time
+```
+
+## Epic E2 — Voice cloning with accent
+
+### US-02 · Upload audio files — *Must* · 5 pts · ✅ Sprint 2
+> As a user, I want to upload recordings of the person so that their voice can
+> be generated.
+
+```gherkin
+Scenario: valid sample
+  Given a 6 s, 16 kHz WAV with the transcript "Leite quente de noite"
+  When I add the sample
+  Then it is stored with duration, mean pitch and pause ratio
+  And with the citation pronunciation /lejte kẽte de nojte/
+
+Scenario: bad sample
+  Given a WAV shorter than 2 s (or clipped, silent, < 16 kHz)
+  When I add the sample
+  Then it is rejected with an explanation
+```
+
+### US-03 · Learn how letters/sounds are pronounced — *Must* · 8 pts · ✅ Sprint 2
+> As a user, I want the generated voice to pronounce letters the way the person
+> does (e.g. "tia" → *tchia*, "festa" → *feshta*, "porta" → *pohta*).
+
+```gherkin
+Scenario: learned palatalization
+  Given samples where the person says /tʃi/ and /dʒi/ where the spelling has "ti" and "di"
+  When I generate the voice
+  Then the profile contains the rules t → tʃ and d → dʒ before /i/ with their frequency
+  And phenomena the person does not produce (e.g. retroflex r) are not in the profile
+```
+
+### US-04 · Learn word endings and word junctions — *Must* · 8 pts · ✅ Sprint 2
+> As a user, I want the voice to end and join words the way the person does
+> (e.g. "leite" → *leiti*, "falar" → *falá*, "os amigos" → *uzamigus*).
+
+```gherkin
+Scenario: word endings
+  Given samples where unstressed final "e"/"o" sound /i/ and /u/
+  Then the profile contains the corresponding word-ending rules
+
+Scenario: word junctions
+  Given samples where a final "s" before a vowel becomes /z/
+  Then the profile contains the sibilant-voicing juncture rule
+  And punctuation (a pause) blocks the junction
+
+Scenario: rules feeding each other
+  Given a profile with "final e → i" and "t before i → tʃ"
+  When I pronounce "noite"
+  Then I get /nojtʃi/
+```
+
+### US-06 · Preview the pronunciation — *Should* · 2 pts · ✅ Sprint 3
+> As a user, I want to see how a text will be pronounced with the person's
+> accent, to check it before listening.
+
+### US-09 · Accent intensity — *Could* · 1 pt · ✅ Sprint 3
+> As a user, I want to adjust the intensity (0 to 1) of the applied accent.
+
+### US-10 · Discover traits outside the catalog — *Could* · 3 pts · ✅ Sprint 2
+> As a user, I want personal traits (e.g. "v" → "b") to be discovered even when
+> they do not belong to a known regional accent.
+
+### US-11 · Clone the timbre from the uploaded recordings — *Must* · 8 pts · ✅ Sprint 5
+> As a user, I want the messages to sound like the person (their timbre), not
+> only to follow their accent and rhythm.
+
+```gherkin
+Scenario: clone with a free-to-use model
+  Given the engine server is running with OpenVoice V2 (MIT) and Piper pt-BR
+  When I generate the voice of "Vó" from her recordings
+  Then the engine stores a speaker embedding and returns a voice id
+
+Scenario: speak with timbre, accent and tone
+  Given the voice of "Vó" was generated with a carioca accent
+  When I ask for "Bom dia" with tone "carinhoso"
+  Then the engine receives the accented phonemes per word (with stress and pauses)
+  And returns a WAV with her timbre, the requested rate, pitch shift and volume
+
+Scenario: optional recognizers
+  Given the server has no phone recognizer installed
+  When I add a sample without IPA
+  Then the sample is stored without accent evidence instead of failing
+```
+
+## Epic E3 — Messages
+
+### US-05 · Ask for a message right now — *Must* · 3 pts · ✅ Sprint 3
+> As a user, I want to ask for a message now (by theme or free text) and hear
+> it in the person's voice.
+
+```gherkin
+Scenario: personalized message by theme
+  Given the voice of "Vó" was generated and my name is "Evandro"
+  When I ask for a message of the theme "bom-dia"
+  Then I get a WAV with a message that contains "Evandro"
+
+Scenario: voice not generated yet
+  When I ask for a message
+  Then I am told to upload samples and generate the voice
+```
+
+### US-18 · Choose the tone of voice of each message — *Must* · 5 pts · ✅ Sprint 4
+> As a user, I want to choose the tone of voice (natural, carinhoso, animado,
+> calmo, firme, sussurrado) and make the voice higher or lower for each
+> message — on demand or scheduled — so that it fits the moment.
+
+```gherkin
+Scenario: initial tone suggested by the theme
+  When I ask for a message of the theme "calma" without a tone
+  Then it is spoken in the tone "calmo"
+
+Scenario: the user's choice
+  When I ask for a message of the theme "calma" with tone "animado" and -2 semitones
+  Then it is spoken in the tone "animado", 2 semitones lower
+  And the person's natural prosody (learned from the samples) is kept as the base
+
+Scenario: tone in a schedule
+  Given a daily schedule with tone "sussurrado"
+  When it fires
+  Then the message is whispered
+
+Scenario: invalid values
+  When I provide the tone "bravo" or a 9-semitone shift
+  Then I get an error explaining the valid options
+```
+
+## Epic E4 — Schedules
+
+### US-07 · Schedule messages with rules — *Must* · 5 pts · ✅ Sprint 3
+> As a user, I want to schedule messages with rules (daily, weekdays, every N
+> minutes inside a window, once) and quiet hours.
+
+```gherkin
+Scenario: interval with window and quiet hours
+  Given the rule "every 60 min between 09:00-18:00" and quiet hours "12:00-14:00"
+  When I compute the firings from 10:00
+  Then they happen at 11:00, 14:00, ..., 17:00 and then 09:00 the next day
+
+Scenario: impossible rule
+  Given the rule "every day at 08:00" with quiet hours "00:00-23:59"
+  Then the schedule is refused ("nunca dispara")
+```
+
+### US-08 · Fire the schedules that are due — *Must* · 3 pts · ✅ Sprint 3
+> As a user, I want due messages to be spoken exactly once, even if the app was
+> off.
+
+## Epic E5 — Android
+
+### US-19 · Build the Android app in CI/CD — *Must* · 8 pts · ✅ Sprint 4
+> As a maintainer, I want every push to build the Android app (APK) from the
+> same Rust core and every tag to publish a release, so that the app can be
+> installed and distributed without manual steps.
+
+```gherkin
+Scenario: build on every push
+  When I push to any branch
+  Then CI builds the Rust library for arm64-v8a, armeabi-v7a and x86_64
+  And builds the debug and release APKs
+  And publishes APKs, native libraries and the lint report as artifacts
+
+Scenario: continuous delivery
+  When I create the tag "v1.2.0"
+  Then a GitHub Release "v1.2.0" is published with the APKs (versionName 1.2.0)
+  And the APK is signed if the keystore secrets are configured
+```
+
+### US-20 · Use the app on the phone — *Should* · 8 pts · ✅ Sprint 4
+> As a user, I want to register the person, upload recordings, generate the
+> voice, ask for messages (choosing the tone) and schedule them on my phone,
+> getting a notification and audio when a scheduled message arrives.
+
+## Epic E6 — Project
+
+### US-21 · Documentation and code comments in English — *Should* · 3 pts · ✅ Sprint 5
+> As a contributor, I want the README, the documentation and the code comments
+> in English, so that people outside Brazil can contribute. The product's user
+> interface stays in Portuguese.
+
+---
+
+## Next stories (future refinement)
+
+| Id | Story | Priority | Pts |
+|----|-------|----------|-----|
+| US-12 | Forced alignment with timestamps to measure per-phoneme duration (syllable- vs stress-timed rhythm) | Could | 8 |
+| US-13 | Intonation per sentence type (question, exclamation) learned from the samples | Could | 5 |
+| US-14 | ~~Mobile app with notifications using the use cases~~ → delivered on Android (US-19/US-20) | — | — |
+| US-15 | Revoking consent deletes the person's samples and voice (app and engine) | Must | 3 |
+| US-16 | MP3/OGG/M4A support on import | Should | 3 |
+| US-17 | Avoid repeating the same message in a row (history) | Could | 2 |
+| US-22 | Inaudible watermark on cloned audio (OpenVoice `wavmark`) | Should | 3 |
+| US-23 | Choose or train the pt-BR base voice closest to the person (gender, age) to improve quality | Could | 8 |

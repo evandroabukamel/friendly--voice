@@ -1,4 +1,4 @@
-//! Persistência em arquivos JSON (adequada para um app pessoal/local).
+//! Persistence in JSON files (suitable for a personal/local app).
 use friendly_voice_application::ports::*;
 use friendly_voice_domain::{
     ids::{SampleId, ScheduleId, SpeakerId},
@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
 
-/// Coleção de `T` guardada em um arquivo JSON.
+/// Collection of `T` stored in a JSON file.
 pub struct JsonRepository<T> {
     file: PathBuf,
     lock: Mutex<()>,
@@ -123,7 +123,7 @@ impl ScheduleRepository for JsonRepository<Schedule> {
     }
 }
 
-/// Guarda os áudios em `<raiz>/<pessoa>/<amostra>.wav`.
+/// Stores the audio files at `<root>/<speaker>/<sample>.wav`.
 pub struct FileAudioStore {
     root: PathBuf,
 }

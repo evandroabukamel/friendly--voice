@@ -1,5 +1,5 @@
-//! Um caso de uso por arquivo (SRP). Cada um recebe suas dependências por
-//! construtor como `Arc<dyn Porta>` (DIP) e expõe um único `execute`.
+//! One use case per file (SRP). Each one receives its dependencies through
+//! the constructor as `Arc<dyn Port>` (DIP) and exposes a single `execute`.
 mod add_voice_sample;
 mod build_voice_profile;
 mod preview_pronunciation;

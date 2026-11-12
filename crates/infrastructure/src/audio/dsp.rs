@@ -1,4 +1,4 @@
-//! Análise acústica por DSP simples: energia, pausas e pitch (autocorrelação).
+//! Acoustic analysis with simple DSP: energy, pauses and pitch (autocorrelation).
 use friendly_voice_application::ports::AcousticAnalyzer;
 use friendly_voice_domain::audio::{AcousticFeatures, AudioClip};
 
@@ -30,7 +30,7 @@ fn percentile(sorted: &[f32], p: f32) -> f32 {
 }
 
 impl DspAcousticAnalyzer {
-    /// Estima F0 de um quadro por autocorrelação normalizada.
+    /// Estimates the F0 of a frame through normalized autocorrelation.
     fn pitch(&self, frame: &[f32], sr: f32) -> Option<f32> {
         let min_lag = (sr / self.max_pitch_hz) as usize;
         let max_lag = ((sr / self.min_pitch_hz) as usize).min(frame.len() - 1);
@@ -106,7 +106,7 @@ mod tests {
         let mut s: Vec<f32> = (0..sr)
             .map(|i| 0.4 * (i as f32 * 200.0 * std::f32::consts::TAU / sr as f32).sin())
             .collect();
-        s.extend(std::iter::repeat_n(0.0, sr as usize)); // 1s de silêncio
+        s.extend(std::iter::repeat_n(0.0, sr as usize)); // 1s of silence
         let f = DspAcousticAnalyzer::default().analyze(&AudioClip::new(sr, s).unwrap());
         assert!((f.mean_pitch_hz - 200.0).abs() < 5.0, "{}", f.mean_pitch_hz);
         assert!((f.pause_ratio - 0.5).abs() < 0.05, "{}", f.pause_ratio);

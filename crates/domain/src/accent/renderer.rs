@@ -1,13 +1,13 @@
-//! Aplica um perfil de sotaque a um texto novo.
+//! Applies an accent profile to new text.
 use super::derivation::UtteranceDerivation;
 use super::rule::AccentProfile;
 use crate::phonetics::PhoneticUtterance;
 
-/// Renderizador de sotaque.
+/// Accent renderer.
 ///
-/// `intensity` (0..=1) controla quão forte é o sotaque: com 1.0 todas as
-/// regras do perfil são aplicadas; valores menores aplicam apenas as regras
-/// que a pessoa realiza com mais regularidade (confiança > 1 - intensidade).
+/// `intensity` (0..=1) controls how strong the accent is: at 1.0 every rule
+/// of the profile is applied; lower values apply only the rules the person
+/// produces most consistently (confidence > 1 - intensity).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AccentRenderer;
 

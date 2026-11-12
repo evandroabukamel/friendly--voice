@@ -1,5 +1,5 @@
-//! Testes de aceitação (critérios das histórias US-01..US-08), exercitando o
-//! binário real com áudios gerados e dados em diretório temporário.
+//! Acceptance tests (criteria of stories US-01..US-08 and US-18), exercising the
+//! real binary with generated audio and data in a temporary directory.
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -33,11 +33,11 @@ impl Env {
 
     fn ok(&self, args: &[&str]) -> String {
         let (ok, text) = self.run(args);
-        assert!(ok, "comando {args:?} falhou:\n{text}");
+        assert!(ok, "command {args:?} failed:\n{text}");
         text
     }
 
-    /// Áudio vozeado (harmônicos) com pausas regulares.
+    /// Voiced audio (harmonics) with regular pauses.
     fn wav(&self, name: &str, secs: f32, f0: f32, transcript: &str, ipa: &str) -> PathBuf {
         let path = self.dir.join(format!("{name}.wav"));
         let spec = hound::WavSpec {
@@ -91,7 +91,7 @@ fn p(path: &Path) -> &str {
 fn full_flow_learns_accent_and_speaks() {
     let env = Env::new("flow");
 
-    // US-01: consentimento obrigatório
+    // US-01: consent is mandatory
     let (ok, out) = env.run(&["pessoa", "adicionar", "--nome", "Vó"]);
     assert!(!ok && out.contains("consentimento"), "{out}");
     let id = speaker_id(&env.ok(&[
@@ -103,7 +103,7 @@ fn full_flow_learns_accent_and_speaks() {
         "Vó",
     ]));
 
-    // US-02: amostras com transcrição e fonemas (arquivos ao lado do .wav)
+    // US-02: samples with transcript and phonemes (files next to the .wav)
     let samples = [
         env.wav(
             "a1",
@@ -131,17 +131,17 @@ fn full_flow_learns_accent_and_speaks() {
         env.ok(&["amostra", "adicionar", "--pessoa", &id, "--audio", p(s)]);
     }
 
-    // US-03/US-04: voz com sotaque aprendido
+    // US-03/US-04: voice with the learned accent
     let out = env.ok(&["voz", "gerar", "--pessoa", &id]);
     assert!(out.contains("Carioca"), "{out}");
     assert!(out.contains("✔    término"), "{out}");
     assert!(out.contains("✔    pronúncia"), "{out}");
 
-    // US-06: pronúncia de texto novo com o sotaque
+    // US-06: pronunciation of new text with the accent
     let out = env.ok(&["pronuncia", "--pessoa", &id, "Bom dia, você é forte!"]);
     assert!(out.contains("/bõ dʒia vose ɛ fohtʃi/"), "{out}");
 
-    // US-05: mensagem na hora gera áudio
+    // US-05: an on-demand message produces audio
     let out = env.ok(&[
         "--meu-nome",
         "Evandro",
@@ -159,11 +159,11 @@ fn full_flow_learns_accent_and_speaks() {
         .extension()
         .is_some_and(|x| x == "wav")));
 
-    // US-18: o usuário escolhe o tom de voz de cada mensagem
+    // US-18: the user picks the tone of voice of each message
     let out = env.ok(&["falar", "--pessoa", &id, "--tema", "calma"]);
     assert!(
         out.contains("tom: calmo"),
-        "tom inicial sugerido pelo tema:\n{out}"
+        "initial tone suggested by the theme:\n{out}"
     );
     let out = env.ok(&[
         "falar",
@@ -193,7 +193,7 @@ fn full_flow_learns_accent_and_speaks() {
     ]);
     assert!(out.contains("tom: sussurrado"), "{out}");
 
-    // US-07/US-08: agendamento
+    // US-07/US-08: scheduling
     let out = env.ok(&[
         "agenda",
         "criar",

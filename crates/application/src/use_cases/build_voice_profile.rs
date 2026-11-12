@@ -13,11 +13,11 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct BuildVoiceProfileOutput {
     pub profile: VoiceProfile,
-    /// `None` quando nenhuma amostra tinha fonemas observados.
+    /// `None` when no sample had observed phonemes.
     pub accent_analysis: Option<AccentAnalysis>,
 }
 
-/// US-03/US-04: gerar a voz da pessoa (timbre + sotaque + prosódia).
+/// US-03/US-04: generate the person's voice (timbre + accent + prosody).
 pub struct BuildVoiceProfile {
     speakers: Arc<dyn SpeakerRepository>,
     samples: Arc<dyn SampleRepository>,
@@ -63,7 +63,7 @@ impl BuildVoiceProfile {
         let samples = self.samples.list_by_speaker(speaker_id)?;
         self.policy.check(&samples)?;
 
-        // 1. Sotaque: aprendido das amostras que têm fonemas observados.
+        // 1. Accent: learned from the samples that have observed phonemes.
         let evidence: Vec<AnalysisEvidence> = samples
             .iter()
             .filter_map(|s| {
@@ -79,10 +79,10 @@ impl BuildVoiceProfile {
             .map(|a| a.profile.clone())
             .unwrap_or_else(AccentProfile::neutral);
 
-        // 2. Prosódia (melodia e ritmo).
+        // 2. Prosody (melody and rhythm).
         let prosody = ProsodyProfile::aggregate(&samples);
 
-        // 3. Timbre: delegado ao motor de clonagem.
+        // 3. Timbre: delegated to the cloning engine.
         let references = samples
             .iter()
             .map(|s| {

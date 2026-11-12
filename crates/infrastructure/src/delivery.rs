@@ -1,5 +1,5 @@
-//! Entrega local: salva a mensagem em uma "caixa de saída" e, opcionalmente,
-//! toca o áudio com um player do sistema (ex.: `aplay`, `afplay`, `ffplay`).
+//! Local delivery: saves the message to an "outbox" and, optionally,
+//! plays the audio with a system player (e.g. `aplay`, `afplay`, `ffplay`).
 use friendly_voice_application::ports::{Delivery, MessageDelivery, PortError, PortResult};
 use std::fs;
 use std::path::PathBuf;
