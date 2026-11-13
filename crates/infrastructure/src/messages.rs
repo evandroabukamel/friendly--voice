@@ -64,6 +64,7 @@ impl CuratedMessageCatalog {
                 "Que orgulho {nome}! Todo o seu esforço valeu a pena.",
             ],
             GoodMorning => &[
+                "Oii? Tudo bem? Tá na hora! Levanta!",
                 "Bom dia {nome}! Hoje vai ser um dia lindo, aproveita!",
                 "Bom dia meu amor! Levanta, {nome}! Que hoje é dia de coisa boa.",
                 "Acorda {nome}! O dia está esperando por você. Vamo lá!",
