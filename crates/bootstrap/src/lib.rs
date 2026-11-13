@@ -17,12 +17,19 @@ use friendly_voice_infrastructure::{
     delivery::OutboxDelivery,
     messages::CuratedMessageCatalog,
     persistence::{FileAudioStore, JsonRepository},
-    phonetics::PortugueseG2p,
     system::{SystemClock, TimeIdGenerator},
     voice::{LocalVoiceBank, ProsodySketchSynthesizer},
 };
 use std::path::Path;
 use std::sync::Arc;
+
+/// Voice cloning, synthesis, optional transcription and a label for the user.
+type Engines = (
+    Arc<dyn VoiceCloningEngine>,
+    Arc<dyn SpeechSynthesizer>,
+    Option<Arc<dyn Transcriber>>,
+    &'static str,
+);
 
 pub struct Container {
     pub speakers: Arc<dyn SpeakerRepository>,
@@ -30,13 +37,11 @@ pub struct Container {
     pub profiles: Arc<dyn VoiceProfileRepository>,
     pub schedules: Arc<dyn ScheduleRepository>,
     store: Arc<dyn AudioStore>,
-    phonemizer: Arc<dyn Phonemizer>,
     clock: Arc<dyn Clock>,
     ids: Arc<dyn IdGenerator>,
     cloning: Arc<dyn VoiceCloningEngine>,
     synthesizer: Arc<dyn SpeechSynthesizer>,
     transcriber: Option<Arc<dyn Transcriber>>,
-    recognizer: Option<Arc<dyn PhoneRecognizer>>,
     delivery: Arc<dyn MessageDelivery>,
     pub engine_name: &'static str,
 }
@@ -48,18 +53,10 @@ impl Container {
         player: Option<String>,
     ) -> Result<Self, String> {
         let local_sketch = Arc::new(ProsodySketchSynthesizer::default());
-        #[allow(clippy::type_complexity)]
-        let (cloning, synthesizer, transcriber, recognizer, engine_name): (
-            Arc<dyn VoiceCloningEngine>,
-            Arc<dyn SpeechSynthesizer>,
-            Option<Arc<dyn Transcriber>>,
-            Option<Arc<dyn PhoneRecognizer>>,
-            &'static str,
-        ) = match engine_url {
+        let (cloning, synthesizer, transcriber, engine_name): Engines = match engine_url {
             None => (
                 Arc::new(LocalVoiceBank),
                 local_sketch,
-                None,
                 None,
                 "local (prosody sketch)",
             ),
@@ -75,59 +72,30 @@ impl Container {
             )),
             schedules: Arc::new(JsonRepository::<Schedule>::new(data.join("schedules.json"))),
             store: Arc::new(FileAudioStore::new(data.join("audio"))),
-            phonemizer: Arc::new(PortugueseG2p),
             clock: Arc::new(SystemClock),
             ids: Arc::new(TimeIdGenerator::default()),
             cloning,
             synthesizer,
             transcriber,
-            recognizer,
             delivery: Arc::new(OutboxDelivery::new(data.join("outbox"), player)),
             engine_name,
         })
     }
 
     #[cfg(feature = "http-engine")]
-    #[allow(clippy::type_complexity)]
-    fn http(
-        url: &str,
-    ) -> Result<
-        (
-            Arc<dyn VoiceCloningEngine>,
-            Arc<dyn SpeechSynthesizer>,
-            Option<Arc<dyn Transcriber>>,
-            Option<Arc<dyn PhoneRecognizer>>,
-            &'static str,
-        ),
-        String,
-    > {
-        use friendly_voice_infrastructure::voice::{
-            HttpPhoneRecognizer, HttpTranscriber, HttpVoiceEngine,
-        };
+    fn http(url: &str) -> Result<Engines, String> {
+        use friendly_voice_infrastructure::voice::{HttpTranscriber, HttpVoiceEngine};
         let engine = Arc::new(HttpVoiceEngine::new(url));
         Ok((
             engine.clone(),
             engine,
             Some(Arc::new(HttpTranscriber::new(url))),
-            Some(Arc::new(HttpPhoneRecognizer::new(url))),
             "neural server (HTTP)",
         ))
     }
 
     #[cfg(not(feature = "http-engine"))]
-    #[allow(clippy::type_complexity)]
-    fn http(
-        _url: &str,
-    ) -> Result<
-        (
-            Arc<dyn VoiceCloningEngine>,
-            Arc<dyn SpeechSynthesizer>,
-            Option<Arc<dyn Transcriber>>,
-            Option<Arc<dyn PhoneRecognizer>>,
-            &'static str,
-        ),
-        String,
-    > {
+    fn http(_url: &str) -> Result<Engines, String> {
         Err("--engine-url requires building with `cargo build --features http-engine`".into())
     }
 
@@ -142,14 +110,10 @@ impl Container {
             self.store.clone(),
             Arc::new(AudioFileDecoder),
             Arc::new(DspAcousticAnalyzer::default()),
-            self.phonemizer.clone(),
             self.ids.clone(),
         );
         if let Some(t) = &self.transcriber {
             uc = uc.with_transcriber(t.clone());
-        }
-        if let Some(r) = &self.recognizer {
-            uc = uc.with_phone_recognizer(r.clone());
         }
         uc
     }
@@ -164,16 +128,11 @@ impl Container {
         )
     }
 
-    pub fn preview_pronunciation(&self) -> PreviewPronunciation {
-        PreviewPronunciation::new(self.profiles.clone(), self.phonemizer.clone())
-    }
-
     pub fn speak_message(&self) -> SpeakMessage {
         SpeakMessage::new(
             self.speakers.clone(),
             self.profiles.clone(),
             Arc::new(CuratedMessageCatalog::new()),
-            self.phonemizer.clone(),
             self.synthesizer.clone(),
             self.delivery.clone(),
             self.clock.clone(),

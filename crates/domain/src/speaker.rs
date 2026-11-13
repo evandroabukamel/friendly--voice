@@ -1,4 +1,4 @@
-use crate::{ids::SpeakerId, DomainError};
+use crate::{ids::SpeakerId, language::Language, DomainError};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,9 @@ pub struct Speaker {
     pub name: String,
     pub relationship: Option<String>,
     pub consent: Consent,
+    /// Language spoken in the recordings and in the messages.
+    #[serde(default)]
+    pub language: Language,
 }
 
 impl Speaker {
@@ -40,7 +43,13 @@ impl Speaker {
             name: name.to_string(),
             relationship: relationship.filter(|r| !r.trim().is_empty()),
             consent,
+            language: Language::default(),
         })
+    }
+
+    pub fn with_language(mut self, language: Language) -> Self {
+        self.language = language;
+        self
     }
 }
 

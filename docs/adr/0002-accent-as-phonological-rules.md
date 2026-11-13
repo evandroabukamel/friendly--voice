@@ -1,6 +1,6 @@
 # ADR 0002 — Accent as ordered phonological rules in the domain
 
-**Status:** accepted · Sprint 1
+**Status:** superseded by [ADR 0007](0007-zero-shot-cloning-with-chatterbox.md) · Sprint 1
 
 ## Context
 The feature must take the accent into account: letter pronunciation, word

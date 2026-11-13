@@ -6,11 +6,11 @@ use chrono::NaiveDateTime;
 use friendly_voice_domain::{
     audio::{AcousticFeatures, AudioClip},
     ids::{SampleId, ScheduleId, SpeakerId},
+    language::Language,
     message::{MessageCategory, MotivationalMessage},
-    phonetics::{Phoneme, PhoneticUtterance},
     schedule::Schedule,
     speaker::Speaker,
-    voice::{SpeechScript, VoiceProfile, VoiceSample},
+    voice::{SpeechScript, VoiceGender, VoiceProfile, VoiceSample},
 };
 use std::fmt;
 
@@ -63,7 +63,7 @@ pub trait AudioStore: Send + Sync {
     fn load(&self, locator: &str) -> PortResult<Vec<u8>>;
 }
 
-// ---------- Audio and phonetics ----------
+// ---------- Audio ----------
 
 pub trait AudioDecoder: Send + Sync {
     fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip>;
@@ -73,19 +73,9 @@ pub trait AcousticAnalyzer: Send + Sync {
     fn analyze(&self, clip: &AudioClip) -> AcousticFeatures;
 }
 
-/// Converts text into its citation pronunciation (G2P).
-pub trait Phonemizer: Send + Sync {
-    fn phonemize(&self, text: &str) -> PhoneticUtterance;
-}
-
 /// Speech recognition (optional): produces the transcript from the audio.
 pub trait Transcriber: Send + Sync {
-    fn transcribe(&self, clip: &AudioClip) -> PortResult<String>;
-}
-
-/// Phone recognition (optional): what the person *actually* pronounced.
-pub trait PhoneRecognizer: Send + Sync {
-    fn recognize(&self, clip: &AudioClip, transcript: &str) -> PortResult<Vec<Phoneme>>;
+    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<String>;
 }
 
 // ---------- Voice ----------
@@ -94,19 +84,24 @@ pub trait PhoneRecognizer: Send + Sync {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReferenceAudio {
     pub bytes: Vec<u8>,
-    pub transcript: String,
+    pub transcript: Option<String>,
 }
 
-/// Creates the voice (timbre) in the neural engine.
+/// Clones the voice in the neural engine from the person's recordings, in
+/// the person's language. `gender` is the register detected from the
+/// recordings, a hint for engines that pick a base voice.
 pub trait VoiceCloningEngine: Send + Sync {
-    fn enroll(&self, speaker: &Speaker, references: &[ReferenceAudio]) -> PortResult<String>;
+    fn enroll(
+        &self,
+        speaker: &Speaker,
+        gender: Option<VoiceGender>,
+        references: &[ReferenceAudio],
+    ) -> PortResult<String>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SynthesizedAudio {
     pub wav: Vec<u8>,
-    /// Markup sent to the engine (e.g. SSML), useful for auditing.
-    pub markup: String,
 }
 
 pub trait SpeechSynthesizer: Send + Sync {

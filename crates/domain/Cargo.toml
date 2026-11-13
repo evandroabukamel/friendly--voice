@@ -1,6 +1,6 @@
 [package]
 name = "friendly-voice-domain"
-description = "Pure business rules: speakers, voice samples, phonetics, accent, tone and schedules."
+description = "Pure business rules: speakers, languages, voice samples, tone and schedules."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,3 +9,6 @@ license.workspace = true
 chrono.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

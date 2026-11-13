@@ -7,6 +7,5 @@ pub mod audio;
 pub mod delivery;
 pub mod messages;
 pub mod persistence;
-pub mod phonetics;
 pub mod system;
 pub mod voice;

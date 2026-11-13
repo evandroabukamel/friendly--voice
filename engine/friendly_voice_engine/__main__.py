@@ -11,22 +11,21 @@ from .download import download_all
 def main() -> None:
     parser = argparse.ArgumentParser(prog="friendly-voice-engine", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("download", help="download and verify the model weights")
+    sub.add_parser("download", help="download the model weights into the Hugging Face cache")
     serve = sub.add_parser("serve", help="start the HTTP server")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8020)
     args = parser.parse_args()
 
-    settings = Settings.from_env()
     if args.command == "download":
-        download_all(settings.models_dir)
-        print(f"models ready in {settings.models_dir}")
+        download_all()
+        print("models ready")
     else:
         import uvicorn
 
         from .server import create_app
 
-        uvicorn.run(create_app(settings=settings), host=args.host, port=args.port)
+        uvicorn.run(create_app(settings=Settings.from_env()), host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

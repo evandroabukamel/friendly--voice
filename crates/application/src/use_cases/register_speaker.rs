@@ -2,6 +2,7 @@ use crate::error::AppResult;
 use crate::ports::{Clock, IdGenerator, SpeakerRepository};
 use friendly_voice_domain::{
     ids::SpeakerId,
+    language::Language,
     speaker::{Consent, Speaker},
 };
 use std::sync::Arc;
@@ -12,6 +13,8 @@ pub struct RegisterSpeakerInput {
     pub relationship: Option<String>,
     /// Who authorized the use of the voice (the person or their legal guardian).
     pub consent_granted_by: Option<String>,
+    /// Language of the recordings and the messages (default: pt-BR).
+    pub language: Option<Language>,
 }
 
 /// US-01: register the person whose voice will be used.
@@ -48,7 +51,8 @@ impl RegisterSpeaker {
             &input.name,
             input.relationship,
             consent,
-        )?;
+        )?
+        .with_language(input.language.unwrap_or_default());
         self.speakers.save(&speaker)?;
         Ok(speaker)
     }
@@ -81,8 +85,20 @@ mod tests {
                 name: "Mãe".into(),
                 relationship: Some("mãe".into()),
                 consent_granted_by: Some("Maria".into()),
+                language: None,
             })
             .unwrap();
+        assert_eq!(s.language.tag(), "pt-BR");
         assert_eq!(f.speakers.list().unwrap(), vec![s]);
+
+        let en = uc
+            .execute(RegisterSpeakerInput {
+                name: "Grandpa".into(),
+                consent_granted_by: Some("Grandpa".into()),
+                language: Some("en-US".parse().unwrap()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(en.language.code(), "en");
     }
 }

@@ -1,16 +1,13 @@
-"""Friendly Voice engine: clones a person's timbre from their recordings.
+"""Friendly Voice engine: speaks any text in the voice of a person, cloned
+from their recordings (zero-shot, no training).
 
-Pipeline for every message:
-
-1. **Base speech (Piper, pt-BR).** The Rust core sends the exact phonemes to
-   say, already carrying the learned accent (letter pronunciation, word
-   endings and word junctions). Piper turns those phonemes into natural
-   Brazilian Portuguese speech, so the accent is preserved verbatim.
-2. **Timbre (OpenVoice V2 tone color converter).** The base speech is
-   converted to the voice of the person, using a speaker embedding extracted
-   from the uploaded recordings.
-3. **Tone.** The tone chosen for the message (calm, cheerful, ...) is applied
-   as speaking rate (Piper length scale), pitch shift and gain.
+* **Enrollment.** The recordings become the conditionals of Chatterbox
+  Multilingual: a speaker embedding averaged over all recordings, plus the
+  10 s window of speech closest to it, which the model imitates for timbre,
+  intonation, rhythm and accent.
+* **Synthesis.** The text is read in the voice's language, sentence by
+  sentence; the tone of the message maps to the model's expressiveness, and
+  an optional pitch shift and gain are applied afterwards.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

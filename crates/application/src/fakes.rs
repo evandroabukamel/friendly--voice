@@ -4,14 +4,13 @@ use crate::ports::*;
 use crate::use_cases::SpeakMessage;
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 use friendly_voice_domain::{
-    accent::{AccentProfile, RuleCatalog},
     audio::{AcousticFeatures, AudioClip},
     ids::{SampleId, ScheduleId, SpeakerId},
+    language::Language,
     message::{MessageCategory, MotivationalMessage},
-    phonetics::{parse_ipa, Phoneme, PhoneticUtterance, PhoneticWord},
     schedule::Schedule,
     speaker::{Consent, Speaker},
-    voice::{ProsodyProfile, SpeechScript, VoiceProfile, VoiceSample},
+    voice::{ProsodyProfile, SpeechScript, VoiceGender, VoiceProfile, VoiceSample},
 };
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -128,59 +127,52 @@ impl AcousticAnalyzer for FakeAnalyzer {
     }
 }
 
-/// Tiny phonetic dictionary.
-pub struct FakePhonemizer;
-impl Phonemizer for FakePhonemizer {
-    fn phonemize(&self, text: &str) -> PhoneticUtterance {
-        let dict: HashMap<&str, (&str, Option<usize>)> = HashMap::from([
-            ("leite", ("lejte", Some(1))),
-            ("quente", ("kẽte", Some(1))),
-            ("noite", ("nojte", Some(1))),
-            ("de", ("de", None)),
-            ("festa", ("fɛsta", Some(1))),
-            ("bom", ("bõ", Some(1))),
-            ("dia", ("dia", Some(1))),
-        ]);
-        let words = text
-            .split_whitespace()
-            .map(|w| {
-                let w = w
-                    .trim_matches(|c: char| !c.is_alphanumeric())
-                    .to_lowercase();
-                match dict.get(w.as_str()) {
-                    Some((ipa, stress)) => PhoneticWord::new(w.clone(), parse_ipa(ipa), *stress),
-                    None => PhoneticWord::new(
-                        w.clone(),
-                        w.chars().map(|c| Phoneme::new(c.to_string())).collect(),
-                        None,
-                    ),
-                }
-            })
-            .filter(|w| !w.phonemes.is_empty())
-            .collect();
-        PhoneticUtterance::new(words)
+/// Transcribes every clip as the same sentence; remembers the language asked.
+#[derive(Default)]
+pub struct FakeTranscriber(Mutex<Option<Language>>);
+impl FakeTranscriber {
+    pub fn language(&self) -> Option<Language> {
+        self.0.lock().unwrap().clone()
+    }
+}
+impl Transcriber for FakeTranscriber {
+    fn transcribe(&self, _: &AudioClip, language: &Language) -> PortResult<String> {
+        *self.0.lock().unwrap() = Some(language.clone());
+        Ok("bom dia".into())
     }
 }
 
 #[derive(Default)]
-pub struct FakeEngine(Mutex<usize>);
+pub struct FakeEngine {
+    enrolled: Mutex<(usize, Option<VoiceGender>)>,
+    spoken: Mutex<Vec<SpeechScript>>,
+}
 impl FakeEngine {
     pub fn enrolled_references(&self) -> usize {
-        *self.0.lock().unwrap()
+        self.enrolled.lock().unwrap().0
+    }
+    pub fn enrolled_gender(&self) -> Option<VoiceGender> {
+        self.enrolled.lock().unwrap().1
+    }
+    pub fn spoken(&self) -> Vec<SpeechScript> {
+        self.spoken.lock().unwrap().clone()
     }
 }
 impl VoiceCloningEngine for FakeEngine {
-    fn enroll(&self, s: &Speaker, refs: &[ReferenceAudio]) -> PortResult<String> {
-        *self.0.lock().unwrap() = refs.len();
+    fn enroll(
+        &self,
+        s: &Speaker,
+        gender: Option<VoiceGender>,
+        refs: &[ReferenceAudio],
+    ) -> PortResult<String> {
+        *self.enrolled.lock().unwrap() = (refs.len(), gender);
         Ok(format!("fake-voice:{}", s.id))
     }
 }
 impl SpeechSynthesizer for FakeEngine {
     fn synthesize(&self, _: &VoiceProfile, script: &SpeechScript) -> PortResult<SynthesizedAudio> {
-        Ok(SynthesizedAudio {
-            wav: vec![1, 2, 3],
-            markup: script.pronunciation.ipa(),
-        })
+        self.spoken.lock().unwrap().push(script.clone());
+        Ok(SynthesizedAudio { wav: vec![1, 2, 3] })
     }
 }
 
@@ -241,7 +233,7 @@ pub struct Fakes {
     pub store: Arc<MemAudio>,
     pub decoder: Arc<FakeDecoder>,
     pub analyzer: Arc<FakeAnalyzer>,
-    pub phonemizer: Arc<FakePhonemizer>,
+    pub transcriber: Arc<FakeTranscriber>,
     pub engine: Arc<FakeEngine>,
     pub messages: Arc<FakeMessages>,
     pub delivery: Arc<FakeDelivery>,
@@ -263,7 +255,7 @@ impl Fakes {
             store: Default::default(),
             decoder: Arc::new(FakeDecoder),
             analyzer: Arc::new(FakeAnalyzer),
-            phonemizer: Arc::new(FakePhonemizer),
+            transcriber: Default::default(),
             engine: Default::default(),
             messages: Arc::new(FakeMessages),
             delivery: Default::default(),
@@ -277,6 +269,10 @@ impl Fakes {
     }
 
     pub fn speaker(&self) -> Speaker {
+        self.speaker_speaking(Language::default())
+    }
+
+    pub fn speaker_speaking(&self, language: Language) -> Speaker {
         let s = Speaker::new(
             SpeakerId::new(self.ids.next_id("spk")),
             "Mãe",
@@ -287,12 +283,13 @@ impl Fakes {
                 statement: "ok".into(),
             }),
         )
-        .unwrap();
+        .unwrap()
+        .with_language(language);
         self.speakers.save(&s).unwrap();
         s
     }
 
-    pub fn add_sample(&self, spk: &Speaker, secs: f32, transcript: &str, observed: Option<&str>) {
+    pub fn add_sample(&self, spk: &Speaker, secs: f32, transcript: Option<&str>) {
         let id = SampleId::new(self.ids.next_id("smp"));
         let loc = self
             .store
@@ -304,39 +301,19 @@ impl Fakes {
                 speaker_id: spk.id.clone(),
                 audio_locator: loc,
                 duration_secs: secs,
-                transcript: transcript.into(),
-                canonical: self.phonemizer.phonemize(transcript),
-                observed: observed.map(parse_ipa),
+                transcript: transcript.map(str::to_string),
                 features: FakeAnalyzer.analyze(&AudioClip::new(16_000, vec![]).unwrap()),
             })
             .unwrap();
     }
 
-    pub fn carioca_profile(&self, spk: &Speaker) {
-        let catalog = RuleCatalog::portuguese();
-        let accent = AccentProfile {
-            label: "Carioca (RJ)".into(),
-            segment_rules: catalog
-                .segment_rules
-                .into_iter()
-                .filter(|r| {
-                    [
-                        "final-e-raising",
-                        "final-o-raising",
-                        "t-palatalization",
-                        "d-palatalization",
-                        "coda-s-palatalization",
-                    ]
-                    .contains(&r.code.as_str())
-                })
-                .collect(),
-            juncture_rules: vec![],
-        };
+    pub fn voice_profile(&self, spk: &Speaker) {
         self.profiles
             .save(&VoiceProfile {
                 speaker_id: spk.id.clone(),
                 engine_voice_id: "v".into(),
-                accent,
+                language: spk.language.clone(),
+                gender: Some(VoiceGender::Female),
                 prosody: ProsodyProfile {
                     mean_pitch_hz: 210.0,
                     pitch_spread_hz: 40.0,
@@ -354,7 +331,6 @@ impl Fakes {
             self.speakers.clone(),
             self.profiles.clone(),
             self.messages.clone(),
-            self.phonemizer.clone(),
             self.engine.clone(),
             self.delivery.clone(),
             self.clock.clone(),

@@ -87,8 +87,13 @@ class MainActivity : Activity() {
         val name = edit("Name (e.g. Grandma Lucia)")
         val relationship = edit("Relationship (e.g. grandmother)")
         val consent = edit("Who authorized the use of the voice (required)")
+        val language = edit("Language of the recordings (e.g. pt-BR, en, es; default pt-BR)")
         button("Register person") {
-            callNative({ NativeBridge.registerSpeaker(name.text.toString(), relationship.text.toString(), consent.text.toString()) }) {
+            callNative({
+                NativeBridge.registerSpeaker(
+                    name.text.toString(), relationship.text.toString(), consent.text.toString(), language.text.toString()
+                )
+            }) {
                 show("Person registered: ${it.obj().getString("name")}")
                 loadSpeakers()
             }
@@ -105,18 +110,17 @@ class MainActivity : Activity() {
             }
             startActivityForResult(intent, PICK_WAV)
         }
-        val transcript = edit("What is said in the recording (Portuguese)")
-        val ipa = edit("Heard phonemes in IPA (optional, e.g. lejtʃi kẽtʃi)")
+        val transcript = edit("What is said in the recording (optional)")
         button("Add sample") {
             val wav = pickedWav ?: return@button show("Choose a .wav or .flac file first.")
             val id = selectedSpeaker() ?: return@button
-            callNative({ NativeBridge.addSample(id, wav, transcript.text.toString(), ipa.text.toString()) }) {
+            callNative({ NativeBridge.addSample(id, wav, transcript.text.toString()) }) {
                 val s = it.obj()
-                show("Sample added (%.1fs): /%s/".format(s.getDouble("duration_secs"), s.getString("citation_ipa")))
+                show("Sample added (%.1fs, mean pitch %.0f Hz)".format(s.getDouble("duration_secs"), s.getDouble("mean_pitch_hz")))
                 pickedWav = null
             }
         }
-        button("Generate voice (timbre + accent)") {
+        button("Generate voice") {
             val id = selectedSpeaker() ?: return@button
             callNative({ NativeBridge.buildVoice(id) }) { show(describeVoice(it.obj())) }
         }
@@ -125,7 +129,7 @@ class MainActivity : Activity() {
         categorySpinner = Spinner(this)
         root.addView(label("Theme"))
         root.addView(categorySpinner)
-        val text = edit("Or your own text, in Portuguese (optional)")
+        val text = edit("Or your own text, in the person's language (optional)")
         toneSpinner = Spinner(this)
         root.addView(label("Tone of voice"))
         root.addView(toneSpinner)
@@ -154,7 +158,7 @@ class MainActivity : Activity() {
                 NativeBridge.speak(id, selectedCategory(), text.text.toString(), selectedTone(), pitchShift(), prefs.listener)
             }) {
                 val m = it.obj()
-                show("💬 ${m.getString("text")}\nTone: ${m.getString("tone")}\n/${m.getString("ipa")}/")
+                show("💬 ${m.getString("text")}\nTone: ${m.getString("tone")} · ${m.getString("language")}")
                 play(m.getString("audio_path"))
             }
         }
@@ -283,8 +287,8 @@ class MainActivity : Activity() {
             val items = (0 until arr.length()).map { i -> arr.getJSONObject(i) }
             speakerIds = items.map { s -> s.getString("id") }
             val labels = items.map { s ->
-                val voice = if (s.optBoolean("voice_ready")) "voice ready · ${s.optString("accent")}" else "voice not generated"
-                "${s.getString("name")} ($voice)"
+                val voice = if (s.optBoolean("voice_ready")) "voice ready · ${s.optString("gender")}" else "voice not generated"
+                "${s.getString("name")} · ${s.optString("language")} ($voice)"
             }
             speakerSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
         }
@@ -334,14 +338,13 @@ class MainActivity : Activity() {
     }
 
     private fun describeVoice(v: JSONObject): String {
-        val sb = StringBuilder("Voice generated! Accent: ${v.getString("accent")}\n")
-        val ev = v.getJSONArray("evidence")
-        for (i in 0 until ev.length()) {
-            val e = ev.getJSONObject(i)
-            val mark = if (e.getBoolean("adopted")) "✔" else "·"
-            sb.append("$mark ${e.getInt("realizations")}/${e.getInt("opportunities")} ${e.getString("description")}\n")
+        val gender = when (v.optString("gender")) {
+            "female" -> "female voice"
+            "male" -> "male voice"
+            else -> "gender not detected"
         }
-        return sb.toString()
+        return "Voice generated! ${v.getString("language")} · $gender · " +
+            "%d sample(s), %.0fs".format(v.getInt("sample_count"), v.getDouble("total_audio_secs"))
     }
 
     private fun play(path: String) {

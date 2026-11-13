@@ -84,6 +84,10 @@ pub fn catalog() -> String {
             "description": t.description(),
         })).collect::<Vec<_>>(),
         "max_pitch_shift": friendly_voice_domain::tone::MAX_PITCH_SHIFT_SEMITONES,
+        "languages": friendly_voice_domain::language::SUPPORTED.iter().map(|(code, name)| json!({
+            "code": code,
+            "name": name,
+        })).collect::<Vec<_>>(),
     })))
 }
 
@@ -98,8 +102,9 @@ pub fn list_speakers() -> String {
                 "id": s.id,
                 "name": s.name,
                 "relationship": s.relationship,
+                "language": s.language,
                 "voice_ready": voice.is_some(),
-                "accent": voice.map(|v| v.accent.label),
+                "gender": voice.and_then(|v| v.gender),
             }));
         }
         Ok(Value::Array(out))
@@ -110,26 +115,26 @@ pub fn register_speaker(
     name: String,
     relationship: Option<String>,
     consent_by: Option<String>,
+    language: Option<String>,
 ) -> String {
     respond((|| {
+        let language = non_empty(language)
+            .map(|l| l.parse().map_err(domain))
+            .transpose()?;
         let s = container()?
             .register_speaker()
             .execute(RegisterSpeakerInput {
                 name,
                 relationship: non_empty(relationship),
                 consent_granted_by: non_empty(consent_by),
+                language,
             })
             .map_err(app)?;
         to_value(&s)
     })())
 }
 
-pub fn add_sample(
-    speaker_id: String,
-    wav: Vec<u8>,
-    transcript: Option<String>,
-    observed_ipa: Option<String>,
-) -> String {
+pub fn add_sample(speaker_id: String, wav: Vec<u8>, transcript: Option<String>) -> String {
     respond((|| {
         let s = container()?
             .add_voice_sample()
@@ -137,45 +142,29 @@ pub fn add_sample(
                 speaker_id: SpeakerId::new(speaker_id),
                 audio: wav,
                 transcript: non_empty(transcript),
-                observed_ipa: non_empty(observed_ipa),
             })
             .map_err(app)?;
         Ok(json!({
             "id": s.id,
             "duration_secs": s.duration_secs,
             "transcript": s.transcript,
-            "citation_ipa": s.canonical.ipa(),
-            "has_observed_phonemes": s.observed.is_some(),
+            "mean_pitch_hz": s.features.mean_pitch_hz,
         }))
     })())
 }
 
 pub fn build_voice(speaker_id: String) -> String {
     respond((|| {
-        let out = container()?
+        let profile = container()?
             .build_voice_profile()
             .execute(&SpeakerId::new(speaker_id))
             .map_err(app)?;
-        let rules: Vec<Value> = out
-            .accent_analysis
-            .iter()
-            .flat_map(|a| a.evidence.iter())
-            .filter(|e| e.opportunities > 0)
-            .map(|e| {
-                json!({
-                    "description": e.description,
-                    "phenomenon": e.phenomenon,
-                    "realizations": e.realizations,
-                    "opportunities": e.opportunities,
-                    "adopted": e.adopted,
-                })
-            })
-            .collect();
         Ok(json!({
-            "accent": out.profile.accent.label,
-            "prosody": out.profile.prosody,
-            "sample_count": out.profile.sample_count,
-            "evidence": rules,
+            "language": profile.language,
+            "gender": profile.gender,
+            "prosody": profile.prosody,
+            "sample_count": profile.sample_count,
+            "total_audio_secs": profile.total_audio_secs,
         }))
     })())
 }
@@ -218,14 +207,13 @@ pub fn speak(
                 speaker_id: SpeakerId::new(speaker_id),
                 content: content(category, text)?,
                 listener: non_empty(listener),
-                accent_intensity: 1.0,
                 tone: tone(tone_style, pitch_shift)?,
             })
             .map_err(app)?;
         Ok(json!({
             "text": out.message.text(),
             "tone": out.script.tone.to_string(),
-            "ipa": out.script.pronunciation.ipa(),
+            "language": out.script.language,
             "audio_path": out.receipt,
         }))
     })())
@@ -408,36 +396,38 @@ mod tests {
         let cat = data(&catalog());
         assert_eq!(cat["tones"].as_array().unwrap().len(), 6);
 
-        let err: Value = serde_json::from_str(&register_speaker("Vó".into(), None, None)).unwrap();
+        assert!(cat["languages"].as_array().unwrap().len() > 20);
+
+        let err: Value =
+            serde_json::from_str(&register_speaker("Vó".into(), None, None, None)).unwrap();
         assert_eq!(err["ok"], false);
+        let bad_language: Value = serde_json::from_str(&register_speaker(
+            "Vó".into(),
+            None,
+            Some("Vó".into()),
+            Some("xx".into()),
+        ))
+        .unwrap();
+        assert_eq!(bad_language["ok"], false);
         let id = data(&register_speaker(
             "Vó".into(),
             Some("avó".into()),
             Some("Vó".into()),
+            Some("pt-BR".into()),
         ))["id"]
             .as_str()
             .unwrap()
             .to_string();
 
-        for (txt, ipa) in [
-            (
-                "Leite quente de noite, tudo certo.",
-                "lejtʃi kẽtʃi dʒi nojtʃi tudu sɛhtu",
-            ),
-            (
-                "A festa é mesmo na porta do mar.",
-                "a fɛʃta ɛ meʒmu na pɔhta du ma",
-            ),
-        ] {
-            data(&add_sample(
-                id.clone(),
-                wav(6.0),
-                Some(txt.into()),
-                Some(ipa.into()),
-            ));
-        }
+        data(&add_sample(
+            id.clone(),
+            wav(6.0),
+            Some("Leite quente de noite, tudo certo.".into()),
+        ));
+        data(&add_sample(id.clone(), wav(6.0), None));
         let voice = data(&build_voice(id.clone()));
-        assert!(voice["evidence"].as_array().unwrap().len() > 3);
+        assert_eq!(voice["language"], "pt-BR");
+        assert_eq!(voice["sample_count"], 2);
 
         let spoken = data(&speak(
             id.clone(),

@@ -1,26 +1,24 @@
 //! HTTP adapter for a self-hosted neural voice server.
 //!
 //! The contract is documented in `docs/engine-api.md`. The reference
-//! implementation lives in `engine/` (Piper pt-BR base speech + OpenVoice V2
-//! tone color conversion, both permissively licensed); any server that
-//! implements the same endpoints can be plugged in.
-use super::ssml::to_ssml;
+//! implementation lives in `engine/` (zero-shot cloning with Chatterbox
+//! Multilingual, MIT licensed); any server that implements the same
+//! endpoints can be plugged in.
 use crate::audio::{encode_wav, to_wav};
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use friendly_voice_application::ports::{
-    PhoneRecognizer, PortError, PortResult, ReferenceAudio, SpeechSynthesizer, SynthesizedAudio,
-    Transcriber, VoiceCloningEngine,
+    PortError, PortResult, ReferenceAudio, SpeechSynthesizer, SynthesizedAudio, Transcriber,
+    VoiceCloningEngine,
 };
 use friendly_voice_domain::{
     audio::AudioClip,
-    phonetics::{parse_ipa, Phoneme},
+    language::Language,
     speaker::Speaker,
-    voice::{SpeechScript, VoiceProfile},
+    voice::{SpeechScript, VoiceGender, VoiceProfile},
 };
 use serde::{Deserialize, Serialize};
 
 const MAX_AUDIO_BYTES: u64 = 64 * 1024 * 1024;
-const LANGUAGE: &str = "pt-BR";
 /// HTTP status used by the server for optional features it does not provide.
 const NOT_IMPLEMENTED: u16 = 501;
 
@@ -50,9 +48,13 @@ struct Client {
 }
 
 impl Client {
+    /// `localhost` is pinned to IPv4: on Windows it resolves to `::1` first,
+    /// and Docker Desktop accepts that connection but stalls for ~20 s
+    /// before the client falls back to `127.0.0.1`.
     fn new(base_url: impl Into<String>) -> Self {
+        let base_url: String = base_url.into();
         Self {
-            base_url: base_url.into(),
+            base_url: base_url.replacen("://localhost", "://127.0.0.1", 1),
         }
     }
 
@@ -123,13 +125,14 @@ impl HttpVoiceEngine {
 struct EnrollRequest<'a> {
     name: &'a str,
     language: &'a str,
+    gender: Option<&'a str>,
     references: Vec<EnrollReference<'a>>,
 }
 
 #[derive(Serialize)]
 struct EnrollReference<'a> {
     audio_wav_base64: String,
-    transcript: &'a str,
+    transcript: Option<&'a str>,
 }
 
 #[derive(Deserialize)]
@@ -138,10 +141,16 @@ struct EnrollResponse {
 }
 
 impl VoiceCloningEngine for HttpVoiceEngine {
-    fn enroll(&self, speaker: &Speaker, references: &[ReferenceAudio]) -> PortResult<String> {
+    fn enroll(
+        &self,
+        speaker: &Speaker,
+        gender: Option<VoiceGender>,
+        references: &[ReferenceAudio],
+    ) -> PortResult<String> {
         let req = EnrollRequest {
             name: &speaker.name,
-            language: LANGUAGE,
+            language: speaker.language.tag(),
+            gender: gender.map(VoiceGender::slug),
             // The contract carries WAV; other formats (FLAC) are converted here,
             // so engines do not need to support every input format.
             references: references
@@ -149,7 +158,7 @@ impl VoiceCloningEngine for HttpVoiceEngine {
                 .map(|r| {
                     Ok(EnrollReference {
                         audio_wav_base64: B64.encode(to_wav(&r.bytes)?),
-                        transcript: &r.transcript,
+                        transcript: r.transcript.as_deref(),
                     })
                 })
                 .collect::<PortResult<_>>()?,
@@ -159,61 +168,30 @@ impl VoiceCloningEngine for HttpVoiceEngine {
     }
 }
 
-/// One word as it must be pronounced (the learned accent is already applied).
-#[derive(Serialize)]
-struct WordPayload<'a> {
-    phonemes: Vec<&'a str>,
-    stress: Option<usize>,
-    pause_after: bool,
-}
-
 #[derive(Serialize)]
 struct SynthesizeRequest<'a> {
     voice_id: &'a str,
     language: &'a str,
     text: &'a str,
-    /// SSML with one `<phoneme alphabet="ipa">` per word.
-    ssml: &'a str,
-    /// Accented pronunciation per word, with stress and pauses (preferred).
-    words: Vec<WordPayload<'a>>,
-    /// Same pronunciation as plain IPA per word (for engines without `words`).
-    ipa_words: Vec<String>,
-    pitch_hz: f32,
-    syllables_per_second: f32,
     /// Chosen tone of voice (natural, warm, cheerful, calm, firm, whisper).
     style: &'a str,
-    /// Tone adjustments relative to the person's natural prosody.
+    /// Extra pitch shift chosen by the user, in semitones.
     pitch_shift_semitones: f32,
+    /// Volume change of the tone, in dB.
     volume_db: f32,
 }
 
 fn synthesize_request<'a>(
     voice: &'a VoiceProfile,
     script: &'a SpeechScript,
-    ssml: &'a str,
 ) -> SynthesizeRequest<'a> {
-    let tone = script.tone.adjustment();
     SynthesizeRequest {
         voice_id: &voice.engine_voice_id,
-        language: LANGUAGE,
+        language: script.language.tag(),
         text: &script.text,
-        ssml,
-        words: script
-            .pronunciation
-            .words
-            .iter()
-            .map(|w| WordPayload {
-                phonemes: w.phonemes.iter().map(Phoneme::symbol).collect(),
-                stress: w.stress,
-                pause_after: w.pause_after,
-            })
-            .collect(),
-        ipa_words: script.pronunciation.words.iter().map(|w| w.ipa()).collect(),
-        pitch_hz: script.prosody.mean_pitch_hz,
-        syllables_per_second: script.prosody.syllables_per_second,
         style: script.tone.style.slug(),
-        pitch_shift_semitones: tone.pitch_semitones,
-        volume_db: tone.volume_db,
+        pitch_shift_semitones: script.tone.pitch_shift_semitones,
+        volume_db: script.tone.style.adjustment().volume_db,
     }
 }
 
@@ -223,11 +201,10 @@ impl SpeechSynthesizer for HttpVoiceEngine {
         voice: &VoiceProfile,
         script: &SpeechScript,
     ) -> PortResult<SynthesizedAudio> {
-        let ssml = to_ssml(script);
         let wav = self
             .client
-            .post("v1/synthesize", &synthesize_request(voice, script, &ssml))?;
-        Ok(SynthesizedAudio { wav, markup: ssml })
+            .post("v1/synthesize", &synthesize_request(voice, script))?;
+        Ok(SynthesizedAudio { wav })
     }
 }
 
@@ -235,54 +212,6 @@ impl SpeechSynthesizer for HttpVoiceEngine {
 struct AudioRequest<'a> {
     language: &'a str,
     audio_wav_base64: String,
-    transcript: Option<&'a str>,
-}
-
-fn audio_request<'a>(
-    clip: &AudioClip,
-    transcript: Option<&'a str>,
-) -> PortResult<AudioRequest<'a>> {
-    Ok(AudioRequest {
-        language: LANGUAGE,
-        audio_wav_base64: B64.encode(encode_wav(clip)?),
-        transcript,
-    })
-}
-
-/// Phone recognition (`POST /v1/phonemes` → `{"ipa": "..."}`).
-///
-/// Optional on the server: when it answers 501, no phonemes are returned
-/// and the sample is stored without accent evidence instead of failing.
-#[derive(Debug, Clone)]
-pub struct HttpPhoneRecognizer {
-    client: Client,
-}
-
-impl HttpPhoneRecognizer {
-    pub fn new(base_url: impl Into<String>) -> Self {
-        Self {
-            client: Client::new(base_url),
-        }
-    }
-}
-
-#[derive(Deserialize)]
-struct PhonemesResponse {
-    ipa: String,
-}
-
-impl PhoneRecognizer for HttpPhoneRecognizer {
-    fn recognize(&self, clip: &AudioClip, transcript: &str) -> PortResult<Vec<Phoneme>> {
-        let req = audio_request(clip, Some(transcript))?;
-        match self
-            .client
-            .post_json::<PhonemesResponse>("v1/phonemes", &req)
-        {
-            Ok(res) => Ok(parse_ipa(&res.ipa)),
-            Err(CallError::NotImplemented) => Ok(Vec::new()),
-            Err(e) => Err(e.into()),
-        }
-    }
 }
 
 /// Transcription (`POST /v1/transcribe` → `{"text": "..."}`).
@@ -305,12 +234,15 @@ struct TranscribeResponse {
 }
 
 impl Transcriber for HttpTranscriber {
-    fn transcribe(&self, clip: &AudioClip) -> PortResult<String> {
-        let req = audio_request(clip, None)?;
+    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<String> {
+        let req = AudioRequest {
+            language: language.tag(),
+            audio_wav_base64: B64.encode(encode_wav(clip)?),
+        };
         match self.client.post_json::<TranscribeResponse>("v1/transcribe", &req) {
             Ok(res) => Ok(res.text),
             Err(CallError::NotImplemented) => Err(err(
-                "the server does not transcribe; provide the transcript (--transcript or a .txt file)",
+                "the server does not transcribe; provide the transcript (--transcript or a .txt file) or leave it out",
             )),
             Err(e) => Err(e.into()),
         }
@@ -320,9 +252,8 @@ impl Transcriber for HttpTranscriber {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use friendly_voice_domain::accent::AccentProfile;
     use friendly_voice_domain::ids::SpeakerId;
-    use friendly_voice_domain::phonetics::{PhoneticUtterance, PhoneticWord};
+    use friendly_voice_domain::speaker::Consent;
     use friendly_voice_domain::tone::{ToneStyle, VoiceTone};
     use friendly_voice_domain::voice::ProsodyProfile;
     use std::io::{BufRead, BufReader, Read, Write};
@@ -368,18 +299,23 @@ mod tests {
     }
 
     #[test]
-    fn missing_phone_recognizer_is_not_an_error() {
-        let (url, _) = serve_once(501, r#"{"detail":"not installed"}"#);
-        assert!(HttpPhoneRecognizer::new(url)
-            .recognize(&clip(), "oi")
-            .unwrap()
-            .is_empty());
+    fn localhost_is_reached_over_ipv4() {
+        assert_eq!(
+            Client::new("http://localhost:8020/").url("v1/voices"),
+            "http://127.0.0.1:8020/v1/voices"
+        );
+        assert_eq!(
+            Client::new("http://engine.lan:8020").url("health"),
+            "http://engine.lan:8020/health"
+        );
     }
 
     #[test]
     fn server_error_detail_is_reported() {
         let (url, _) = serve_once(422, r#"{"detail":"no reference audio longer than 1s"}"#);
-        let e = HttpTranscriber::new(url).transcribe(&clip()).unwrap_err();
+        let e = HttpTranscriber::new(url)
+            .transcribe(&clip(), &Language::default())
+            .unwrap_err();
         assert!(
             e.0.contains("HTTP 422") && e.0.contains("longer than 1s"),
             "{e}"
@@ -387,26 +323,22 @@ mod tests {
     }
 
     #[test]
-    fn synthesis_sends_accented_words_with_stress_and_tone() {
+    fn synthesis_sends_text_language_and_tone() {
         let (url, rx) = serve_once(200, "RIFF");
         let voice = VoiceProfile {
             speaker_id: SpeakerId::new("s"),
             engine_voice_id: "abc".into(),
-            accent: AccentProfile::default(),
+            language: Language::default(),
+            gender: Some(VoiceGender::Female),
             prosody: ProsodyProfile::default(),
             sample_count: 1,
             total_audio_secs: 10.0,
         };
         let script = SpeechScript {
-            text: "noite".into(),
-            pronunciation: PhoneticUtterance::new(vec![PhoneticWord::new(
-                "noite",
-                parse_ipa("nojtʃi"),
-                Some(1),
-            )
-            .with_pause(true)]),
+            text: "Boa noite, meu bem.".into(),
+            language: "es".parse().unwrap(),
             prosody: ProsodyProfile::default(),
-            tone: VoiceTone::of(ToneStyle::Calm),
+            tone: VoiceTone::new(ToneStyle::Calm, 1.5).unwrap(),
         };
         let audio = HttpVoiceEngine::new(url)
             .synthesize(&voice, &script)
@@ -414,13 +346,43 @@ mod tests {
         assert_eq!(audio.wav, b"RIFF");
         let sent: serde_json::Value = serde_json::from_str(&rx.recv().unwrap()).unwrap();
         assert_eq!(sent["voice_id"], "abc");
-        assert_eq!(
-            sent["words"][0]["phonemes"],
-            serde_json::json!(["n", "o", "j", "tʃ", "i"])
-        );
-        assert_eq!(sent["words"][0]["stress"], 1);
-        assert_eq!(sent["words"][0]["pause_after"], true);
+        assert_eq!(sent["text"], "Boa noite, meu bem.");
+        assert_eq!(sent["language"], "es");
         assert_eq!(sent["style"], "calm");
+        assert_eq!(sent["pitch_shift_semitones"], 1.5);
         assert_eq!(sent["volume_db"], -3.0);
+    }
+
+    #[test]
+    fn enrollment_sends_language_and_gender() {
+        let (url, rx) = serve_once(200, r#"{"voice_id":"v1"}"#);
+        let speaker = Speaker::new(
+            SpeakerId::new("s"),
+            "Vó",
+            None,
+            Some(Consent {
+                granted_by: "Vó".into(),
+                granted_at: Default::default(),
+                statement: "ok".into(),
+            }),
+        )
+        .unwrap()
+        .with_language("it".parse().unwrap());
+        let wav = encode_wav(&clip()).unwrap();
+        let id = HttpVoiceEngine::new(url)
+            .enroll(
+                &speaker,
+                Some(VoiceGender::Male),
+                &[ReferenceAudio {
+                    bytes: wav,
+                    transcript: None,
+                }],
+            )
+            .unwrap();
+        assert_eq!(id, "v1");
+        let sent: serde_json::Value = serde_json::from_str(&rx.recv().unwrap()).unwrap();
+        assert_eq!(sent["language"], "it");
+        assert_eq!(sent["gender"], "male");
+        assert!(sent["references"][0]["transcript"].is_null());
     }
 }

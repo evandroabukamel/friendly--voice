@@ -36,37 +36,37 @@ impl CuratedMessageCatalog {
         use MessageCategory::*;
         match category {
             Motivation => &[
-                "Ei, {nome}, você é muito mais forte do que imagina. Vai com tudo hoje!",
-                "Um passo de cada vez, {nome}. Você já chegou longe e vai chegar mais longe ainda.",
-                "Não desiste não, {nome}! O que é difícil hoje vira história amanhã.",
-                "Acredita em você, {nome}, porque eu acredito. Sempre acreditei.",
-                "Faz o seu melhor hoje, {nome}. O seu melhor sempre é suficiente.",
+                "Ei {nome}, você é muito mais forte do que imagina. Vai com tudo hoje!",
+                "Um passo de cada vez {nome}. Você já chegou longe e vai chegar mais longe ainda.",
+                "Não desiste não {nome}! O que é difícil hoje vira história amanhã.",
+                "Acredita em você {nome}, porque eu acredito. Sempre acreditei.",
+                "Faz o seu melhor hoje {nome}. O seu melhor sempre é suficiente.",
             ],
             Confidence => &[
                 "{nome}, você tem tudo o que precisa dentro de você. Confia!",
-                "Lembra de quantas vezes você achou que não ia dar conta, {nome}? Deu. E vai dar de novo.",
-                "Levanta essa cabeça, {nome}. Você é capaz, inteligente e muito querido.",
-                "Você não precisa ser perfeito, {nome}. Precisa só ser você.",
+                "Lembra de quantas vezes você achou que não ia dar conta {nome}? Deu. E vai dar de novo.",
+                "Levanta essa cabeça {nome}. Você é capaz, inteligente e muito querido.",
+                "Você não precisa ser perfeito {nome}. Precisa só ser você.",
             ],
             Gratitude => &[
-                "Que bom ter você na minha vida, {nome}. Obrigado por existir.",
-                "{nome}, para um minutinho e repara em tudo de bom que você já construiu.",
-                "Hoje eu só queria te dizer: tenho muito orgulho de você, {nome}.",
+                "Que bom ter você na minha vida {nome}. Obrigado por existir.",
+                "{nome} para um minutinho e repara em tudo de bom que você já construiu.",
+                "Hoje, eu só queria te dizer: tenho muito orgulho de você, {nome}.",
             ],
             Calm => &[
-                "Respira fundo, {nome}. Vai ficar tudo bem. Uma coisa de cada vez.",
-                "Calma, {nome}. Você não precisa resolver tudo agora.",
-                "Desacelera um pouquinho, {nome}. Cuidar de você também é importante.",
+                "Respira fundo {nome}. Vai ficar tudo bem. Uma coisa de cada vez.",
+                "Calma {nome}. Você não precisa resolver tudo agora.",
+                "Desaceléra um pouquinho {nome}. Cuidar de você também é importante.",
             ],
             Celebration => &[
-                "Parabéns, {nome}! Eu sabia que você ia conseguir!",
-                "Olha só você, {nome}! Comemora essa conquista, você merece!",
-                "Que orgulho, {nome}! Todo o seu esforço valeu a pena.",
+                "Parabéns {nome}! Eu sabia que você ia conseguir!",
+                "Olha só você {nome}! Comemora essa conquista, você merece!",
+                "Que orgulho {nome}! Todo o seu esforço valeu a pena.",
             ],
             GoodMorning => &[
-                "Bom dia, {nome}! Hoje vai ser um dia lindo, aproveita!",
-                "Bom dia, meu amor! Levanta com fé, {nome}, que hoje é dia de coisa boa.",
-                "Acorda, {nome}! O dia está esperando por você. Vai com Deus.",
+                "Bom dia {nome}! Hoje vai ser um dia lindo, aproveita!",
+                "Bom dia meu amor! Levanta, {nome}! Que hoje é dia de coisa boa.",
+                "Acorda {nome}! O dia está esperando por você. Vamo lá!",
             ],
         }
     }

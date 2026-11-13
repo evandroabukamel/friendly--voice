@@ -64,12 +64,14 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_registerSpeaker<'l>(
     name: JString<'l>,
     relationship: JString<'l>,
     consent_by: JString<'l>,
+    language: JString<'l>,
 ) -> jstring {
     let name = req(&mut env, &name);
     let relationship = opt(&mut env, &relationship);
     let consent_by = opt(&mut env, &consent_by);
+    let language = opt(&mut env, &language);
     guarded(&mut env, || {
-        api::register_speaker(name, relationship, consent_by)
+        api::register_speaker(name, relationship, consent_by, language)
     })
 }
 
@@ -80,7 +82,6 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_addSample<'l>(
     speaker_id: JString<'l>,
     wav: JByteArray<'l>,
     transcript: JString<'l>,
-    observed_ipa: JString<'l>,
 ) -> jstring {
     let speaker_id = req(&mut env, &speaker_id);
     let bytes = if wav.is_null() {
@@ -89,10 +90,7 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_addSample<'l>(
         env.convert_byte_array(&wav).unwrap_or_default()
     };
     let transcript = opt(&mut env, &transcript);
-    let observed_ipa = opt(&mut env, &observed_ipa);
-    guarded(&mut env, || {
-        api::add_sample(speaker_id, bytes, transcript, observed_ipa)
-    })
+    guarded(&mut env, || api::add_sample(speaker_id, bytes, transcript))
 }
 
 #[no_mangle]

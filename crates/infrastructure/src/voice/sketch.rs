@@ -2,20 +2,19 @@
 //!
 //! * [`LocalVoiceBank`] registers the person's references (the real timbre
 //!   needs a neural engine — see `HttpVoiceEngine`).
-//! * [`ProsodySketchSynthesizer`] renders a "sound sketch" of the speech: each
-//!   syllable becomes a voiced pulse at the person's mean pitch and rhythm,
-//!   with longer/higher stressed syllables, noise for fricatives and pauses at
-//!   punctuation. It validates rhythm/intonation and the end-to-end pipeline.
-use super::ssml::to_ssml;
+//! * [`ProsodySketchSynthesizer`] renders a "sound sketch" of the text: each
+//!   syllable (group of vowel letters) becomes a voiced pulse at the person's
+//!   mean pitch and rhythm, the next-to-last syllable of a word is longer and
+//!   higher, sibilant letters become noise and punctuation becomes a pause.
+//!   It validates rhythm/intonation and the end-to-end pipeline.
 use crate::audio::encode_wav;
 use friendly_voice_application::ports::{
     PortError, PortResult, ReferenceAudio, SpeechSynthesizer, SynthesizedAudio, VoiceCloningEngine,
 };
 use friendly_voice_domain::{
     audio::AudioClip,
-    phonetics::Phoneme,
     speaker::Speaker,
-    voice::{SpeechScript, VoiceProfile},
+    voice::{estimate_syllables, SpeechScript, VoiceGender, VoiceProfile},
 };
 use std::f32::consts::TAU;
 
@@ -23,7 +22,12 @@ use std::f32::consts::TAU;
 pub struct LocalVoiceBank;
 
 impl VoiceCloningEngine for LocalVoiceBank {
-    fn enroll(&self, speaker: &Speaker, references: &[ReferenceAudio]) -> PortResult<String> {
+    fn enroll(
+        &self,
+        speaker: &Speaker,
+        _gender: Option<VoiceGender>,
+        references: &[ReferenceAudio],
+    ) -> PortResult<String> {
         if references.is_empty() {
             return Err(PortError::new("no reference audio"));
         }
@@ -59,11 +63,23 @@ fn xorshift(seed: &mut u32) -> f32 {
     *seed as f32 / u32::MAX as f32 - 0.5
 }
 
-fn is_fricative(p: &Phoneme) -> bool {
-    matches!(
-        p.symbol(),
-        "s" | "ʃ" | "f" | "h" | "x" | "z" | "ʒ" | "v" | "tʃ" | "dʒ"
-    )
+fn sibilants(word: &str) -> usize {
+    word.chars()
+        .filter(|c| {
+            matches!(
+                c.to_ascii_lowercase(),
+                's' | 'z' | 'f' | 'x' | 'j' | 'v' | 'ç'
+            )
+        })
+        .count()
+}
+
+/// Words with the punctuation that follows them.
+fn words(text: &str) -> impl Iterator<Item = (&str, bool)> {
+    text.split_whitespace().map(|w| {
+        let pause = w.ends_with(|c: char| ".,;:!?…—()".contains(c));
+        (w, pause)
+    })
 }
 
 impl ProsodySketchSynthesizer {
@@ -132,41 +148,39 @@ impl ProsodySketchSynthesizer {
         } else {
             0.18
         };
-        let total = script.pronunciation.syllable_count().max(1) as f32;
+        let total = estimate_syllables(&script.text).max(1) as f32;
         let adj = script.tone.adjustment();
         let voice = Voicing {
             gain: 10f32.powf(adj.volume_db / 20.0),
             breathy: adj.breathy,
         };
         let (mut out, mut phase, mut seed, mut k) = (Vec::new(), 0.0f32, 0x9E37_79B9u32, 0.0f32);
-        for word in &script.pronunciation.words {
-            for (i, ph) in word.phonemes.iter().enumerate() {
-                if ph.is_vowel() {
-                    // Declination: the sentence pitch "falls" from start to end.
-                    let decl = base + spread * 0.5 * (1.0 - 2.0 * k / total);
-                    let stressed = word.stress == Some(i);
-                    let (dur, f0) = if stressed {
-                        (syll * 1.35, decl + spread * 0.4)
-                    } else {
-                        (syll * 0.85, decl)
-                    };
-                    self.tone(
-                        &mut out,
-                        dur * 0.8,
-                        f0,
-                        f0 * 0.97,
-                        &mut phase,
-                        voice,
-                        &mut seed,
-                    );
-                    k += 1.0;
-                } else if is_fricative(ph) {
-                    self.noise(&mut out, syll * 0.3, &mut seed, voice.gain);
-                } else if ph.is_consonant() && !ph.is_voiced() {
-                    self.silence(&mut out, syll * 0.12);
-                }
+        for (word, pause_after) in words(&script.text) {
+            let syllables = estimate_syllables(word);
+            let stressed = syllables.saturating_sub(2).min(syllables.saturating_sub(1));
+            for i in 0..syllables {
+                // Declination: the sentence pitch "falls" from start to end.
+                let decl = base + spread * 0.5 * (1.0 - 2.0 * k / total);
+                let (dur, f0) = if i == stressed {
+                    (syll * 1.35, decl + spread * 0.4)
+                } else {
+                    (syll * 0.85, decl)
+                };
+                self.tone(
+                    &mut out,
+                    dur * 0.8,
+                    f0,
+                    f0 * 0.97,
+                    &mut phase,
+                    voice,
+                    &mut seed,
+                );
+                k += 1.0;
             }
-            self.silence(&mut out, if word.pause_after { 0.35 } else { 0.03 });
+            for _ in 0..sibilants(word) {
+                self.noise(&mut out, syll * 0.3, &mut seed, voice.gain);
+            }
+            self.silence(&mut out, if pause_after { 0.35 } else { 0.03 });
         }
         AudioClip::new(self.sample_rate, out).expect("sample rate > 0")
     }
@@ -180,7 +194,6 @@ impl SpeechSynthesizer for ProsodySketchSynthesizer {
     ) -> PortResult<SynthesizedAudio> {
         Ok(SynthesizedAudio {
             wav: encode_wav(&self.render(script))?,
-            markup: to_ssml(script),
         })
     }
 }
@@ -188,52 +201,37 @@ impl SpeechSynthesizer for ProsodySketchSynthesizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use friendly_voice_domain::phonetics::{parse_ipa, PhoneticUtterance, PhoneticWord};
     use friendly_voice_domain::tone::{ToneStyle, VoiceTone};
     use friendly_voice_domain::voice::ProsodyProfile;
 
-    #[test]
-    fn faster_speaker_produces_shorter_audio() {
-        let utt = PhoneticUtterance::new(vec![PhoneticWord::new(
-            "x",
-            parse_ipa("vosekõsegi"),
-            Some(1),
-        )]);
-        let script = |rate| SpeechScript {
-            text: "x".into(),
-            pronunciation: utt.clone(),
+    fn script(rate: f32, style: ToneStyle) -> SpeechScript {
+        SpeechScript {
+            text: "Você consegue, meu bem.".into(),
+            language: Default::default(),
             prosody: ProsodyProfile {
                 mean_pitch_hz: 200.0,
                 syllables_per_second: rate,
                 ..Default::default()
             },
-            tone: VoiceTone::default(),
-        };
+            tone: VoiceTone::of(style),
+        }
+    }
+
+    #[test]
+    fn faster_speaker_produces_shorter_audio() {
         let s = ProsodySketchSynthesizer::default();
-        assert!(s.render(&script(7.0)).duration_secs() < s.render(&script(4.0)).duration_secs());
+        assert!(
+            s.render(&script(7.0, ToneStyle::Natural)).duration_secs()
+                < s.render(&script(4.0, ToneStyle::Natural)).duration_secs()
+        );
     }
 
     #[test]
     fn whisper_is_quieter_than_firm() {
-        let utt = PhoneticUtterance::new(vec![PhoneticWord::new(
-            "x",
-            parse_ipa("vosekõsegi"),
-            Some(1),
-        )]);
-        let script = |style| SpeechScript {
-            text: "x".into(),
-            pronunciation: utt.clone(),
-            prosody: ProsodyProfile {
-                mean_pitch_hz: 200.0,
-                syllables_per_second: 5.0,
-                ..Default::default()
-            },
-            tone: VoiceTone::of(style),
-        };
         let s = ProsodySketchSynthesizer::default();
         assert!(
-            s.render(&script(ToneStyle::Whisper)).rms()
-                < s.render(&script(ToneStyle::Firm)).rms() / 3.0
+            s.render(&script(5.0, ToneStyle::Whisper)).rms()
+                < s.render(&script(5.0, ToneStyle::Firm)).rms() / 3.0
         );
     }
 }

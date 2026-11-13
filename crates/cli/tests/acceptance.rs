@@ -1,4 +1,4 @@
-//! Acceptance tests (criteria of stories US-01..US-08 and US-18), exercising the
+//! Acceptance tests (criteria of stories US-01..US-08, US-11, US-18 and US-27), exercising the
 //! real binary with generated audio and data in a temporary directory.
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -38,7 +38,7 @@ impl Env {
     }
 
     /// Voiced audio (harmonics) with regular pauses.
-    fn wav(&self, name: &str, secs: f32, f0: f32, transcript: &str, ipa: &str) -> PathBuf {
+    fn wav(&self, name: &str, secs: f32, f0: f32, transcript: Option<&str>) -> PathBuf {
         let path = self.dir.join(format!("{name}.wav"));
         let spec = hound::WavSpec {
             channels: 1,
@@ -61,8 +61,9 @@ impl Env {
             w.write_sample((v * i16::MAX as f32) as i16).unwrap();
         }
         w.finalize().unwrap();
-        std::fs::write(path.with_extension("txt"), transcript).unwrap();
-        std::fs::write(path.with_extension("ipa"), ipa).unwrap();
+        if let Some(t) = transcript {
+            std::fs::write(path.with_extension("txt"), t).unwrap();
+        }
         path
     }
 }
@@ -77,7 +78,7 @@ fn speaker_id(out: &str) -> String {
     out.split("id: ")
         .nth(1)
         .unwrap()
-        .split(')')
+        .split([')', ','])
         .next()
         .unwrap()
         .to_string()
@@ -88,51 +89,32 @@ fn p(path: &Path) -> &str {
 }
 
 #[test]
-fn full_flow_learns_accent_and_speaks() {
+fn full_flow_clones_the_voice_and_speaks() {
     let env = Env::new("flow");
 
     // US-01: consent is mandatory
     let (ok, out) = env.run(&["person", "add", "--name", "Vó"]);
     assert!(!ok && out.contains("consent"), "{out}");
-    let id = speaker_id(&env.ok(&["person", "add", "--name", "Vó", "--consent-by", "Vó"]));
+    let out = env.ok(&["person", "add", "--name", "Vó", "--consent-by", "Vó"]);
+    assert!(out.contains("speaks Portuguese"), "{out}");
+    let id = speaker_id(&out);
 
-    // US-02: samples with transcript and phonemes (files next to the .wav)
+    // US-02: samples, with or without a transcript (file next to the .wav)
     let samples = [
-        env.wav(
-            "a1",
-            6.0,
-            210.0,
-            "Leite quente de noite, tudo certo.",
-            "lejtʃi kẽtʃi dʒi nojtʃi tudu sɛhtu",
-        ),
-        env.wav(
-            "a2",
-            6.0,
-            205.0,
-            "Os amigos de verdade vão falar com você.",
-            "uz amiguʃ dʒi vehdadʒi vãw fala kũ vose",
-        ),
-        env.wav(
-            "a3",
-            5.0,
-            215.0,
-            "A festa é mesmo na porta do mar.",
-            "a fɛʃta ɛ meʒmu na pɔhta du ma",
-        ),
+        env.wav("a1", 6.0, 210.0, Some("Leite quente de noite, tudo certo.")),
+        env.wav("a2", 6.0, 205.0, None),
+        env.wav("a3", 5.0, 215.0, Some("A festa é mesmo na porta do mar.")),
     ];
     for s in &samples {
         env.ok(&["sample", "add", "--person", &id, "--audio", p(s)]);
     }
 
-    // US-03/US-04: voice with the learned accent
+    // US-11: the voice is cloned from the samples; a high voice is female
     let out = env.ok(&["voice", "generate", "--person", &id]);
-    assert!(out.contains("Carioca"), "{out}");
-    assert!(out.contains("✔    ending"), "{out}");
-    assert!(out.contains("✔    letters"), "{out}");
-
-    // US-06: pronunciation of new text with the accent
-    let out = env.ok(&["pronounce", "--person", &id, "Bom dia, você é forte!"]);
-    assert!(out.contains("/bõ dʒia vose ɛ fohtʃi/"), "{out}");
+    assert!(out.contains("female voice"), "{out}");
+    assert!(out.contains("Portuguese (pt-BR)"), "{out}");
+    let out = env.ok(&["voice", "show", "--person", &id]);
+    assert!(out.contains("3 sample(s)"), "{out}");
 
     // US-05: an on-demand message produces audio
     let out = env.ok(&[
@@ -239,12 +221,11 @@ fn accepts_flac_samples() {
     for (name, f0) in [("f1", 200.0), ("f2", 190.0)] {
         let path = env.dir.join(format!("{name}.flac"));
         flac(&path, 6.0, f0);
-        // Sidecar files work for FLAC too.
+        // The transcript sidecar works for FLAC too.
         std::fs::write(path.with_extension("txt"), "Leite quente de noite.").unwrap();
-        std::fs::write(path.with_extension("ipa"), "lejtʃi kẽtʃi dʒi nojtʃi").unwrap();
         let out = env.ok(&["sample", "add", "--person", &id, "--audio", p(&path)]);
         assert!(out.contains("added (6.0s)"), "{out}");
-        assert!(out.contains("Heard:     /lejtʃikẽtʃidʒinojtʃi/"), "{out}");
+        assert!(out.contains("Text: Leite quente de noite."), "{out}");
     }
     // The original FLAC is kept, with the right extension.
     let audio_dir = env.dir.join("data/audio").join(&id);
@@ -289,13 +270,7 @@ fn portuguese_aliases_still_work() {
         "--consentimento-de",
         "Vó",
     ]));
-    let wav = env.wav(
-        "a1",
-        12.0,
-        210.0,
-        "Leite quente de noite.",
-        "lejtʃi kẽtʃi dʒi nojtʃi",
-    );
+    let wav = env.wav("a1", 12.0, 210.0, None);
     env.ok(&[
         "amostra",
         "adicionar",
@@ -347,13 +322,7 @@ fn english_values_are_accepted() {
         "--consent-by",
         "Grandma",
     ]));
-    let wav = env.wav(
-        "a1",
-        12.0,
-        210.0,
-        "Leite quente de noite.",
-        "lejtʃi kẽtʃi dʒi nojtʃi",
-    );
+    let wav = env.wav("a1", 12.0, 210.0, None);
     env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
     env.ok(&["voice", "generate", "--person", &id]);
     let out = env.ok(&[
@@ -383,9 +352,62 @@ fn english_values_are_accepted() {
 fn rejects_invalid_audio() {
     let env = Env::new("bad");
     let id = speaker_id(&env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]));
-    let short = env.wav("curto", 0.5, 200.0, "oi", "oj");
+    let short = env.wav("curto", 0.5, 200.0, Some("oi"));
     let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&short)]);
     assert!(!ok && out.contains("too short"), "{out}");
     let (ok, out) = env.run(&["voice", "generate", "--person", &id]);
     assert!(!ok && out.contains("not enough"), "{out}");
+}
+
+/// US-27: the language of the recordings is chosen per person; a low voice
+/// is detected as male.
+#[test]
+fn speaks_in_the_chosen_language() {
+    let env = Env::new("language");
+    let (ok, out) = env.run(&[
+        "person",
+        "add",
+        "--name",
+        "Grandpa",
+        "--consent-by",
+        "Grandpa",
+        "--language",
+        "xx",
+    ]);
+    assert!(!ok && out.contains("unsupported language"), "{out}");
+    let out = env.ok(&[
+        "person",
+        "add",
+        "--name",
+        "Grandpa",
+        "--consent-by",
+        "Grandpa",
+        "--language",
+        "en-us",
+    ]);
+    assert!(out.contains("speaks English"), "{out}");
+    let id = speaker_id(&out);
+    let wav = env.wav("g1", 12.0, 115.0, Some("Good morning, my dear."));
+    env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    let out = env.ok(&["voice", "generate", "--person", &id]);
+    assert!(
+        out.contains("male voice") && out.contains("English (en-US)"),
+        "{out}"
+    );
+
+    // the themes are written in Portuguese; other languages speak free text
+    let (ok, out) = env.run(&["speak", "--person", &id, "--theme", "calm"]);
+    assert!(!ok && out.contains("only available in Portuguese"), "{out}");
+    let out = env.ok(&["speak", "--person", &id, "--text", "You can do it!"]);
+    assert!(out.contains("language: en-US"), "{out}");
+    let out = env.ok(&["person", "list"]);
+    assert!(
+        out.contains("[en-US]") && out.contains("male voice"),
+        "{out}"
+    );
+    let out = env.ok(&["languages"]);
+    assert!(
+        out.contains("pt  Portuguese") && out.contains("ja  Japanese"),
+        "{out}"
+    );
 }

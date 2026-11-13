@@ -14,16 +14,16 @@ trap 'rm -rf "$WORK"' EXIT
 export FRIENDLY_VOICE_DATA="$WORK/data" FRIENDLY_VOICE_ENGINE_URL="$URL"
 
 # Reference recordings: voiced, harmonic signals with syllable-like pauses,
-# plus the transcript (.txt) and what was heard (.ipa) next to each file.
+# two of them with the transcript (.txt) next to the file.
 python3 - "$WORK" <<'PY'
 import math, struct, sys, wave
 work = sys.argv[1]
 samples = {
-    "a1": (210, "Leite quente de noite, tudo certo.", "lejtʃi kẽtʃi dʒi nojtʃi tudu sɛhtu"),
-    "a2": (205, "Os amigos de verdade vão falar com você.", "uz amiguʃ dʒi vehdadʒi vãw fala kũ vose"),
-    "a3": (215, "A festa é mesmo na porta do mar.", "a fɛʃta ɛ meʒmu na pɔhta du ma"),
+    "a1": (210, "Leite quente de noite, tudo certo."),
+    "a2": (205, None),
+    "a3": (215, "A festa é mesmo na porta do mar."),
 }
-for name, (f0, text, ipa) in samples.items():
+for name, (f0, text) in samples.items():
     sr, frames = 16000, []
     for i in range(6 * sr):
         t = i / sr
@@ -31,13 +31,13 @@ for name, (f0, text, ipa) in samples.items():
         frames.append(struct.pack("<h", int(v * 32767)))
     with wave.open(f"{work}/{name}.wav", "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr); w.writeframes(b"".join(frames))
-    open(f"{work}/{name}.txt", "w").write(text)
-    open(f"{work}/{name}.ipa", "w").write(ipa)
+    if text:
+        open(f"{work}/{name}.txt", "w").write(text)
 PY
 
-id=$("$FV" person add --name "Vó" --consent-by "Vó" | sed -n 's/.*id: \(.*\))/\1/p')
+id=$("$FV" person add --name "Vó" --consent-by "Vó" | sed -n 's/.*id: \([^,)]*\).*/\1/p')
 for f in a1 a2 a3; do "$FV" sample add --person "$id" --audio "$WORK/$f.wav" >/dev/null; done
-"$FV" voice generate --person "$id" | grep -q "neural server (HTTP)"
+"$FV" voice generate --person "$id" | tee /dev/stderr | grep -q "neural server (HTTP)"
 "$FV" speak --person "$id" --theme good-morning --tone warm
 "$FV" speak --person "$id" --text "Respira fundo. Vai dar tudo certo." --tone calm --pitch-shift -1
 

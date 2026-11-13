@@ -8,83 +8,71 @@ Android) through `--features http-engine`. It implements the contract in
 
 | Step | Component | License |
 |---|---|---|
-| Timbre embedding from the uploaded recordings | OpenVoice V2 tone color encoder | MIT |
-| Base speech from the **accented phonemes** sent by the app | Piper `pt_BR-faber-medium` (ONNX, run with `onnxruntime`) | see below |
-| Base speech → the person's timbre | OpenVoice V2 tone color converter | MIT |
-| Tone of the message (rate, pitch shift, gain) | Piper length scale + librosa | ISC (librosa) |
+| Speaker embedding averaged over **all** recordings | Chatterbox voice encoder | MIT |
+| Reference: the 10 s window of speech closest to that average (continuous speech, no clipping) | `references.py` | — |
+| Text → speech in the person's voice, in one of 23 languages | Chatterbox Multilingual (T3 + S3Gen) | MIT |
+| Tone of the message | style → `exaggeration`/`cfg_weight`; pitch shift with Praat PSOLA via `praat-parselmouth` (shifts under 1 semitone skipped); gain | GPL-3.0 (Praat) |
+| Transcription *(optional)* | faster-whisper `small`, on the CPU | MIT |
 
-The engine does **no** grapheme-to-phoneme conversion: the Rust core already
-decided how every word is pronounced (that is where the learned accent lives)
-and sends the phonemes with stress and pauses. The engine only maps them to
-the Piper voice inventory, so the accent reaches the audio unchanged.
-
-OpenVoice's converter also moves the pitch towards the reference speaker, so
-the only pitch change applied afterwards is the one requested by the tone.
+Zero-shot: no training. The model reads the text itself and imitates the
+person's timbre, intonation, rhythm and accent from the reference. Long texts
+are spoken sentence by sentence (≤ 220 characters); a take whose duration
+shows it was cut off or rambled is retried with another seed. Every output
+carries Resemble AI's imperceptible Perth watermark.
 
 ## Install
 
-Requires Python 3.10+.
+Requires Python 3.10 or 3.11.
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu   # or a CUDA build
-pip install -e ".[dev]"
-# OpenVoice from a pinned commit, without its (very old) pinned dependencies:
-pip install --no-deps -r requirements-openvoice.txt
-friendly-voice-engine download      # weights, verified by SHA-256
+pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124   # or .../whl/cpu
+pip install -e ".[transcribe,dev]"
+friendly-voice-engine download      # ~3 GB into the Hugging Face cache (HF_HOME)
 friendly-voice-engine serve --host 127.0.0.1 --port 8020
 ```
 
-Docker (CPU, weights baked into the image):
+Docker (weights baked into the image):
 
 ```bash
 docker build -t friendly-voice-engine .
-docker run -p 8020:8020 -v fv-voices:/data friendly-voice-engine
+docker run --gpus all -p 8020:8020 -v fv-voices:/data friendly-voice-engine   # NVIDIA GPU
+docker run -p 8020:8020 -v fv-voices:/data friendly-voice-engine              # CPU
 ```
 
-Optional features:
-
-```bash
-pip install -e ".[transcribe]"   # POST /v1/transcribe (faster-whisper)
-pip install -e ".[phonemes]"     # POST /v1/phonemes (wav2vec2 phone recognizer):
-                                 # learns the accent without hand-written IPA
-```
-
-Without them, those endpoints answer `501` and the app falls back to the
-transcript / IPA files provided by the user.
+Without the `transcribe` extra, `/v1/transcribe` answers `501` and samples are
+stored without a transcript (it is not needed to clone the voice).
 
 ## Configuration
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `FV_ENGINE_HOME` | `~/.cache/friendly-voice-engine` | base folder |
-| `FV_MODELS_DIR` | `$FV_ENGINE_HOME/models` | model weights |
-| `FV_VOICES_DIR` | `$FV_ENGINE_HOME/voices` | cloned voices (one speaker embedding each) |
-| `FV_DEVICE` | `cpu` | `cpu`, `cuda`, `cuda:0`... |
-| `FV_TAU` | `0.3` | OpenVoice conversion strength (lower = closer to the target timbre) |
+| `FV_VOICES_DIR` | `$FV_ENGINE_HOME/voices` | cloned voices (conditionals + reference window + metadata) |
+| `FV_DEVICE` | `auto` | `auto` (GPU when there is one), `cpu`, `cuda`, `cuda:0`... |
+| `HF_HOME` | `~/.cache/huggingface` | model weights |
 
-On a 4-core CPU (no GPU), about 2 s of speech are produced in about 1 s.
+Speed: about 4 s per sentence on a 6 GB laptop GPU (RTX 4050); several times
+slower on CPU. Voices made by engine 0.1 (OpenVoice) are not compatible:
+generate them again.
 
 ## Tests
 
 ```bash
-pytest -q                          # integration tests are skipped without the weights
+pytest -q                          # integration tests are skipped without chatterbox-tts
 ../scripts/engine-e2e.sh           # Rust CLI ⇄ running server, end to end
 ```
 
 ## Recording tips
 
-* 3 to 10 recordings of 5–20 s each, one speaker, little background noise.
-* Natural speech (a conversation or a message) carries more of the accent than
-  reading aloud.
-* Provide what was said (`.txt`) and, ideally, what was heard (`.ipa`) — or
-  enable `[phonemes]` — so that the accent can be learned too.
+* 3 to 10 recordings of 10–60 s each, one speaker, little background noise.
+* Natural speech (a conversation or a voice message) carries more of the
+  person's intonation and accent than reading aloud.
+* Register the person with the language they speak in the recordings.
 
 ## Licenses of the models
 
-* OpenVoice V1/V2 code and weights: MIT (MyShell.ai, since April 2024).
-* Piper `pt_BR-faber-medium`: dataset CC0, fine-tuned from Piper's *lessac*
-  voice, whose dataset (Blizzard 2013) has its own license — review it before
-  commercial distribution, or replace the base voice.
+* Chatterbox / Chatterbox Multilingual code and weights: MIT (Resemble AI).
+* faster-whisper and the Whisper `small` weights: MIT.
 * XTTS v2 was **not** used: its Coqui Public Model License allows only
-  non-commercial use (see ADR 0006).
+  non-commercial use (see ADR 0006/0007).

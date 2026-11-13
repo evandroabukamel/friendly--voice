@@ -1,6 +1,6 @@
 # ADR 0006 — OpenVoice V2 (not XTTS v2) for voice cloning
 
-**Status:** accepted · Sprint 5
+**Status:** superseded by [ADR 0007](0007-zero-shot-cloning-with-chatterbox.md) · Sprint 5
 
 ## Context
 The app needs a free-to-use model to clone the timbre of the uploaded

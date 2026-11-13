@@ -4,9 +4,7 @@
 #[cfg(feature = "http-engine")]
 mod http;
 mod sketch;
-mod ssml;
 
 #[cfg(feature = "http-engine")]
-pub use http::{HttpPhoneRecognizer, HttpTranscriber, HttpVoiceEngine};
+pub use http::{HttpTranscriber, HttpVoiceEngine};
 pub use sketch::{LocalVoiceBank, ProsodySketchSynthesizer};
-pub use ssml::to_ssml;

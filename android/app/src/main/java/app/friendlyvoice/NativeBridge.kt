@@ -16,8 +16,8 @@ object NativeBridge {
     @JvmStatic external fun configure(dataDir: String, engineUrl: String?): String
     @JvmStatic external fun catalog(): String
     @JvmStatic external fun listSpeakers(): String
-    @JvmStatic external fun registerSpeaker(name: String, relationship: String?, consentBy: String?): String
-    @JvmStatic external fun addSample(speakerId: String, wav: ByteArray, transcript: String?, observedIpa: String?): String
+    @JvmStatic external fun registerSpeaker(name: String, relationship: String?, consentBy: String?, language: String?): String
+    @JvmStatic external fun addSample(speakerId: String, wav: ByteArray, transcript: String?): String
     @JvmStatic external fun buildVoice(speakerId: String): String
     @JvmStatic external fun speak(
         speakerId: String,

@@ -1,4 +1,4 @@
-//! Command line interface (presentation layer). User-facing text is in Portuguese.
+//! Command line interface (presentation layer).
 mod args;
 
 use args::*;
@@ -9,11 +9,12 @@ use friendly_voice_application::{
 };
 use friendly_voice_bootstrap::{parse, Container};
 use friendly_voice_domain::{
-    accent::RulePhenomenon,
     ids::{ScheduleId, SpeakerId},
+    language::{Language, SUPPORTED},
     message::{MessageCategory, MessageContent},
     schedule::{Recurrence, Schedule},
     tone::{ToneStyle, VoiceTone},
+    voice::{VoiceGender, VoiceProfile},
     DomainError,
 };
 use std::path::Path;
@@ -43,20 +44,6 @@ fn run(cli: Cli) -> CliResult {
         Command::Person(cmd) => person(&c, cmd),
         Command::Sample(cmd) => sample(&c, cmd),
         Command::Voice(cmd) => voice(&c, cmd),
-        Command::Pronounce {
-            speaker,
-            intensity,
-            text,
-        } => {
-            let p = c
-                .preview_pronunciation()
-                .execute(&SpeakerId::new(speaker), &text, intensity)
-                .map_err(app_err)?;
-            println!("Accent:         {}", p.accent_label);
-            println!("Citation form:  /{}/", p.citation_ipa);
-            println!("With accent:    /{}/", p.accented_ipa);
-            Ok(())
-        }
         Command::Speak(a) => {
             let out = c
                 .speak_message()
@@ -64,13 +51,14 @@ fn run(cli: Cli) -> CliResult {
                     speaker_id: SpeakerId::new(a.speaker),
                     content: content(&a.content)?,
                     listener,
-                    accent_intensity: a.intensity,
                     tone: tone(&a.tone)?,
                 })
                 .map_err(app_err)?;
             println!("💬 {}", out.message.text());
-            println!("   tone: {}", out.script.tone);
-            println!("   /{}/", out.script.pronunciation.ipa());
+            println!(
+                "   tone: {}  language: {}",
+                out.script.tone, out.script.language
+            );
             println!("🔊 {} [{}]", out.receipt, c.engine_name);
             Ok(())
         }
@@ -93,6 +81,13 @@ fn run(cli: Cli) -> CliResult {
             println!(
                 "\nFine tuning: --pitch-shift <semitones> (-6 to +6) makes the voice higher or lower."
             );
+            Ok(())
+        }
+        Command::Languages => {
+            for (code, name) in SUPPORTED {
+                println!("{code:<3} {name}");
+            }
+            println!("\nA region may follow the code, e.g. pt-BR, en-US. Themes are in Portuguese; other languages speak --text.");
             Ok(())
         }
     }
@@ -127,30 +122,39 @@ fn person(c: &Container, cmd: PersonCmd) -> CliResult {
             name,
             relationship,
             consent_by,
+            language,
         } => {
+            let language: Language = language.parse().map_err(|e: DomainError| e.to_string())?;
             let s = c
                 .register_speaker()
                 .execute(RegisterSpeakerInput {
                     name,
                     relationship,
                     consent_granted_by: consent_by,
+                    language: Some(language),
                 })
                 .map_err(app_err)?;
-            println!("Person registered: {} (id: {})", s.name, s.id);
+            println!(
+                "Person registered: {} (id: {}, speaks {})",
+                s.name,
+                s.id,
+                s.language.name()
+            );
             println!("Consent: {}", s.consent.statement);
         }
         PersonCmd::List => {
             for s in c.speakers.list().map_err(|e| e.to_string())? {
                 let voice = c.profiles.find(&s.id).map_err(|e| e.to_string())?;
                 println!(
-                    "{}  {}{}  — voice: {}",
+                    "{}  {}{}  [{}]  — voice: {}",
                     s.id,
                     s.name,
                     s.relationship
                         .map(|r| format!(" ({r})"))
                         .unwrap_or_default(),
+                    s.language,
                     voice
-                        .map(|v| format!("generated, accent {}", v.accent.label))
+                        .map(|v| format!("generated, {}", gender_label(v.gender)))
                         .unwrap_or("not generated".into())
                 );
             }
@@ -171,7 +175,6 @@ fn sample(c: &Container, cmd: SampleCmd) -> CliResult {
             speaker,
             audio,
             transcript,
-            observed_ipa,
         } => {
             let bytes = std::fs::read(&audio).map_err(|e| format!("{}: {e}", audio.display()))?;
             let s = c
@@ -180,20 +183,11 @@ fn sample(c: &Container, cmd: SampleCmd) -> CliResult {
                     speaker_id: SpeakerId::new(speaker),
                     audio: bytes,
                     transcript: transcript.or_else(|| sidecar(&audio, "txt")),
-                    observed_ipa: observed_ipa.or_else(|| sidecar(&audio, "ipa")),
                 })
                 .map_err(app_err)?;
             println!("Sample {} added ({:.1}s)", s.id, s.duration_secs);
-            println!("  Text:      {}", s.transcript);
-            println!("  Citation:  /{}/", s.canonical.ipa());
-            match &s.observed {
-                Some(o) => println!(
-                    "  Heard:     /{}/",
-                    o.iter().map(|p| p.symbol()).collect::<String>()
-                ),
-                None => println!(
-                    "  Heard:     (no phonemes — the accent will not be learned from this sample)"
-                ),
+            if let Some(t) = &s.transcript {
+                println!("  Text: {t}");
             }
             println!(
                 "  Mean pitch {:.0} Hz, spread {:.0} Hz, pauses {:.0}%",
@@ -208,64 +202,62 @@ fn sample(c: &Container, cmd: SampleCmd) -> CliResult {
                 .list_by_speaker(&SpeakerId::new(speaker))
                 .map_err(|e| e.to_string())?
             {
-                println!("{}  {:>5.1}s  {}", s.id, s.duration_secs, s.transcript);
+                println!(
+                    "{}  {:>5.1}s  {}",
+                    s.id,
+                    s.duration_secs,
+                    s.transcript.as_deref().unwrap_or("")
+                );
             }
         }
     }
     Ok(())
 }
 
-fn phenomenon_label(p: RulePhenomenon) -> &'static str {
-    match p {
-        RulePhenomenon::Segmental => "letters",
-        RulePhenomenon::WordEnding => "ending",
-        RulePhenomenon::Juncture => "junction",
+fn gender_label(gender: Option<VoiceGender>) -> &'static str {
+    match gender {
+        Some(VoiceGender::Female) => "female voice",
+        Some(VoiceGender::Male) => "male voice",
+        None => "gender not detected",
     }
+}
+
+fn print_voice(p: &VoiceProfile) {
+    println!(
+        "Language: {} ({})  ·  {} (mean pitch {:.0} Hz)",
+        p.language.name(),
+        p.language,
+        gender_label(p.gender),
+        p.prosody.mean_pitch_hz
+    );
+    println!(
+        "Material: {} sample(s), {:.1}s",
+        p.sample_count, p.total_audio_secs
+    );
+    let rate = if p.prosody.syllables_per_second > 0.0 {
+        format!("{:.1} syllables/s, ", p.prosody.syllables_per_second)
+    } else {
+        String::new()
+    };
+    println!(
+        "Prosody: pitch spread ±{:.0} Hz, {rate}pauses {:.0}%",
+        p.prosody.pitch_spread_hz / 2.0,
+        p.prosody.pause_ratio * 100.0
+    );
 }
 
 fn voice(c: &Container, cmd: VoiceCmd) -> CliResult {
     match cmd {
         VoiceCmd::Generate { speaker } => {
-            let out = c
+            let p = c
                 .build_voice_profile()
                 .execute(&SpeakerId::new(speaker))
                 .map_err(app_err)?;
-            let p = &out.profile;
             println!(
                 "Voice generated with the {} engine: {}",
                 c.engine_name, p.engine_voice_id
             );
-            println!(
-                "Material: {} sample(s), {:.1}s",
-                p.sample_count, p.total_audio_secs
-            );
-            println!(
-                "Prosody: pitch {:.0} Hz (±{:.0}), {:.1} syllables/s, pauses {:.0}%",
-                p.prosody.mean_pitch_hz,
-                p.prosody.pitch_spread_hz / 2.0,
-                p.prosody.syllables_per_second,
-                p.prosody.pause_ratio * 100.0
-            );
-            match &out.accent_analysis {
-                None => println!("Accent: no sample with phonemes; using a neutral pronunciation."),
-                Some(a) => {
-                    println!("Accent: {}", p.accent.label);
-                    if let Some((name, score)) = &a.closest_preset {
-                        println!("  Closest to: {name} ({:.0}% similarity)", score * 100.0);
-                    }
-                    println!("  {:<4} {:<11} {:>10}  phenomenon", "", "kind", "frequency");
-                    for e in a.evidence.iter().filter(|e| e.opportunities > 0) {
-                        println!(
-                            "  {:<4} {:<11} {:>4}/{:<5}  {}",
-                            if e.adopted { "✔" } else { "·" },
-                            phenomenon_label(e.phenomenon),
-                            e.realizations,
-                            e.opportunities,
-                            e.description
-                        );
-                    }
-                }
-            }
+            print_voice(&p);
         }
         VoiceCmd::Show { speaker } => {
             let p = c
@@ -275,22 +267,8 @@ fn voice(c: &Container, cmd: VoiceCmd) -> CliResult {
                 .ok_or(format!(
                     "the voice of '{speaker}' has not been generated yet"
                 ))?;
-            println!("Accent: {}", p.accent.label);
-            for r in &p.accent.segment_rules {
-                println!(
-                    "  [{}] {:.0}%  {}",
-                    phenomenon_label(r.phenomenon),
-                    r.confidence * 100.0,
-                    r.description
-                );
-            }
-            for r in &p.accent.juncture_rules {
-                println!(
-                    "  [junction] {:.0}%  {}",
-                    r.confidence * 100.0,
-                    r.description
-                );
-            }
+            println!("Engine voice: {}", p.engine_voice_id);
+            print_voice(&p);
         }
     }
     Ok(())
@@ -397,12 +375,8 @@ fn schedule(c: &Container, cmd: ScheduleCmd, listener: Option<String>) -> CliRes
         ScheduleCmd::Run {
             watch,
             interval_secs,
-            intensity,
         } => {
-            let runner = c
-                .run_due_schedules()
-                .with_listener(listener)
-                .with_accent_intensity(intensity);
+            let runner = c.run_due_schedules().with_listener(listener);
             loop {
                 for o in runner.execute().map_err(app_err)? {
                     match o.result {

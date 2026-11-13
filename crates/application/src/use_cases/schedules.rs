@@ -104,7 +104,6 @@ pub struct RunDueSchedules {
     speak: Arc<SpeakMessage>,
     clock: Arc<dyn Clock>,
     listener: Option<String>,
-    accent_intensity: f32,
 }
 
 impl RunDueSchedules {
@@ -118,15 +117,10 @@ impl RunDueSchedules {
             speak,
             clock,
             listener: None,
-            accent_intensity: 1.0,
         }
     }
     pub fn with_listener(mut self, listener: Option<String>) -> Self {
         self.listener = listener;
-        self
-    }
-    pub fn with_accent_intensity(mut self, intensity: f32) -> Self {
-        self.accent_intensity = intensity;
         self
     }
 
@@ -140,7 +134,6 @@ impl RunDueSchedules {
                 speaker_id: schedule.speaker_id.clone(),
                 content: schedule.content.clone(),
                 listener: self.listener.clone(),
-                accent_intensity: self.accent_intensity,
                 tone: schedule.tone,
             });
             schedule.mark_fired(now);
@@ -164,7 +157,7 @@ mod tests {
     fn creates_and_runs_due_schedules_once() {
         let f = Fakes::new();
         let spk = f.speaker();
-        f.carioca_profile(&spk);
+        f.voice_profile(&spk);
         let create = CreateSchedule::new(
             f.speakers.clone(),
             f.schedules.clone(),

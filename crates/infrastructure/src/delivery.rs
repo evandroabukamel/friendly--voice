@@ -27,7 +27,9 @@ fn player_command(player: &str, wav: &Path) -> PortResult<Command> {
         return Ok(cmd);
     }
     let mut parts = player.split_whitespace();
-    let program = parts.next().ok_or_else(|| PortError::new("player vazio"))?;
+    let program = parts
+        .next()
+        .ok_or_else(|| PortError::new("empty player command"))?;
     let mut cmd = Command::new(program);
     cmd.args(parts).arg(wav);
     Ok(cmd)
@@ -54,23 +56,16 @@ impl MessageDelivery for OutboxDelivery {
         let wav = self.dir.join(format!("{stem}.wav"));
         fs::write(&wav, &d.audio.wav).map_err(PortError::new)?;
         let note = format!(
-            "From: {}\nWhen: {}\nTone: {}\n\n{}\n\nPronunciation (IPA): {}\n\nMarkup sent to the engine:\n{}\n",
+            "From: {}\nWhen: {}\nLanguage: {}\nTone: {}\n\n{}\n",
             d.speaker.name,
             d.at.format("%Y-%m-%d %H:%M"),
+            d.script.language,
             d.script.tone,
             d.message.text(),
-            d.script.pronunciation.ipa(),
-            d.audio.markup
         );
         fs::write(self.dir.join(format!("{stem}.txt")), note).map_err(PortError::new)?;
         if let Some(player) = &self.player {
-            let mut parts = player.split_whitespace();
-            let program = parts
-                .next()
-                .ok_or_else(|| PortError::new("empty player command"))?;
-            Command::new(program)
-                .args(parts)
-                .arg(&wav)
+            player_command(player, &wav)?
                 .status()
                 .map_err(|e| PortError::new(format!("could not play with '{player}': {e}")))?;
         }

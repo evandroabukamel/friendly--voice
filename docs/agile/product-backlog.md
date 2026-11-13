@@ -33,7 +33,7 @@ Scenario: registration with consent
   Then I get an id and the consent statement with date/time
 ```
 
-## Epic E2 — Voice cloning with accent
+## Epic E2 — Voice cloning
 
 ### US-02 · Upload audio files — *Must* · 5 pts · ✅ Sprint 2
 > As a user, I want to upload recordings of the person so that their voice can
@@ -44,7 +44,6 @@ Scenario: valid sample
   Given a 6 s, 16 kHz WAV with the transcript "Leite quente de noite"
   When I add the sample
   Then it is stored with duration, mean pitch and pause ratio
-  And with the citation pronunciation /lejte kẽte de nojte/
 
 Scenario: bad sample
   Given a WAV shorter than 2 s (or clipped, silent, < 16 kHz)
@@ -52,69 +51,51 @@ Scenario: bad sample
   Then it is rejected with an explanation
 ```
 
-### US-03 · Learn how letters/sounds are pronounced — *Must* · 8 pts · ✅ Sprint 2
-> As a user, I want the generated voice to pronounce letters the way the person
-> does (e.g. "tia" → *tchia*, "festa" → *feshta*, "porta" → *pohta*).
+### ~~US-03, US-04, US-06, US-09, US-10~~ · Accent rules — withdrawn in Sprint 7
+Learning letter pronunciation, word endings and junctions as rules,
+previewing the pronunciation, the accent intensity and off-catalog traits
+were delivered in Sprints 2–3 and withdrawn when the synthesis moved to
+zero-shot cloning, which imitates the accent from the recordings themselves
+(ADR 0007).
+
+### US-11 · Clone the voice from the uploaded recordings — *Must* · 8 pts · ✅ Sprint 5, redone in Sprint 7
+> As a user, I want the messages to sound like the person — timbre,
+> intonation, rhythm and accent — and to know whether it is a female or male voice.
 
 ```gherkin
-Scenario: learned palatalization
-  Given samples where the person says /tʃi/ and /dʒi/ where the spelling has "ti" and "di"
-  When I generate the voice
-  Then the profile contains the rules t → tʃ and d → dʒ before /i/ with their frequency
-  And phenomena the person does not produce (e.g. retroflex r) are not in the profile
-```
-
-### US-04 · Learn word endings and word junctions — *Must* · 8 pts · ✅ Sprint 2
-> As a user, I want the voice to end and join words the way the person does
-> (e.g. "leite" → *leiti*, "falar" → *falá*, "os amigos" → *uzamigus*).
-
-```gherkin
-Scenario: word endings
-  Given samples where unstressed final "e"/"o" sound /i/ and /u/
-  Then the profile contains the corresponding word-ending rules
-
-Scenario: word junctions
-  Given samples where a final "s" before a vowel becomes /z/
-  Then the profile contains the sibilant-voicing juncture rule
-  And punctuation (a pause) blocks the junction
-
-Scenario: rules feeding each other
-  Given a profile with "final e → i" and "t before i → tʃ"
-  When I pronounce "noite"
-  Then I get /nojtʃi/
-```
-
-### US-06 · Preview the pronunciation — *Should* · 2 pts · ✅ Sprint 3
-> As a user, I want to see how a text will be pronounced with the person's
-> accent, to check it before listening.
-
-### US-09 · Accent intensity — *Could* · 1 pt · ✅ Sprint 3
-> As a user, I want to adjust the intensity (0 to 1) of the applied accent.
-
-### US-10 · Discover traits outside the catalog — *Could* · 3 pts · ✅ Sprint 2
-> As a user, I want personal traits (e.g. "v" → "b") to be discovered even when
-> they do not belong to a known regional accent.
-
-### US-11 · Clone the timbre from the uploaded recordings — *Must* · 8 pts · ✅ Sprint 5
-> As a user, I want the messages to sound like the person (their timbre), not
-> only to follow their accent and rhythm.
-
-```gherkin
-Scenario: clone with a free-to-use model
-  Given the engine server is running with OpenVoice V2 (MIT) and Piper pt-BR
+Scenario: clone from every recording
+  Given the engine server is running with Chatterbox Multilingual (MIT)
   When I generate the voice of "Vó" from her recordings
-  Then the engine stores a speaker embedding and returns a voice id
+  Then the speaker embedding is the average of all recordings
+  And the reference is the 10 s window closest to that average
+  And the profile says "female voice" when the mean pitch is ≥ 160 Hz
 
-Scenario: speak with timbre, accent and tone
-  Given the voice of "Vó" was generated with a carioca accent
-  When I ask for "Bom dia" with tone "carinhoso"
-  Then the engine receives the accented phonemes per word (with stress and pauses)
-  And returns a WAV with her timbre, the requested rate, pitch shift and volume
+Scenario: speak with the voice and the tone
+  Given the voice of "Vó" was generated
+  When I ask for "Bom dia" with tone "warm"
+  Then the engine receives the text, the language and the tone
+  And returns a WAV in her voice; a take that was cut off is retried
 
-Scenario: optional recognizers
-  Given the server has no phone recognizer installed
-  When I add a sample without IPA
-  Then the sample is stored without accent evidence instead of failing
+Scenario: optional transcription
+  Given the server has no transcriber installed
+  When I add a sample without a transcript
+  Then the sample is stored without one
+```
+
+### US-27 · Choose the language of the person — *Should* · 3 pts · ✅ Sprint 7
+> As a user, I want to say which language the person speaks in the
+> recordings, so that the voice speaks my messages in that language.
+
+```gherkin
+Scenario: language per person
+  When I register "Grandpa" with --language en-US
+  Then samples are transcribed and messages spoken in English
+  And an unsupported language is rejected with the list of supported ones
+
+Scenario: themes are Portuguese
+  Given a person who speaks English
+  When I ask for a theme
+  Then I am told to pass the text instead
 ```
 
 ### US-24 · Upload recordings in FLAC — *Should* · 2 pts · ✅ Sprint 6
@@ -268,11 +249,11 @@ Scenario: continuous delivery
 
 | Id | Story | Priority | Pts |
 |----|-------|----------|-----|
-| US-12 | Forced alignment with timestamps to measure per-phoneme duration (syllable- vs stress-timed rhythm) | Could | 8 |
-| US-13 | Intonation per sentence type (question, exclamation) learned from the samples | Could | 5 |
 | US-14 | ~~Mobile app with notifications using the use cases~~ → delivered on Android (US-19/US-20) | — | — |
 | US-15 | Revoking consent deletes the person's samples and voice (app and engine) | Must | 3 |
 | US-16 | ~~FLAC support on import~~ → delivered (US-24); MP3/OGG/M4A still pending | Should | 2 |
 | US-17 | Avoid repeating the same message in a row (history) | Could | 2 |
-| US-22 | Inaudible watermark on cloned audio (OpenVoice `wavmark`) | Should | 3 |
-| US-23 | Choose or train the pt-BR base voice closest to the person (gender, age) to improve quality | Could | 8 |
+| US-22 | ~~Inaudible watermark on cloned audio~~ → every Chatterbox output carries the Perth watermark (Sprint 7) | — | — |
+| US-23 | ~~Base voice closest to the person~~ → no base voice since zero-shot cloning (ADR 0007) | — | — |
+| US-28 | Message themes written in other languages | Could | 3 |
+| US-29 | First-person words agreeing with the speaker's gender ("obrigado"/"obrigada") | Could | 2 |

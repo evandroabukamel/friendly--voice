@@ -6,7 +6,15 @@ import io
 
 import librosa
 import numpy as np
+import parselmouth
 import soundfile as sf
+from parselmouth.praat import call
+
+#: Shifts smaller than this are inaudible as a tone change but any
+#: resynthesis still costs quality, so the audio is left untouched.
+MIN_PITCH_SHIFT = 1.0
+#: Pitch search range (Hz) for the PSOLA analysis; covers adult voices.
+PITCH_FLOOR, PITCH_CEILING = 75.0, 600.0
 
 
 def decode_wav(data: bytes) -> tuple[np.ndarray, int]:
@@ -28,9 +36,17 @@ def resample(audio: np.ndarray, sample_rate: int, target: int) -> np.ndarray:
 
 
 def pitch_shift(audio: np.ndarray, sample_rate: int, semitones: float) -> np.ndarray:
-    if abs(semitones) < 0.05:
+    """Shifts the pitch with PSOLA (Praat overlap-add), which keeps formants
+    and avoids the metallic sound of a phase vocoder."""
+    if abs(semitones) < MIN_PITCH_SHIFT:
         return audio
-    return librosa.effects.pitch_shift(audio, sr=sample_rate, n_steps=semitones)
+    sound = parselmouth.Sound(audio.astype(np.float64), sampling_frequency=sample_rate)
+    manipulation = call(sound, "To Manipulation", 0.01, PITCH_FLOOR, PITCH_CEILING)
+    tier = call(manipulation, "Extract pitch tier")
+    call(tier, "Multiply frequencies", sound.xmin, sound.xmax, 2.0 ** (semitones / 12.0))
+    call([tier, manipulation], "Replace pitch tier")
+    shifted = call(manipulation, "Get resynthesis (overlap-add)")
+    return shifted.values[0].astype(np.float32)
 
 
 def apply_gain(audio: np.ndarray, gain_db: float, ceiling: float = 0.97) -> np.ndarray:

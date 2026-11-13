@@ -57,20 +57,9 @@ pub enum Command {
     #[command(about = "Audio samples of the person.", alias = "amostra")]
     #[command(subcommand)]
     Sample(SampleCmd),
-    #[command(about = "Voice generation (timbre + accent + prosody).", alias = "voz")]
+    #[command(about = "Voice generation (cloned from the samples).", alias = "voz")]
     #[command(subcommand)]
     Voice(VoiceCmd),
-    #[command(
-        about = "Shows how a text will be pronounced with the person's accent.",
-        alias = "pronuncia"
-    )]
-    Pronounce {
-        #[arg(long = "person", alias = "pessoa")]
-        speaker: String,
-        #[arg(long = "intensity", alias = "intensidade", default_value_t = 1.0)]
-        intensity: f32,
-        text: String,
-    },
     #[command(about = "Asks for a message right now.", alias = "falar")]
     Speak(SpeakArgs),
     #[command(about = "Scheduled messages.", alias = "agenda")]
@@ -80,6 +69,11 @@ pub enum Command {
     Themes,
     #[command(about = "Lists the available tones of voice.", alias = "tons")]
     Tones,
+    #[command(
+        about = "Lists the languages a person can speak (see `person add --language`).",
+        alias = "idiomas"
+    )]
+    Languages,
 }
 
 #[derive(Debug, Subcommand)]
@@ -96,6 +90,13 @@ pub enum PersonCmd {
             alias = "consentimento-de"
         )]
         consent_by: Option<String>,
+        #[arg(
+            help = "Language spoken in the recordings and the messages, e.g. pt-BR, en, es (see `languages`).",
+            long = "language",
+            alias = "idioma",
+            default_value = "pt-BR"
+        )]
+        language: String,
     },
     #[command(about = "Lists the registered people.", alias = "listar")]
     List,
@@ -104,7 +105,7 @@ pub enum PersonCmd {
 #[derive(Debug, Subcommand)]
 pub enum SampleCmd {
     #[command(
-        about = "Adds a .wav or .flac recording. If `<file>.txt` (transcript) or `<file>.ipa` (heard phonemes) exist next to it, they are used.",
+        about = "Adds a .wav or .flac recording. If `<file>.txt` (transcript) exists next to it, it is used.",
         alias = "adicionar"
     )]
     Add {
@@ -113,17 +114,11 @@ pub enum SampleCmd {
         #[arg(long = "audio")]
         audio: PathBuf,
         #[arg(
-            help = "What is said in the recording.",
+            help = "What is said in the recording (optional).",
             long = "transcript",
             alias = "texto"
         )]
         transcript: Option<String>,
-        #[arg(
-            help = "Phonetic transcription (IPA) of what was heard, e.g. \"lejtʃi kẽtʃi\".",
-            long = "phonemes",
-            alias = "fonemas"
-        )]
-        observed_ipa: Option<String>,
     },
     #[command(about = "Lists the person's samples.", alias = "listar")]
     List {
@@ -135,14 +130,14 @@ pub enum SampleCmd {
 #[derive(Debug, Subcommand)]
 pub enum VoiceCmd {
     #[command(
-        about = "Analyzes the samples and generates the voice.",
+        about = "Clones the voice from all the samples and detects whether it is female or male.",
         alias = "gerar"
     )]
     Generate {
         #[arg(long = "person", alias = "pessoa")]
         speaker: String,
     },
-    #[command(about = "Shows the generated voice/accent profile.", alias = "mostrar")]
+    #[command(about = "Shows the generated voice.", alias = "mostrar")]
     Show {
         #[arg(long = "person", alias = "pessoa")]
         speaker: String,
@@ -159,7 +154,7 @@ pub struct ContentArgs {
     )]
     pub category: Option<String>,
     #[arg(
-        help = "Fixed text (in Portuguese, the language of the voice).",
+        help = "Fixed text, written in the person's language.",
         long = "text",
         alias = "texto"
     )]
@@ -193,13 +188,6 @@ pub struct SpeakArgs {
     pub content: ContentArgs,
     #[command(flatten)]
     pub tone: ToneArgs,
-    #[arg(
-        help = "0.0 (no accent) to 1.0 (full accent).",
-        long = "intensity",
-        alias = "intensidade",
-        default_value_t = 1.0
-    )]
-    pub intensity: f32,
 }
 
 #[derive(Debug, Subcommand)]
@@ -225,8 +213,6 @@ pub enum ScheduleCmd {
             default_value_t = 30
         )]
         interval_secs: u64,
-        #[arg(long = "intensity", alias = "intensidade", default_value_t = 1.0)]
-        intensity: f32,
     },
 }
 

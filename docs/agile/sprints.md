@@ -125,3 +125,18 @@ learned accent and the chosen tone; documentation and comments in English.
   remain accepted. The spoken message catalog stays in pt-BR, because the
   voice and pronunciation model are Portuguese.
 * The default branch is now `main`.
+
+## Sprint 7 — Zero-shot cloning, language and gender
+**Increment:** the voice is cloned with Chatterbox Multilingual from all the
+person's recordings; a language is chosen per person; female/male is detected.
+* Listening review of the Piper + OpenVoice pipeline on 28 real recordings:
+  the timbre was close but the speech sounded foreign and robotic, and no
+  phoneme notation fixed it (ADR 0007).
+* Prototype on a laptop GPU: 100 % of the takes understood by Whisper,
+  speaker similarity ≈ 0.90 (her own recordings: 0.90–0.94).
+* Removed: accent rules, G2P, phone recognizer, `pronounce`, `--intensity`,
+  `--phonemes`; the transcript became optional.
+* Added: `Language` (23 languages, `person add --language`, `languages`),
+  `VoiceGender` from the mean pitch, speaker embedding averaged over every
+  recording with the closest reference window, retries for cut-off takes.
+

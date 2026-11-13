@@ -1,10 +1,9 @@
 use crate::error::{AppError, AppResult};
 use crate::ports::{
-    Clock, Delivery, MessageDelivery, MessageSource, Phonemizer, SpeakerRepository,
-    SpeechSynthesizer, VoiceProfileRepository,
+    Clock, Delivery, MessageDelivery, MessageSource, SpeakerRepository, SpeechSynthesizer,
+    VoiceProfileRepository,
 };
 use friendly_voice_domain::{
-    accent::AccentRenderer,
     ids::SpeakerId,
     message::{MessageContent, MotivationalMessage},
     tone::{ToneStyle, VoiceTone},
@@ -18,8 +17,6 @@ pub struct SpeakRequest {
     pub content: MessageContent,
     /// Name of the listener (personalizes the message).
     pub listener: Option<String>,
-    /// 0.0 = no accent, 1.0 = full learned accent.
-    pub accent_intensity: f32,
     /// Tone of voice of this message. `None` = initial tone suggested by the theme
     /// (e.g. "calma" → calmo, "celebracao" → animado; free text → natural).
     pub tone: Option<VoiceTone>,
@@ -37,20 +34,16 @@ pub struct SpeakMessage {
     speakers: Arc<dyn SpeakerRepository>,
     profiles: Arc<dyn VoiceProfileRepository>,
     messages: Arc<dyn MessageSource>,
-    phonemizer: Arc<dyn Phonemizer>,
     synthesizer: Arc<dyn SpeechSynthesizer>,
     delivery: Arc<dyn MessageDelivery>,
     clock: Arc<dyn Clock>,
-    renderer: AccentRenderer,
 }
 
 impl SpeakMessage {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         speakers: Arc<dyn SpeakerRepository>,
         profiles: Arc<dyn VoiceProfileRepository>,
         messages: Arc<dyn MessageSource>,
-        phonemizer: Arc<dyn Phonemizer>,
         synthesizer: Arc<dyn SpeechSynthesizer>,
         delivery: Arc<dyn MessageDelivery>,
         clock: Arc<dyn Clock>,
@@ -59,11 +52,9 @@ impl SpeakMessage {
             speakers,
             profiles,
             messages,
-            phonemizer,
             synthesizer,
             delivery,
             clock,
-            renderer: AccentRenderer,
         }
     }
 
@@ -80,6 +71,14 @@ impl SpeakMessage {
         })?;
 
         let message = match req.content {
+            // The theme catalog is written in Portuguese.
+            MessageContent::Category(_) if !voice.language.is_portuguese() => {
+                return Err(AppError::Precondition(format!(
+                    "themes are only available in Portuguese and {} speaks {}; pass the text to say",
+                    speaker.name,
+                    voice.language.name()
+                )))
+            }
             MessageContent::Category(c) => {
                 self.messages.pick(c, &speaker, req.listener.as_deref())?
             }
@@ -90,13 +89,9 @@ impl SpeakMessage {
             .tone
             .unwrap_or_else(|| VoiceTone::of(ToneStyle::default_for(message.category())));
 
-        let citation = self.phonemizer.phonemize(message.text());
-        let pronunciation = self
-            .renderer
-            .render(&voice.accent, &citation, req.accent_intensity);
         let script = SpeechScript {
             text: message.text().to_string(),
-            pronunciation,
+            language: voice.language.clone(),
             prosody: tone.apply(voice.prosody),
             tone,
         };
@@ -123,21 +118,22 @@ mod tests {
     use friendly_voice_domain::message::MessageCategory;
 
     #[test]
-    fn speaks_with_accent_and_delivers() {
+    fn speaks_in_the_voice_language_and_delivers() {
         let f = Fakes::new();
         let spk = f.speaker();
-        f.carioca_profile(&spk);
+        f.voice_profile(&spk);
         let uc = f.speak_message();
         let out = uc
             .execute(SpeakRequest {
                 speaker_id: spk.id.clone(),
                 content: MessageContent::FixedText("leite quente".into()),
                 listener: None,
-                accent_intensity: 1.0,
                 tone: None,
             })
             .unwrap();
-        assert_eq!(out.script.pronunciation.ipa(), "lejtʃi kẽtʃi");
+        assert_eq!(out.script.text, "leite quente");
+        assert_eq!(out.script.language.tag(), "pt-BR");
+        assert_eq!(f.engine.spoken()[0].text, "leite quente");
         assert_eq!(out.script.tone, VoiceTone::of(ToneStyle::Natural));
         assert_eq!(f.delivery.delivered(), vec!["leite quente".to_string()]);
 
@@ -146,7 +142,6 @@ mod tests {
                 speaker_id: spk.id,
                 content: MessageContent::Category(MessageCategory::Motivation),
                 listener: Some("Ana".into()),
-                accent_intensity: 0.0,
                 tone: None,
             })
             .unwrap();
@@ -159,7 +154,7 @@ mod tests {
     fn chosen_tone_colors_the_natural_prosody() {
         let f = Fakes::new();
         let spk = f.speaker();
-        f.carioca_profile(&spk);
+        f.voice_profile(&spk);
         let natural = f.profiles.find(&spk.id).unwrap().unwrap().prosody;
         let tone = VoiceTone::new(ToneStyle::Calm, -1.0).unwrap();
         let out = f
@@ -168,7 +163,6 @@ mod tests {
                 speaker_id: spk.id,
                 content: MessageContent::Category(MessageCategory::Celebration),
                 listener: None,
-                accent_intensity: 1.0,
                 tone: Some(tone),
             })
             .unwrap();
@@ -190,10 +184,32 @@ mod tests {
                 speaker_id: spk.id,
                 content: MessageContent::FixedText("oi".into()),
                 listener: None,
-                accent_intensity: 1.0,
                 tone: None,
             })
             .unwrap_err();
         assert!(matches!(err, AppError::Precondition(_)));
+    }
+
+    #[test]
+    fn other_languages_speak_free_text_only() {
+        let f = Fakes::new();
+        let spk = f.speaker_speaking("en".parse().unwrap());
+        f.voice_profile(&spk);
+        let request = |content| SpeakRequest {
+            speaker_id: spk.id.clone(),
+            content,
+            listener: None,
+            tone: None,
+        };
+        let err = f
+            .speak_message()
+            .execute(request(MessageContent::Category(MessageCategory::Calm)))
+            .unwrap_err();
+        assert!(matches!(err, AppError::Precondition(_)), "{err}");
+        let out = f
+            .speak_message()
+            .execute(request(MessageContent::FixedText("You can do it!".into())))
+            .unwrap();
+        assert_eq!(out.script.language.code(), "en");
     }
 }

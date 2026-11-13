@@ -7,10 +7,10 @@ on:
 
 jobs:
   test:
-    name: Engine tests + Rust end-to-end (OpenVoice)
+    name: Engine tests + Rust end-to-end (Chatterbox, CPU)
     runs-on: ubuntu-latest
     env:
-      FV_MODELS_DIR: ${{ github.workspace }}/.models
+      HF_HOME: ${{ github.workspace }}/.models
     steps:
       - uses: actions/checkout@v4
 
@@ -20,13 +20,12 @@ jobs:
           cache: pip
           cache-dependency-path: engine/pyproject.toml
 
-      - name: Install the engine (CPU PyTorch + OpenVoice without its old pins)
+      - name: Install the engine (CPU PyTorch at the version chatterbox-tts pins)
         working-directory: engine
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends libsndfile1
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
-          pip install --no-deps -r requirements-openvoice.txt
 
       - name: Cache model weights
         uses: actions/cache@v4
@@ -34,7 +33,7 @@ jobs:
           path: .models
           key: engine-models-${{ hashFiles('engine/friendly_voice_engine/download.py') }}
 
-      - name: Download and verify model weights
+      - name: Download the model weights
         run: friendly-voice-engine download
 
       - name: Unit and integration tests

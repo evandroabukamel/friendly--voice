@@ -1,22 +1,18 @@
-"""Integration tests: real models (skipped when the weights are not present).
-
-Run ``friendly-voice-engine download`` first, or point FV_MODELS_DIR at them.
-"""
+"""Integration tests with the real model (skipped when chatterbox-tts is not
+installed). The first run downloads the weights (~3 GB)."""
 
 import base64
+import importlib.util
 import os
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 from friendly_voice_engine import audio as fx
 from friendly_voice_engine.config import Settings
-from friendly_voice_engine.download import missing
 
-settings = Settings.from_env()
 pytestmark = pytest.mark.skipif(
-    bool(missing(settings.models_dir)), reason="model weights not downloaded"
+    importlib.util.find_spec("chatterbox") is None, reason="chatterbox-tts not installed"
 )
 
 
@@ -34,8 +30,7 @@ def client(tmp_path_factory):
 
     from friendly_voice_engine.server import create_app
 
-    voices = tmp_path_factory.mktemp("voices")
-    os.environ["FV_VOICES_DIR"] = str(voices)
+    os.environ["FV_VOICES_DIR"] = str(tmp_path_factory.mktemp("voices"))
     return TestClient(create_app(settings=Settings.from_env()))
 
 
@@ -46,45 +41,38 @@ def b64wav(audio: np.ndarray, sr: int = 16_000) -> str:
 def test_health(client):
     body = client.get("/health").json()
     assert body["status"] == "ok"
-    assert 2.0 < body["base_voice_syllables_per_second"] < 12.0
+    assert "pt" in body["languages"]
 
 
-def test_clone_and_speak_with_accent_and_tone(client):
+def test_clone_and_speak_with_tone(client):
     enrolled = client.post(
         "/v1/voices",
-        json={"name": "Vó", "references": [{"audio_wav_base64": b64wav(voice_like(6, 210)), "transcript": "x"}]},
+        json={"name": "Vó", "references": [{"audio_wav_base64": b64wav(voice_like(12, 210))}]},
     )
     assert enrolled.status_code == 200, enrolled.text
-    voice_id = enrolled.json()["voice_id"]
-
-    words = [
-        {"phonemes": ["b", "õ"], "stress": 1},
-        {"phonemes": ["dʒ", "i", "a"], "stress": 1, "pause_after": True},
-        {"phonemes": ["v", "o", "s", "e"], "stress": 3},
-        {"phonemes": ["ɛ"], "stress": 0},
-        {"phonemes": ["f", "ɔ", "h", "tʃ", "i"], "stress": 1},
-    ]
+    body = enrolled.json()
+    assert abs(body["median_pitch_hz"] - 210) < 15
 
     def say(**extra):
-        r = client.post("/v1/synthesize", json={"voice_id": voice_id, "words": words, **extra})
+        r = client.post(
+            "/v1/synthesize",
+            json={"voice_id": body["voice_id"], "text": "Bom dia, meu amor. Vai dar tudo certo.", **extra},
+        )
         assert r.status_code == 200, r.text
         assert r.headers["content-type"] == "audio/wav"
-        audio, sr = fx.decode_wav(r.content)
-        return audio, sr
+        return fx.decode_wav(r.content)
 
-    normal, sr = say(syllables_per_second=5.0)
-    assert len(normal) / sr > 0.8
-    assert np.max(np.abs(normal)) > 0.1
-
-    slow, _ = say(syllables_per_second=3.0)
-    assert len(slow) > len(normal) * 1.3
-
-    quiet, _ = say(syllables_per_second=5.0, volume_db=-10)
+    normal, sr = say()
+    assert len(normal) / sr > 1.0
+    quiet, _ = say(volume_db=-10)
     assert np.sqrt(np.mean(quiet**2)) < np.sqrt(np.mean(normal**2)) / 2
 
 
 def test_errors(client):
-    assert client.post("/v1/synthesize", json={"voice_id": "doesnotexist", "words": [{"phonemes": ["a"]}]}).status_code == 404
+    ok = {"voice_id": "doesnotexist", "text": "oi"}
+    assert client.post("/v1/synthesize", json=ok).status_code == 404
     assert client.post("/v1/voices", json={"name": "x", "references": [{"audio_wav_base64": "@@"}]}).status_code == 400
     short = b64wav(voice_like(0.3, 200))
     assert client.post("/v1/voices", json={"name": "x", "references": [{"audio_wav_base64": short}]}).status_code == 422
+    unsupported = {"name": "x", "language": "tlh", "references": [{"audio_wav_base64": b64wav(voice_like(3, 200))}]}
+    assert client.post("/v1/voices", json=unsupported).status_code == 422
