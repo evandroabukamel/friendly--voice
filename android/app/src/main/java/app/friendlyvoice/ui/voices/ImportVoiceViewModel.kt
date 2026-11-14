@@ -8,6 +8,7 @@ import app.friendlyvoice.R
 import app.friendlyvoice.audio.AudioImporter
 import app.friendlyvoice.audio.VoiceRecorder
 import app.friendlyvoice.core.Language
+import app.friendlyvoice.core.LanguageMatch
 import app.friendlyvoice.core.Sample
 import app.friendlyvoice.core.SingleFlight
 import app.friendlyvoice.core.Speaker
@@ -63,6 +64,8 @@ class ImportVoiceViewModel(
     private val importer: AudioImporter,
     private val recordingsDir: File,
     defaultListenerName: String?,
+    /** The app's current locale (BCP 47), used to pre-select a new voice's language. */
+    private val appLocaleTag: String,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -103,6 +106,9 @@ class ImportVoiceViewModel(
             val languages = repository.catalog().map { it.languages }.getOrDefault(emptyList())
             _state.update { it.copy(languages = languages) }
             val id = speakerId
+            if (id == null && languages.isNotEmpty() && !savedState.contains(KEY_LANGUAGE)) {
+                setLanguage(LanguageMatch.best(appLocaleTag, languages.map { it.code }))
+            }
             if (id == null) {
                 _state.update { it.copy(loading = false) }
                 return@launch

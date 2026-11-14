@@ -15,6 +15,7 @@ import app.friendlyvoice.R
 import app.friendlyvoice.audio.AudioImporter
 import app.friendlyvoice.audio.VoiceRecorder
 import app.friendlyvoice.core.Language
+import app.friendlyvoice.core.LanguageMatch
 import app.friendlyvoice.databinding.FragmentImportVoiceBinding
 import app.friendlyvoice.ui.UiMessage
 import app.friendlyvoice.ui.appViewModels
@@ -34,6 +35,7 @@ class ImportVoiceFragment : Fragment() {
             importer = AudioImporter(app),
             recordingsDir = File(app.filesDir, "recordings"),
             defaultListenerName = app.prefs.listenerName,
+            appLocaleTag = requireContext().resources.configuration.locales[0].toLanguageTag(),
             savedState = saved,
         )
     }
@@ -119,7 +121,9 @@ class ImportVoiceFragment : Fragment() {
             shownLanguages = state.languages
             b.languageInput.setAdapter(requireContext().dropdownAdapter(state.languages.map { it.name }))
         }
-        b.languageInput.setText(state.languages.firstOrNull { it.code == state.language }?.name ?: state.language, false)
+        // The core may store a regional tag (pt-BR) for a catalog code (pt).
+        val languageCode = LanguageMatch.best(state.language, state.languages.map { it.code })
+        b.languageInput.setText(state.languages.firstOrNull { it.code == languageCode }?.name ?: state.language, false)
 
         // Text fields are filled once (after loading); then the user's typing drives the state.
         if (!formFilled && !state.loading) {
