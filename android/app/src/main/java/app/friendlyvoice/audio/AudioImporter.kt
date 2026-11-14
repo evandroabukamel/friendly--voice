@@ -6,6 +6,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import app.friendlyvoice.R
 import app.friendlyvoice.core.AudioKind
 import app.friendlyvoice.core.Pcm
 import app.friendlyvoice.core.ShortBuffer
@@ -13,7 +14,6 @@ import app.friendlyvoice.core.Wav
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import java.io.IOException
 import java.nio.ByteOrder
 import kotlin.coroutines.coroutineContext
 
@@ -31,10 +31,10 @@ class AudioImporter(private val context: Context) {
             val buffer = ByteArray(12)
             val read = input.read(buffer)
             if (read <= 0) ByteArray(0) else buffer.copyOf(read)
-        } ?: throw IOException("Could not open the file.")
+        } ?: throw AudioError(R.string.error_file_open)
         when (AudioKind.sniff(head)) {
             AudioKind.WAV, AudioKind.FLAC ->
-                resolver.openInputStream(uri)?.use { it.readBytes() } ?: throw IOException("Could not open the file.")
+                resolver.openInputStream(uri)?.use { it.readBytes() } ?: throw AudioError(R.string.error_file_open)
             AudioKind.OTHER -> decodeToWav(uri)
         }
     }
@@ -45,10 +45,10 @@ class AudioImporter(private val context: Context) {
             extractor.setDataSource(context, uri, null)
             val track = (0 until extractor.trackCount).firstOrNull {
                 extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
-            } ?: throw IOException("This file has no audio track. Use a WAV, MP3 or FLAC file.")
+            } ?: throw AudioError(R.string.error_no_audio_track)
             extractor.selectTrack(track)
             val format = extractor.getTrackFormat(track)
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: throw IOException("Unknown audio format.")
+            val mime = format.getString(MediaFormat.KEY_MIME) ?: throw AudioError(R.string.error_audio_format)
             var sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
 
@@ -65,7 +65,7 @@ class AudioImporter(private val context: Context) {
                     if (!inputDone) {
                         val inIndex = codec.dequeueInputBuffer(TIMEOUT_US)
                         if (inIndex >= 0) {
-                            val input = codec.getInputBuffer(inIndex) ?: throw IOException("Decoder error.")
+                            val input = codec.getInputBuffer(inIndex) ?: throw AudioError(R.string.error_audio_format)
                             val size = extractor.readSampleData(input, 0)
                             if (size < 0) {
                                 codec.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
@@ -84,7 +84,7 @@ class AudioImporter(private val context: Context) {
                         if (out.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
                             out.getInteger(MediaFormat.KEY_PCM_ENCODING) != AudioFormat.ENCODING_PCM_16BIT
                         ) {
-                            throw IOException("Unsupported audio encoding. Convert the file to WAV.")
+                            throw AudioError(R.string.error_audio_format)
                         }
                     } else if (outIndex >= 0) {
                         val output = codec.getOutputBuffer(outIndex)
@@ -99,7 +99,7 @@ class AudioImporter(private val context: Context) {
                         if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) outputDone = true
                         // Guard memory: the core refuses samples over 180 s anyway.
                         if (mono.size > sampleRate.toLong() * MAX_DECODE_SECS) {
-                            throw IOException("This recording is longer than 180 seconds: split it into pieces.")
+                            throw AudioError(R.string.error_audio_too_long)
                         }
                     }
                 }

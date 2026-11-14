@@ -4,12 +4,12 @@ import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import app.friendlyvoice.R
 import app.friendlyvoice.core.Wav
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.IOException
 import java.io.RandomAccessFile
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -33,13 +33,13 @@ class VoiceRecorder(private val maxSeconds: Int = MAX_SECONDS) {
         stopRequested.set(false)
         target.parentFile?.mkdirs()
         val minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL, ENCODING)
-        if (minBuffer <= 0) throw IOException("The microphone is not available.")
+        if (minBuffer <= 0) throw AudioError(R.string.error_mic_unavailable)
         val bufferBytes = maxOf(minBuffer, SAMPLE_RATE / 5 * 2)
         val recorder = AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, CHANNEL, ENCODING, bufferBytes)
         var dataBytes = 0L
         try {
             if (recorder.state != AudioRecord.STATE_INITIALIZED) {
-                throw IOException("The microphone is not available.")
+                throw AudioError(R.string.error_mic_unavailable)
             }
             RandomAccessFile(target, "rw").use { file ->
                 file.setLength(0)
@@ -52,7 +52,7 @@ class VoiceRecorder(private val maxSeconds: Int = MAX_SECONDS) {
                     while (coroutineContext.isActive && !stopRequested.get() && dataBytes < maxBytes) {
                         val wanted = minOf(buffer.size.toLong(), maxBytes - dataBytes).toInt()
                         val read = recorder.read(buffer, 0, wanted)
-                        if (read < 0) throw IOException("Recording failed (error $read).")
+                        if (read < 0) throw AudioError(R.string.error_recording_failed)
                         file.write(buffer, 0, read)
                         dataBytes += read
                         val second = (dataBytes / (SAMPLE_RATE * 2)).toInt()

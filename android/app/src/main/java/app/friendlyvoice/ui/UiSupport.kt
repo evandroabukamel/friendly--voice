@@ -16,6 +16,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.friendlyvoice.FriendlyVoiceApp
 import app.friendlyvoice.R
+import app.friendlyvoice.audio.AudioError
 import app.friendlyvoice.core.RepeatWords
 import app.friendlyvoice.core.Weekday
 import com.google.android.material.snackbar.Snackbar
@@ -30,7 +31,7 @@ sealed interface UiMessage {
     companion object {
         /** The core's error messages are already clear and actionable: show them as they are. */
         fun error(t: Throwable): UiMessage =
-            t.message?.takeIf { it.isNotBlank() }?.let(::Text) ?: Res(R.string.error_generic)
+            (t as? AudioError)?.let { Res(it.messageId) } ?: t.message?.takeIf { it.isNotBlank() }?.let(::Text) ?: Res(R.string.error_generic)
     }
 }
 

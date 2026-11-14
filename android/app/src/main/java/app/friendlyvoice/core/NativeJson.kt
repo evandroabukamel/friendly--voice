@@ -17,7 +17,8 @@ object NativeJson {
     fun unwrap(json: String): Any? {
         val root = JSONObject(json)
         if (!root.optBoolean("ok", false)) {
-            throw NativeException(root.str("error") ?: "Unknown error in the voice library.")
+            // No message: the UI shows its own translated generic error.
+            throw NativeException(root.str("error").orEmpty())
         }
         return if (root.isNull("data")) null else root.get("data")
     }
