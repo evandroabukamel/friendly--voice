@@ -75,6 +75,16 @@ jobs:
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      - name: Unit tests (JVM, pure Kotlin logic)
+        run: gradle -p android testDebugUnitTest
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-unit-test-report
+          path: android/app/build/reports/tests/testDebugUnitTest/**
+          if-no-files-found: ignore
+
       - name: Build the APK (debug and release) and lint
         run: gradle -p android assembleDebug assembleRelease lint
 
