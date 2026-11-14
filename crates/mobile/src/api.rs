@@ -1,3 +1,4 @@
+use chrono::NaiveTime;
 use friendly_voice_application::{
     use_cases::{
         AddVoiceSampleInput, CreateScheduleInput, RegisterSpeakerInput, SpeakRequest,
@@ -9,7 +10,7 @@ use friendly_voice_bootstrap::{parse, Container};
 use friendly_voice_domain::{
     ids::{ScheduleId, SpeakerId},
     message::{MessageCategory, MessageContent},
-    schedule::{Recurrence, Schedule},
+    schedule::{Recurrence, Schedule, TimeWindow},
     speaker::Speaker,
     tone::{ToneStyle, VoiceTone},
     voice::VoiceSample,
@@ -342,8 +343,9 @@ fn schedule_input(request_json: &str) -> Result<CreateScheduleInput, String> {
 pub fn create_schedule(request_json: String) -> String {
     respond((|| {
         let input = schedule_input(&request_json)?;
-        let s = container()?.create_schedule().execute(input).map_err(app)?;
-        schedule_item(&s)
+        let c = container()?;
+        let s = c.create_schedule().execute(input).map_err(app)?;
+        schedule_item(&c, &s)
     })())
 }
 
@@ -352,33 +354,111 @@ pub fn create_schedule(request_json: String) -> String {
 pub fn update_schedule(id: String, request_json: String) -> String {
     respond((|| {
         let input = schedule_input(&request_json)?;
-        let s = container()?
+        let c = container()?;
+        let s = c
             .update_schedule()
             .execute(&ScheduleId::new(id), input)
             .map_err(app)?;
-        schedule_item(&s)
+        schedule_item(&c, &s)
     })())
 }
 
-/// One schedule as the app shows it (item of `listSchedules`).
-fn schedule_item(s: &Schedule) -> ApiResult {
+fn hhmm(t: NaiveTime) -> String {
+    t.format("%H:%M").to_string()
+}
+
+fn window_text(w: TimeWindow) -> String {
+    format!("{}-{}", hhmm(w.start), hhmm(w.end))
+}
+
+/// The schedule written back as the request that creates it; sending it to
+/// `update_schedule` yields the same schedule.
+fn schedule_request(s: &Schedule) -> Value {
+    let (kind, at, days, every_minutes, within) = match &s.recurrence {
+        Recurrence::Daily { at } => ("daily", Some(hhmm(*at)), None, None, None),
+        Recurrence::Weekly { days, at } => (
+            "weekly",
+            Some(hhmm(*at)),
+            Some(
+                days.iter()
+                    .map(|d| parse::weekday_short(*d))
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ),
+            None,
+            None,
+        ),
+        Recurrence::Interval {
+            every_minutes,
+            within,
+        } => (
+            "interval",
+            None,
+            None,
+            Some(*every_minutes),
+            within.map(window_text),
+        ),
+        Recurrence::Once { at } => (
+            "once",
+            Some(at.format("%Y-%m-%d %H:%M").to_string()),
+            None,
+            None,
+            None,
+        ),
+    };
+    let (category, text) = match &s.content {
+        MessageContent::Category(c) => (Some(c.slug()), None),
+        MessageContent::FixedText(t) => (None, Some(t.as_str())),
+    };
+    json!({
+        "speaker_id": s.speaker_id,
+        "kind": kind,
+        "at": at,
+        "days": days,
+        "every_minutes": every_minutes,
+        "within": within,
+        "quiet": s.quiet_hours.map(window_text),
+        "category": category,
+        "text": text,
+        "tone": s.tone.map(|t| t.style.slug()),
+        "pitch_shift": s.tone.map_or(0.0, |t| t.pitch_shift_semitones),
+    })
+}
+
+/// One schedule as the app shows it (item of `listSchedules`, also returned
+/// by create/update/setEnabled).
+fn schedule_item(c: &Container, s: &Schedule) -> ApiResult {
+    let speaker_name = c
+        .speakers
+        .find(&s.speaker_id)
+        .map_err(|e| e.to_string())?
+        .map(|p| p.name);
+    let time = match &s.recurrence {
+        Recurrence::Daily { at } | Recurrence::Weekly { at, .. } => Some(hhmm(*at)),
+        Recurrence::Once { at } => Some(hhmm(at.time())),
+        Recurrence::Interval { .. } => None,
+    };
     let mut v = to_value(s)?;
+    v["speaker_name"] = json!(speaker_name);
     v["next_due"] = json!(s
         .next_due()
         .filter(|_| s.enabled)
         .map(|d| d.format("%d/%m %H:%M").to_string()));
+    v["time"] = json!(time);
     v["tone_label"] = json!(s
         .tone
         .map(|t| t.to_string())
         .unwrap_or("suggested by the theme".into()));
+    v["request"] = schedule_request(s);
     Ok(v)
 }
 
 pub fn list_schedules() -> String {
     respond((|| {
-        let all = container()?.list_schedules().execute().map_err(app)?;
+        let c = container()?;
+        let all = c.list_schedules().execute().map_err(app)?;
         all.iter()
-            .map(schedule_item)
+            .map(|s| schedule_item(&c, s))
             .collect::<Result<Vec<_>, _>>()
             .map(Value::Array)
     })())
@@ -387,11 +467,12 @@ pub fn list_schedules() -> String {
 /// Alarm on/off switch. Re-enabling only fires future occurrences.
 pub fn set_schedule_enabled(id: String, enabled: bool) -> String {
     respond((|| {
-        let s = container()?
+        let c = container()?;
+        let s = c
             .set_schedule_enabled()
             .execute(&ScheduleId::new(id), enabled)
             .map_err(app)?;
-        schedule_item(&s)
+        schedule_item(&c, &s)
     })())
 }
 
@@ -463,6 +544,10 @@ mod tests {
         }
         w.finalize().unwrap();
         cursor.into_inner()
+    }
+
+    fn rules_daily(id: &str) -> String {
+        json!({ "speaker_id": id, "kind": "daily", "at": "08:15", "category": "calma" }).to_string()
     }
 
     /// App flow: configure → register → samples → voice → speak with a tone → schedule.
@@ -607,6 +692,36 @@ mod tests {
         let unknown: Value =
             serde_json::from_str(&update_schedule("nope".into(), edit.to_string())).unwrap();
         assert!(unknown["error"].as_str().unwrap().contains("not found"));
+        assert_eq!(edited["speaker_name"], "Vó");
+        assert_eq!(edited["time"], Value::Null);
+        assert_eq!(
+            edited["request"],
+            json!({ "speaker_id": id, "kind": "interval", "at": null, "days": null, "every_minutes": 90, "within": "09:00-18:00", "quiet": "12:00-13:00", "category": null, "text": "Respira fundo", "tone": "calm", "pitch_shift": 1.0 })
+        );
+
+        // `request` round-trips: sending it back changes nothing.
+        let rules = [
+            json!({ "speaker_id": id, "kind": "daily", "at": "08:15", "category": "calma" }),
+            json!({ "speaker_id": id, "kind": "weekly", "days": "fri,mon", "at": "07:30", "quiet": "22:00-06:00", "tone": "natural", "pitch_shift": -1.5 }),
+            json!({ "speaker_id": id, "kind": "interval", "every_minutes": 45, "text": "Bebe água" }),
+            json!({ "speaker_id": id, "kind": "once", "at": "2099-01-02 09:05", "category": "good-morning", "tone": "warm" }),
+        ];
+        for rule in rules {
+            let created = data(&create_schedule(rule.to_string()));
+            let cid = created["id"].as_str().unwrap().to_string();
+            let again = data(&update_schedule(
+                cid.clone(),
+                created["request"].to_string(),
+            ));
+            assert_eq!(again, created, "{rule}");
+            data(&remove_schedule(cid));
+        }
+        let daily = data(&create_schedule(rules_daily(&id)));
+        assert_eq!(daily["time"], "08:15");
+        assert_eq!(daily["request"]["category"], "calm");
+        assert_eq!(daily["request"]["tone"], Value::Null);
+        assert_eq!(daily["request"]["pitch_shift"], 0.0);
+        data(&remove_schedule(daily["id"].as_str().unwrap().into()));
         data(&remove_schedule(s["id"].as_str().unwrap().into()));
         data(&run_due_schedules(None));
 

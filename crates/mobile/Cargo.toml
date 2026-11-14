@@ -16,6 +16,7 @@ http-engine = ["friendly-voice-bootstrap/http-engine"]
 friendly-voice-domain.workspace = true
 friendly-voice-application.workspace = true
 friendly-voice-bootstrap.workspace = true
+chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 jni.workspace = true

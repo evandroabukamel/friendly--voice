@@ -430,6 +430,7 @@ dependencies = [
 name = "friendly-voice-mobile"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "friendly-voice-application",
  "friendly-voice-bootstrap",
  "friendly-voice-domain",
