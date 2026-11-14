@@ -88,9 +88,17 @@ fv voice generate --person spk-...
 fv speak --person spk-... --theme good-morning
 fv speak --person spk-... --text "Respira fundo, vai dar tudo certo."
 fv speak --person spk-... --theme confidence --tone warm --pitch-shift -1
+fv speak --person spk-... --theme celebration --listener-name "Campeão"   # name for this message only
 fv tones                                                   # list the tones of voice
 fv themes                                                  # list the message themes
 fv languages                                               # list the languages
+
+# How this person calls you (omit --listener-name to clear it)
+fv person set-listener-name --person spk-... --listener-name "Filhote"
+# Revoke consent: deletes recordings, voice (also on the server) and cached
+# speech; the person's schedules are switched off. Re-adding needs new consent.
+fv person revoke --person spk-... --by "Lúcia"
+fv person delete --person spk-...                          # also removes the person
 
 # Schedule
 fv schedule create --person spk-... --daily 07:30 --theme good-morning

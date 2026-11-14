@@ -71,6 +71,26 @@ the key being a stable hash of the engine kind, the whole `VoiceProfile`
 (final text, language, tone style, pitch shift, prosody). The same talk is
 never asked from the engine twice; a rebuilt voice or another tone misses.
 Files are written to a temp file and renamed, so a half file is never served.
+Regenerating a voice deletes that person's cached files (`SpeechCache::clear`);
+changing samples, the listener name or the language does not.
+
+## Revoking consent and deleting a person (US-15)
+
+`RevokeConsent` marks the person revoked first (`Speaker.consent_revoked =
+{by, at}`), so every later use is refused (`DomainError::ConsentRevoked`):
+adding samples, building the voice, speaking (now or scheduled), creating or
+editing a schedule with that person, turning their schedules on. Then
+`VoiceDataEraser` runs idempotent steps in a crash-safe order: switch off the
+person's schedules (kept), clear the speech cache, delete the audio files,
+delete the sample entries, ask the engine to forget the voice
+(`VoiceCloningEngine::forget`, `DELETE /v1/voices/{id}`) and only then delete
+the profile, which holds the engine's voice id. If the voice server is
+unreachable the error says to run it again; a re-run finishes the cleanup.
+The person stays as a revoked record and is no longer listed; using them again
+needs a new registration with a new consent.
+
+`DeleteSpeaker` does the same and finally removes the record; an unknown id
+is fine.
 
 ## Schedules
 
@@ -88,10 +108,14 @@ nothing missed is replayed:
 
 ## Listener name
 
-The messages call the listener by name. `Speaker.listener_name` (optional,
-per voice: "Filhote", "Campeão") wins over the name given by the caller (the
-app's Settings name or CLI `--my-name`), both for "speak now" and scheduled
-runs (`SpeakMessage`).
+The messages call the listener by name, chosen in this order
+(`SpeakMessage`, for "speak now" and scheduled runs):
+
+1. a name for this one message (`SpeakRequest.listener_override`, CLI
+   `speak --listener-name`);
+2. the person's own name for the listener, `Speaker.listener_name`
+   ("Filhote", "Campeão");
+3. the caller's name: the app's Settings name or CLI `--my-name`.
 
 ## Android bridge (JNI)
 
@@ -104,9 +128,11 @@ become `None`; panics never cross into the JVM.
 |---|---|
 | `configure(dataDir: String, engineUrl: String?)` | `{engine}` |
 | `catalog()` | themes, tones, languages |
-| `listSpeakers()` | `[speaker item]` |
+| `listSpeakers()` | `[speaker item]` (revoked people excluded) |
 | `registerSpeaker(name: String, relationship: String?, consentBy: String?, language: String?, listenerName: String?)` | the stored speaker plus the speaker item fields |
 | `setListenerName(speakerId: String, listenerName: String?)` | speaker item |
+| `revokeConsent(speakerId: String, revokedBy: String?)` | `null` |
+| `deleteSpeaker(speakerId: String)` | `null` |
 | `addSample(speakerId: String, wav: ByteArray, transcript: String?)` | sample item |
 | `listSamples(speakerId: String)` | `[sample item]` |
 | `buildVoice(speakerId: String)` | `{language, gender, prosody, sample_count, total_audio_secs}` |
@@ -127,10 +153,13 @@ become `None`; panics never cross into the JVM.
   ("HH:MM-HH:MM"), category, text, tone, pitch_shift}`.
 * **schedule item:** the stored schedule (`id, speaker_id, recurrence,
   content, tone, quiet_hours, enabled, created_at, last_fired_at,
-  active_since`) plus `speaker_name`, `next_due` ("dd/MM HH:mm", null when
-  disabled), `time` ("HH:mm", null for interval), `tone_label` and `request`,
-  the schedule request above; sending it back to `updateSchedule` yields the
-  same schedule.
+  active_since`) plus `speaker_name` (null when the person was deleted),
+  `voice_available` (false when the person is revoked or deleted), `next_due`
+  ("dd/MM HH:mm", null when disabled), `time` ("HH:mm", null for interval),
+  `tone_label` and `request`, the schedule request above; sending it back to
+  `updateSchedule` yields the same schedule. Turning on a schedule whose voice
+  is unavailable fails ("edit the schedule to choose another voice");
+  `updateSchedule` can move it to another voice, keeping its on/off state.
 
 ## Tone of voice
 

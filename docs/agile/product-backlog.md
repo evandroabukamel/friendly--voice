@@ -33,6 +33,35 @@ Scenario: registration with consent
   Then I get an id and the consent statement with date/time
 ```
 
+### US-15 · Revoke consent — *Must* · 3 pts · ✅ Sprint 8
+> As the person of the voice (or the user on their behalf), I want to revoke
+> the consent, so that the recordings and the cloned voice are deleted and
+> never used again.
+
+```gherkin
+Scenario: revoking deletes the voice everywhere
+  Given "Mãe" with recordings, a generated voice, cached speech and a schedule
+  When I revoke her consent
+  Then her recordings, voice (also on the voice server) and cached speech are deleted
+  And her schedule is kept but switched off
+  And she is no longer listed
+
+Scenario: every later use is refused
+  Given "Mãe" whose consent was revoked
+  When I add a sample, generate the voice, speak, schedule or switch on her schedule
+  Then it is refused, telling me to register her again with a new consent
+
+Scenario: idempotent and crash-safe
+  Given the voice server was unreachable while revoking
+  When I revoke again
+  Then the remaining cleanup is finished
+
+Scenario: delete a person
+  When I delete "Tio"
+  Then the same data is deleted and the person record too
+  And deleting again (or an unknown id) is fine
+```
+
 ## Epic E2 — Voice cloning
 
 ### US-02 · Upload audio files — *Must* · 5 pts · ✅ Sprint 2
@@ -330,7 +359,7 @@ Scenario: continuous delivery
 | Id | Story | Priority | Pts |
 |----|-------|----------|-----|
 | US-14 | ~~Mobile app with notifications using the use cases~~ → delivered on Android (US-19/US-20) | — | — |
-| US-15 | Revoking consent deletes the person's samples and voice (app and engine) | Must | 3 |
+| US-15 | ~~Revoking consent deletes the person's samples and voice (app and engine)~~ → delivered (Sprint 8) | — | — |
 | US-16 | ~~FLAC support on import~~ → delivered (US-24); MP3/OGG/M4A 🚧 in progress: decoded to WAV on Android before reaching the core; CLI still pending | Should | 2 |
 | US-17 | Avoid repeating the same message in a row (history) | Could | 2 |
 | US-22 | ~~Inaudible watermark on cloned audio~~ → every Chatterbox output carries the Perth watermark (Sprint 7) | — | — |

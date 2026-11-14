@@ -28,10 +28,14 @@ port or use case changes.
   files count as a miss.
 * Engine errors are never cached; a failed cache write only costs a later
   request.
+* **Cleanup:** `SpeechCache::clear` deletes a person's folder when their voice
+  is regenerated, when consent is revoked and when the person is deleted.
+  Changing samples, the listener name or the language does not clear it
+  (the key already tells those talks apart).
 
 ## Consequences
 * + Repeated talks play instantly and offline.
 * + Switching engines or rebuilding the voice never serves stale audio.
-* − The cache grows without bound; no eviction yet. Deleting the folder is
-  always safe.
-* − Revoking consent (US-15) must also delete `cache/speech/<speaker-id>/`.
+* + Revoking consent or deleting a person leaves no cached speech behind.
+* − Within one voice the cache grows without bound; no eviction yet.
+  Deleting the folder is always safe.

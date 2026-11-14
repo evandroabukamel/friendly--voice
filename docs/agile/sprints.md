@@ -153,3 +153,7 @@ can call the listener by its own name, and generated speech is cached.
   `VoiceProfile.built_at` versions the voice.
 * Bridge: `listSamples`, richer `listSpeakers` (sample totals, consent,
   listener name). US-16 MP3 import in progress on the Android side.
+* US-15 `RevokeConsent` and `DeleteSpeaker` (idempotent, crash-safe
+  cleanup), engine `DELETE /v1/voices/{id}`, speech cache cleared on voice
+  regeneration, schedules report `voice_available`; CLI `person revoke`,
+  `person delete`, `person set-listener-name`, `speak --listener-name`.
