@@ -110,6 +110,16 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_addSample<'l>(
 }
 
 #[no_mangle]
+pub extern "system" fn Java_app_friendlyvoice_NativeBridge_listSamples<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    speaker_id: JString<'l>,
+) -> jstring {
+    let speaker_id = req(&mut env, &speaker_id);
+    guarded(&mut env, || api::list_samples(speaker_id))
+}
+
+#[no_mangle]
 pub extern "system" fn Java_app_friendlyvoice_NativeBridge_buildVoice<'l>(
     mut env: JNIEnv<'l>,
     _class: JClass<'l>,

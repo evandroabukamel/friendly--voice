@@ -1,5 +1,8 @@
 use friendly_voice_application::{
-    use_cases::{AddVoiceSampleInput, CreateScheduleInput, RegisterSpeakerInput, SpeakRequest},
+    use_cases::{
+        AddVoiceSampleInput, CreateScheduleInput, RegisterSpeakerInput, SpeakRequest,
+        SpeakerOverview,
+    },
     AppError,
 };
 use friendly_voice_bootstrap::{parse, Container};
@@ -9,6 +12,7 @@ use friendly_voice_domain::{
     schedule::{Recurrence, Schedule},
     speaker::Speaker,
     tone::{ToneStyle, VoiceTone},
+    voice::VoiceSample,
     DomainError,
 };
 use serde::{Deserialize, Serialize};
@@ -93,29 +97,51 @@ pub fn catalog() -> String {
 }
 
 /// One person as the app shows it (item of `listSpeakers`).
-fn speaker_item(c: &Container, s: &Speaker) -> ApiResult {
-    let voice = c.profiles.find(&s.id).map_err(|e| e.to_string())?;
-    Ok(json!({
+fn speaker_item(o: &SpeakerOverview) -> Value {
+    let s = &o.speaker;
+    json!({
         "id": s.id,
         "name": s.name,
         "relationship": s.relationship,
         "language": s.language,
         "consent_granted_by": s.consent.granted_by,
         "listener_name": s.listener_name,
-        "voice_ready": voice.is_some(),
-        "gender": voice.and_then(|v| v.gender),
-    }))
+        "voice_ready": o.voice.is_some(),
+        "gender": o.voice.as_ref().and_then(|v| v.gender),
+        "sample_count": o.sample_count,
+        "total_sample_secs": o.total_sample_secs,
+    })
+}
+
+fn speaker_item_of(c: &Container, s: &Speaker) -> ApiResult {
+    let o = c.list_speakers().one(s.clone()).map_err(app)?;
+    Ok(speaker_item(&o))
 }
 
 pub fn list_speakers() -> String {
     respond((|| {
-        let c = container()?;
-        let speakers = c.speakers.list().map_err(|e| e.to_string())?;
-        speakers
-            .iter()
-            .map(|s| speaker_item(&c, s))
-            .collect::<Result<Vec<_>, _>>()
-            .map(Value::Array)
+        let all = container()?.list_speakers().execute().map_err(app)?;
+        Ok(Value::Array(all.iter().map(speaker_item).collect()))
+    })())
+}
+
+/// One recording as the app shows it (item of `listSamples`).
+fn sample_item(s: &VoiceSample) -> Value {
+    json!({
+        "id": s.id,
+        "duration_secs": s.duration_secs,
+        "transcript": s.transcript,
+        "mean_pitch_hz": s.features.mean_pitch_hz,
+    })
+}
+
+pub fn list_samples(speaker_id: String) -> String {
+    respond((|| {
+        let all = container()?
+            .list_samples()
+            .execute(&SpeakerId::new(speaker_id))
+            .map_err(app)?;
+        Ok(Value::Array(all.iter().map(sample_item).collect()))
     })())
 }
 
@@ -144,7 +170,7 @@ pub fn register_speaker(
             })
             .map_err(app)?;
         let mut v = to_value(&s)?;
-        if let (Value::Object(v), Value::Object(item)) = (&mut v, speaker_item(&c, &s)?) {
+        if let (Value::Object(v), Value::Object(item)) = (&mut v, speaker_item_of(&c, &s)?) {
             v.extend(item);
         }
         Ok(v)
@@ -159,7 +185,7 @@ pub fn set_listener_name(speaker_id: String, listener_name: Option<String>) -> S
             .set_listener_name()
             .execute(&SpeakerId::new(speaker_id), listener_name)
             .map_err(app)?;
-        speaker_item(&c, &s)
+        speaker_item_of(&c, &s)
     })())
 }
 
@@ -173,12 +199,7 @@ pub fn add_sample(speaker_id: String, wav: Vec<u8>, transcript: Option<String>) 
                 transcript: non_empty(transcript),
             })
             .map_err(app)?;
-        Ok(json!({
-            "id": s.id,
-            "duration_secs": s.duration_secs,
-            "transcript": s.transcript,
-            "mean_pitch_hz": s.features.mean_pitch_hz,
-        }))
+        Ok(sample_item(&s))
     })())
 }
 
@@ -501,9 +522,39 @@ mod tests {
             Some("Leite quente de noite, tudo certo.".into()),
         ));
         data(&add_sample(id.clone(), wav(6.0), None));
+        let samples = data(&list_samples(id.clone()));
+        assert_eq!(samples.as_array().unwrap().len(), 2);
+        assert_eq!(
+            samples[0]["transcript"],
+            "Leite quente de noite, tudo certo."
+        );
+        assert!(samples[1]["mean_pitch_hz"].as_f64().unwrap() > 0.0);
+        assert!(samples[1]["id"].is_string() && samples[1]["duration_secs"].is_number());
+        let ghost: Value = serde_json::from_str(&list_samples("ghost".into())).unwrap();
+        assert_eq!(ghost["ok"], false);
+        let people = data(&list_speakers());
+        let vo = people
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["id"] == id.as_str())
+            .unwrap();
+        assert_eq!(vo["sample_count"], 2);
+        assert!((vo["total_sample_secs"].as_f64().unwrap() - 12.0).abs() < 0.1);
+        assert_eq!(vo["voice_ready"], false);
+        assert_eq!(vo["consent_granted_by"], "Vó");
         let voice = data(&build_voice(id.clone()));
         assert_eq!(voice["language"], "pt-BR");
         assert_eq!(voice["sample_count"], 2);
+        let people = data(&list_speakers());
+        let vo = people
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["id"] == id.as_str())
+            .unwrap();
+        assert_eq!(vo["voice_ready"], true);
+        assert_eq!(vo["gender"], "female");
 
         let spoken = data(&speak(
             id.clone(),

@@ -103,6 +103,18 @@ impl Container {
         RegisterSpeaker::new(self.speakers.clone(), self.ids.clone(), self.clock.clone())
     }
 
+    pub fn list_speakers(&self) -> ListSpeakers {
+        ListSpeakers::new(
+            self.speakers.clone(),
+            self.samples.clone(),
+            self.profiles.clone(),
+        )
+    }
+
+    pub fn list_samples(&self) -> ListSamples {
+        ListSamples::new(self.speakers.clone(), self.samples.clone())
+    }
+
     pub fn set_listener_name(&self) -> SetListenerName {
         SetListenerName::new(self.speakers.clone())
     }
