@@ -156,6 +156,10 @@ impl Container {
         RemoveSchedule::new(self.schedules.clone())
     }
 
+    pub fn set_schedule_enabled(&self) -> SetScheduleEnabled {
+        SetScheduleEnabled::new(self.schedules.clone(), self.clock.clone())
+    }
+
     pub fn run_due_schedules(&self) -> RunDueSchedules {
         RunDueSchedules::new(
             self.schedules.clone(),

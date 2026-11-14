@@ -6,7 +6,7 @@ use friendly_voice_bootstrap::{parse, Container};
 use friendly_voice_domain::{
     ids::{ScheduleId, SpeakerId},
     message::{MessageCategory, MessageContent},
-    schedule::Recurrence,
+    schedule::{Recurrence, Schedule},
     tone::{ToneStyle, VoiceTone},
     DomainError,
 };
@@ -296,23 +296,38 @@ pub fn create_schedule(request_json: String) -> String {
     })())
 }
 
+/// One schedule as the app shows it (item of `listSchedules`).
+fn schedule_item(s: &Schedule) -> ApiResult {
+    let mut v = to_value(s)?;
+    v["next_due"] = json!(s
+        .next_due()
+        .filter(|_| s.enabled)
+        .map(|d| d.format("%d/%m %H:%M").to_string()));
+    v["tone_label"] = json!(s
+        .tone
+        .map(|t| t.to_string())
+        .unwrap_or("suggested by the theme".into()));
+    Ok(v)
+}
+
 pub fn list_schedules() -> String {
     respond((|| {
         let all = container()?.list_schedules().execute().map_err(app)?;
-        let mut out = Vec::new();
-        for s in all {
-            let mut v = to_value(&s)?;
-            v["next_due"] = json!(s
-                .next_due()
-                .filter(|_| s.enabled)
-                .map(|d| d.format("%d/%m %H:%M").to_string()));
-            v["tone_label"] = json!(s
-                .tone
-                .map(|t| t.to_string())
-                .unwrap_or("suggested by the theme".into()));
-            out.push(v);
-        }
-        Ok(Value::Array(out))
+        all.iter()
+            .map(schedule_item)
+            .collect::<Result<Vec<_>, _>>()
+            .map(Value::Array)
+    })())
+}
+
+/// Alarm on/off switch. Re-enabling only fires future occurrences.
+pub fn set_schedule_enabled(id: String, enabled: bool) -> String {
+    respond((|| {
+        let s = container()?
+            .set_schedule_enabled()
+            .execute(&ScheduleId::new(id), enabled)
+            .map_err(app)?;
+        schedule_item(&s)
     })())
 }
 
@@ -453,6 +468,18 @@ mod tests {
         let s = data(&create_schedule(req.to_string()));
         assert_eq!(s["tone"]["style"], "Warm");
         assert_eq!(data(&list_schedules())[0]["tone_label"], "warm");
+        let sid = s["id"].as_str().unwrap().to_string();
+        let off = data(&set_schedule_enabled(sid.clone(), false));
+        assert_eq!(off["enabled"], false);
+        assert_eq!(off["next_due"], Value::Null);
+        assert_eq!(data(&set_schedule_enabled(sid.clone(), false)), off);
+        let on = data(&set_schedule_enabled(sid.clone(), true));
+        assert_eq!(on["enabled"], true);
+        assert!(on["next_due"].is_string());
+        assert_eq!(data(&list_schedules())[0], on);
+        let missing: Value =
+            serde_json::from_str(&set_schedule_enabled("nope".into(), true)).unwrap();
+        assert_eq!(missing["ok"], false);
         data(&remove_schedule(s["id"].as_str().unwrap().into()));
         data(&run_due_schedules(None));
 

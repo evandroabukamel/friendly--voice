@@ -6,7 +6,7 @@
 //! * panics never cross into the JVM: they become `{"ok":false,...}`.
 use crate::api;
 use jni::objects::{JByteArray, JClass, JString};
-use jni::sys::{jfloat, jstring};
+use jni::sys::{jboolean, jfloat, jstring, JNI_FALSE};
 use jni::JNIEnv;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -150,6 +150,18 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_removeSchedule<'l>(
 ) -> jstring {
     let id = req(&mut env, &id);
     guarded(&mut env, || api::remove_schedule(id))
+}
+
+#[no_mangle]
+pub extern "system" fn Java_app_friendlyvoice_NativeBridge_setScheduleEnabled<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    id: JString<'l>,
+    enabled: jboolean,
+) -> jstring {
+    let id = req(&mut env, &id);
+    let enabled = enabled != JNI_FALSE;
+    guarded(&mut env, || api::set_schedule_enabled(id, enabled))
 }
 
 #[no_mangle]

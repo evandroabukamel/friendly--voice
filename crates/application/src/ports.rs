@@ -55,6 +55,9 @@ pub trait ScheduleRepository: Send + Sync {
     fn save(&self, schedule: &Schedule) -> PortResult<()>;
     fn list(&self) -> PortResult<Vec<Schedule>>;
     fn delete(&self, id: &ScheduleId) -> PortResult<bool>;
+    fn find(&self, id: &ScheduleId) -> PortResult<Option<Schedule>> {
+        Ok(self.list()?.into_iter().find(|s| &s.id == id))
+    }
 }
 
 /// Stores the original audio files.
