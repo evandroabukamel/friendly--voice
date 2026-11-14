@@ -181,6 +181,21 @@ impl SpeechSynthesizer for FakeEngine {
     }
 }
 
+/// Remembers which people had their cached speech cleared.
+#[derive(Default)]
+pub struct MemSpeechCache(Mutex<Vec<SpeakerId>>);
+impl MemSpeechCache {
+    pub fn cleared(&self) -> Vec<SpeakerId> {
+        self.0.lock().unwrap().clone()
+    }
+}
+impl SpeechCache for MemSpeechCache {
+    fn clear(&self, speaker: &SpeakerId) -> PortResult<()> {
+        self.0.lock().unwrap().push(speaker.clone());
+        Ok(())
+    }
+}
+
 pub struct FakeMessages;
 impl MessageSource for FakeMessages {
     fn pick(
@@ -240,6 +255,7 @@ pub struct Fakes {
     pub analyzer: Arc<FakeAnalyzer>,
     pub transcriber: Arc<FakeTranscriber>,
     pub engine: Arc<FakeEngine>,
+    pub speech_cache: Arc<MemSpeechCache>,
     pub messages: Arc<FakeMessages>,
     pub delivery: Arc<FakeDelivery>,
     pub clock: Arc<FakeClock>,
@@ -262,6 +278,7 @@ impl Fakes {
             analyzer: Arc::new(FakeAnalyzer),
             transcriber: Default::default(),
             engine: Default::default(),
+            speech_cache: Default::default(),
             messages: Arc::new(FakeMessages),
             delivery: Default::default(),
             clock: Arc::new(FakeClock(Mutex::new(start))),

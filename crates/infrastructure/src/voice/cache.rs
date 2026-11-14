@@ -2,9 +2,12 @@
 //! [`SpeechSynthesizer`] that keeps every generated WAV on disk, so the same
 //! talk is never asked from the engine twice.
 use friendly_voice_application::ports::{
-    PortError, PortResult, SpeechSynthesizer, SynthesizedAudio,
+    PortError, PortResult, SpeechCache, SpeechSynthesizer, SynthesizedAudio,
 };
-use friendly_voice_domain::voice::{SpeechScript, VoiceProfile};
+use friendly_voice_domain::{
+    ids::SpeakerId,
+    voice::{SpeechScript, VoiceProfile},
+};
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -137,12 +140,20 @@ impl SpeechSynthesizer for CachedSpeechSynthesizer {
     }
 }
 
+impl SpeechCache for CachedSpeechSynthesizer {
+    fn clear(&self, speaker: &SpeakerId) -> PortResult<()> {
+        match fs::remove_dir_all(self.root.join(folder(speaker.as_str()))) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(PortError::new(e)),
+            _ => Ok(()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use friendly_voice_application::ports::PortError;
     use friendly_voice_domain::{
-        ids::SpeakerId,
         language::Language,
         tone::{ToneStyle, VoiceTone},
         voice::ProsodyProfile,
@@ -279,6 +290,24 @@ mod tests {
             b"oi"
         );
         assert_eq!(inner.calls(), 4, "an empty file is a miss");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn clearing_deletes_only_that_persons_files() {
+        let root = dir("clear");
+        let inner = Arc::new(Counting::default());
+        let cache = CachedSpeechSynthesizer::new(inner.clone(), &root, "neural");
+        let mut dad = voice();
+        dad.speaker_id = SpeakerId::new("spk-2");
+        cache.synthesize(&voice(), &script("oi")).unwrap();
+        cache.synthesize(&dad, &script("oi")).unwrap();
+        cache.clear(&SpeakerId::new("spk-1")).unwrap();
+        cache.clear(&SpeakerId::new("spk-1")).unwrap();
+        assert!(!root.join("spk-1").exists());
+        assert!(root.join("spk-2").is_dir());
+        cache.synthesize(&dad, &script("oi")).unwrap();
+        assert_eq!(inner.calls(), 2, "the other person is still cached");
         std::fs::remove_dir_all(root).unwrap();
     }
 }

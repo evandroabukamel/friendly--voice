@@ -41,6 +41,7 @@ pub struct Container {
     ids: Arc<dyn IdGenerator>,
     cloning: Arc<dyn VoiceCloningEngine>,
     synthesizer: Arc<dyn SpeechSynthesizer>,
+    speech_cache: Arc<dyn SpeechCache>,
     transcriber: Option<Arc<dyn Transcriber>>,
     delivery: Arc<dyn MessageDelivery>,
     pub engine_name: &'static str,
@@ -63,7 +64,7 @@ impl Container {
             Some(url) => Self::http(url)?,
         };
         // Every engine sits behind the speech cache (ADR 0008).
-        let synthesizer: Arc<dyn SpeechSynthesizer> = Arc::new(CachedSpeechSynthesizer::new(
+        let speech_cache = Arc::new(CachedSpeechSynthesizer::new(
             synthesizer,
             data.join("cache").join("speech"),
             if engine_url.is_some() {
@@ -72,6 +73,7 @@ impl Container {
                 "sketch"
             },
         ));
+        let synthesizer: Arc<dyn SpeechSynthesizer> = speech_cache.clone();
         Ok(Self {
             speakers: Arc::new(JsonRepository::<Speaker>::new(data.join("speakers.json"))),
             samples: Arc::new(JsonRepository::<VoiceSample>::new(
@@ -86,6 +88,7 @@ impl Container {
             ids: Arc::new(TimeIdGenerator::default()),
             cloning,
             synthesizer,
+            speech_cache,
             transcriber,
             delivery: Arc::new(OutboxDelivery::new(data.join("outbox"), player)),
             engine_name,
@@ -151,6 +154,7 @@ impl Container {
             self.profiles.clone(),
             self.store.clone(),
             self.cloning.clone(),
+            self.speech_cache.clone(),
             self.clock.clone(),
         )
     }

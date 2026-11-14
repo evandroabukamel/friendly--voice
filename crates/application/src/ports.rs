@@ -118,6 +118,12 @@ pub trait SpeechSynthesizer: Send + Sync {
     ) -> PortResult<SynthesizedAudio>;
 }
 
+/// Synthesized speech kept on the device (ADR 0008).
+pub trait SpeechCache: Send + Sync {
+    /// Deletes every cached talk of the person. Idempotent.
+    fn clear(&self, speaker: &SpeakerId) -> PortResult<()>;
+}
+
 // ---------- Messages ----------
 
 pub trait MessageSource: Send + Sync {

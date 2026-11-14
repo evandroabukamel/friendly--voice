@@ -1,7 +1,7 @@
 use crate::error::{AppError, AppResult};
 use crate::ports::{
-    AudioStore, Clock, ReferenceAudio, SampleRepository, SpeakerRepository, VoiceCloningEngine,
-    VoiceProfileRepository,
+    AudioStore, Clock, ReferenceAudio, SampleRepository, SpeakerRepository, SpeechCache,
+    VoiceCloningEngine, VoiceProfileRepository,
 };
 use friendly_voice_domain::{
     ids::SpeakerId,
@@ -17,6 +17,7 @@ pub struct BuildVoiceProfile {
     profiles: Arc<dyn VoiceProfileRepository>,
     store: Arc<dyn AudioStore>,
     engine: Arc<dyn VoiceCloningEngine>,
+    cache: Arc<dyn SpeechCache>,
     clock: Arc<dyn Clock>,
     policy: EnrollmentPolicy,
 }
@@ -28,6 +29,7 @@ impl BuildVoiceProfile {
         profiles: Arc<dyn VoiceProfileRepository>,
         store: Arc<dyn AudioStore>,
         engine: Arc<dyn VoiceCloningEngine>,
+        cache: Arc<dyn SpeechCache>,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
@@ -36,6 +38,7 @@ impl BuildVoiceProfile {
             profiles,
             store,
             engine,
+            cache,
             clock,
             policy: EnrollmentPolicy::default(),
         }
@@ -78,6 +81,9 @@ impl BuildVoiceProfile {
             built_at: Some(self.clock.now()),
         };
         self.profiles.save(&profile)?;
+        // The old voice's talks are unreachable (the key holds `built_at`);
+        // delete them so they do not pile up.
+        self.cache.clear(speaker_id)?;
         Ok(profile)
     }
 }
@@ -95,6 +101,7 @@ mod tests {
             f.profiles.clone(),
             f.store.clone(),
             f.engine.clone(),
+            f.speech_cache.clone(),
             f.clock.clone(),
         )
     }
@@ -114,6 +121,11 @@ mod tests {
         assert_eq!(profile.language.code(), "en");
         assert_eq!(profile.built_at, Some(f.clock.now()), "versions the voice");
         assert!(f.profiles.find(&spk.id).unwrap().is_some());
+        assert_eq!(
+            f.speech_cache.cleared(),
+            vec![spk.id.clone()],
+            "the old voice's cached speech is deleted"
+        );
     }
 
     #[test]
@@ -121,6 +133,10 @@ mod tests {
         let f = Fakes::new();
         let spk = f.speaker();
         assert!(matches!(uc(&f).execute(&spk.id), Err(AppError::Domain(_))));
+        assert!(
+            f.speech_cache.cleared().is_empty(),
+            "a failed build keeps the cache"
+        );
         f.add_sample(&spk, 12.0, None);
         assert!(uc(&f).execute(&spk.id).is_ok());
     }
