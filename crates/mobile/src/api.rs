@@ -7,6 +7,7 @@ use friendly_voice_domain::{
     ids::{ScheduleId, SpeakerId},
     message::{MessageCategory, MessageContent},
     schedule::{Recurrence, Schedule},
+    speaker::Speaker,
     tone::{ToneStyle, VoiceTone},
     DomainError,
 };
@@ -91,46 +92,74 @@ pub fn catalog() -> String {
     })))
 }
 
+/// One person as the app shows it (item of `listSpeakers`).
+fn speaker_item(c: &Container, s: &Speaker) -> ApiResult {
+    let voice = c.profiles.find(&s.id).map_err(|e| e.to_string())?;
+    Ok(json!({
+        "id": s.id,
+        "name": s.name,
+        "relationship": s.relationship,
+        "language": s.language,
+        "consent_granted_by": s.consent.granted_by,
+        "listener_name": s.listener_name,
+        "voice_ready": voice.is_some(),
+        "gender": voice.and_then(|v| v.gender),
+    }))
+}
+
 pub fn list_speakers() -> String {
     respond((|| {
         let c = container()?;
         let speakers = c.speakers.list().map_err(|e| e.to_string())?;
-        let mut out = Vec::new();
-        for s in speakers {
-            let voice = c.profiles.find(&s.id).map_err(|e| e.to_string())?;
-            out.push(json!({
-                "id": s.id,
-                "name": s.name,
-                "relationship": s.relationship,
-                "language": s.language,
-                "voice_ready": voice.is_some(),
-                "gender": voice.and_then(|v| v.gender),
-            }));
-        }
-        Ok(Value::Array(out))
+        speakers
+            .iter()
+            .map(|s| speaker_item(&c, s))
+            .collect::<Result<Vec<_>, _>>()
+            .map(Value::Array)
     })())
 }
 
+/// Registers a person. `listener_name` is how this person calls the
+/// listener; when set it wins over the name passed to `speak`/`runDueSchedules`.
 pub fn register_speaker(
     name: String,
     relationship: Option<String>,
     consent_by: Option<String>,
     language: Option<String>,
+    listener_name: Option<String>,
 ) -> String {
     respond((|| {
         let language = non_empty(language)
             .map(|l| l.parse().map_err(domain))
             .transpose()?;
-        let s = container()?
+        let c = container()?;
+        let s = c
             .register_speaker()
             .execute(RegisterSpeakerInput {
                 name,
                 relationship: non_empty(relationship),
                 consent_granted_by: non_empty(consent_by),
                 language,
+                listener_name: non_empty(listener_name),
             })
             .map_err(app)?;
-        to_value(&s)
+        let mut v = to_value(&s)?;
+        if let (Value::Object(v), Value::Object(item)) = (&mut v, speaker_item(&c, &s)?) {
+            v.extend(item);
+        }
+        Ok(v)
+    })())
+}
+
+/// Sets (or clears, with null/blank) how this person calls the listener.
+pub fn set_listener_name(speaker_id: String, listener_name: Option<String>) -> String {
+    respond((|| {
+        let c = container()?;
+        let s = c
+            .set_listener_name()
+            .execute(&SpeakerId::new(speaker_id), listener_name)
+            .map_err(app)?;
+        speaker_item(&c, &s)
     })())
 }
 
@@ -428,13 +457,14 @@ mod tests {
         assert!(cat["languages"].as_array().unwrap().len() > 20);
 
         let err: Value =
-            serde_json::from_str(&register_speaker("Vó".into(), None, None, None)).unwrap();
+            serde_json::from_str(&register_speaker("Vó".into(), None, None, None, None)).unwrap();
         assert_eq!(err["ok"], false);
         let bad_language: Value = serde_json::from_str(&register_speaker(
             "Vó".into(),
             None,
             Some("Vó".into()),
             Some("xx".into()),
+            None,
         ))
         .unwrap();
         assert_eq!(bad_language["ok"], false);
@@ -443,10 +473,27 @@ mod tests {
             Some("avó".into()),
             Some("Vó".into()),
             Some("pt-BR".into()),
+            None,
         ))["id"]
             .as_str()
             .unwrap()
             .to_string();
+
+        let named = data(&set_listener_name(id.clone(), Some(" Filhote ".into())));
+        assert_eq!(named["listener_name"], "Filhote");
+        assert_eq!(named["id"], id.as_str());
+        assert_eq!(data(&list_speakers())[0], named);
+        let missing: Value =
+            serde_json::from_str(&set_listener_name("ghost".into(), None)).unwrap();
+        assert_eq!(missing["ok"], false);
+        let with_name = data(&register_speaker(
+            "Pai".into(),
+            None,
+            Some("Pai".into()),
+            None,
+            Some("Campeão".into()),
+        ));
+        assert_eq!(with_name["listener_name"], "Campeão");
 
         data(&add_sample(
             id.clone(),
@@ -467,6 +514,11 @@ mod tests {
             Some("Evandro".into()),
         ));
         assert_eq!(spoken["tone"], "whisper (-1 st)");
+        assert!(
+            spoken["text"].as_str().unwrap().contains("Filhote"),
+            "{spoken}"
+        );
+        data(&set_listener_name(id.clone(), None));
         assert!(std::path::Path::new(spoken["audio_path"].as_str().unwrap()).exists());
         let default_tone = data(&speak(
             id.clone(),

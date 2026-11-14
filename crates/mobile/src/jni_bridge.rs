@@ -65,13 +65,29 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_registerSpeaker<'l>(
     relationship: JString<'l>,
     consent_by: JString<'l>,
     language: JString<'l>,
+    listener_name: JString<'l>,
 ) -> jstring {
     let name = req(&mut env, &name);
     let relationship = opt(&mut env, &relationship);
     let consent_by = opt(&mut env, &consent_by);
     let language = opt(&mut env, &language);
+    let listener_name = opt(&mut env, &listener_name);
     guarded(&mut env, || {
-        api::register_speaker(name, relationship, consent_by, language)
+        api::register_speaker(name, relationship, consent_by, language, listener_name)
+    })
+}
+
+#[no_mangle]
+pub extern "system" fn Java_app_friendlyvoice_NativeBridge_setListenerName<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    speaker_id: JString<'l>,
+    listener_name: JString<'l>,
+) -> jstring {
+    let speaker_id = req(&mut env, &speaker_id);
+    let listener_name = opt(&mut env, &listener_name);
+    guarded(&mut env, || {
+        api::set_listener_name(speaker_id, listener_name)
     })
 }
 

@@ -203,6 +203,43 @@ mod tests {
     }
 
     #[test]
+    fn scheduled_runs_use_the_name_the_person_uses() {
+        let f = Fakes::new();
+        let spk = f.speaker().with_listener_name(Some("Filhote".into()));
+        f.speakers.save(&spk).unwrap();
+        f.voice_profile(&spk);
+        CreateSchedule::new(
+            f.speakers.clone(),
+            f.schedules.clone(),
+            f.ids.clone(),
+            f.clock.clone(),
+        )
+        .execute(CreateScheduleInput {
+            speaker_id: spk.id,
+            recurrence: Recurrence::Daily {
+                at: (f.clock.now() + Duration::minutes(1)).time(),
+            },
+            content: MessageContent::Category(
+                friendly_voice_domain::message::MessageCategory::Motivation,
+            ),
+            tone: None,
+            quiet_hours: None,
+        })
+        .unwrap();
+        f.clock.advance(Duration::minutes(2));
+        let out = RunDueSchedules::new(
+            f.schedules.clone(),
+            Arc::new(f.speak_message()),
+            f.clock.clone(),
+        )
+        .with_listener(Some("Evandro".into()))
+        .execute()
+        .unwrap();
+        let spoken = out[0].result.as_ref().unwrap();
+        assert!(spoken.message.text().contains("Filhote"));
+    }
+
+    #[test]
     fn list_and_remove() {
         let f = Fakes::new();
         let spk = f.speaker();

@@ -97,6 +97,11 @@ pub enum PersonCmd {
             default_value = "pt-BR"
         )]
         language: String,
+        #[arg(
+            help = "How this person calls you in the messages (e.g. \"Filhote\"); wins over --my-name.",
+            long = "listener-name"
+        )]
+        listener_name: Option<String>,
     },
     #[command(about = "Lists the registered people.", alias = "listar")]
     List,

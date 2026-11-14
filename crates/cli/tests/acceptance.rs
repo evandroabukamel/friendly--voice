@@ -411,3 +411,33 @@ fn speaks_in_the_chosen_language() {
         "{out}"
     );
 }
+
+#[test]
+fn the_name_the_person_uses_wins_over_my_name() {
+    let env = Env::new("listener");
+    let out = env.ok(&[
+        "person",
+        "add",
+        "--name",
+        "Mãe",
+        "--consent-by",
+        "Mãe",
+        "--listener-name",
+        "Filhote",
+    ]);
+    assert!(out.contains("calls you Filhote"), "{out}");
+    let id = speaker_id(&out);
+    let wav = env.wav("m1", 12.0, 210.0, None);
+    env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    env.ok(&["voice", "generate", "--person", &id]);
+    let out = env.ok(&[
+        "--my-name",
+        "Evandro",
+        "speak",
+        "--person",
+        &id,
+        "--theme",
+        "celebration",
+    ]);
+    assert!(out.contains("Filhote") && !out.contains("Evandro"), "{out}");
+}

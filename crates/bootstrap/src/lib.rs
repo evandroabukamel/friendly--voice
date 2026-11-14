@@ -103,6 +103,10 @@ impl Container {
         RegisterSpeaker::new(self.speakers.clone(), self.ids.clone(), self.clock.clone())
     }
 
+    pub fn set_listener_name(&self) -> SetListenerName {
+        SetListenerName::new(self.speakers.clone())
+    }
+
     pub fn add_voice_sample(&self) -> AddVoiceSample {
         let mut uc = AddVoiceSample::new(
             self.speakers.clone(),

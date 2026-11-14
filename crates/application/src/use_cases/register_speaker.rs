@@ -15,6 +15,8 @@ pub struct RegisterSpeakerInput {
     pub consent_granted_by: Option<String>,
     /// Language of the recordings and the messages (default: pt-BR).
     pub language: Option<Language>,
+    /// How this person calls the listener (optional, per voice).
+    pub listener_name: Option<String>,
 }
 
 /// US-01: register the person whose voice will be used.
@@ -52,7 +54,8 @@ impl RegisterSpeaker {
             input.relationship,
             consent,
         )?
-        .with_language(input.language.unwrap_or_default());
+        .with_language(input.language.unwrap_or_default())
+        .with_listener_name(input.listener_name);
         self.speakers.save(&speaker)?;
         Ok(speaker)
     }
@@ -86,9 +89,11 @@ mod tests {
                 relationship: Some("mãe".into()),
                 consent_granted_by: Some("Maria".into()),
                 language: None,
+                listener_name: Some(" Filhote ".into()),
             })
             .unwrap();
         assert_eq!(s.language.tag(), "pt-BR");
+        assert_eq!(s.listener_name.as_deref(), Some("Filhote"));
         assert_eq!(f.speakers.list().unwrap(), vec![s]);
 
         let en = uc

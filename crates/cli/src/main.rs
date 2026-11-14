@@ -123,6 +123,7 @@ fn person(c: &Container, cmd: PersonCmd) -> CliResult {
             relationship,
             consent_by,
             language,
+            listener_name,
         } => {
             let language: Language = language.parse().map_err(|e: DomainError| e.to_string())?;
             let s = c
@@ -132,6 +133,7 @@ fn person(c: &Container, cmd: PersonCmd) -> CliResult {
                     relationship,
                     consent_granted_by: consent_by,
                     language: Some(language),
+                    listener_name,
                 })
                 .map_err(app_err)?;
             println!(
@@ -140,6 +142,9 @@ fn person(c: &Container, cmd: PersonCmd) -> CliResult {
                 s.id,
                 s.language.name()
             );
+            if let Some(n) = &s.listener_name {
+                println!("{} calls you {n}", s.name);
+            }
             println!("Consent: {}", s.consent.statement);
         }
         PersonCmd::List => {

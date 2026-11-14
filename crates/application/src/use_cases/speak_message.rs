@@ -80,7 +80,10 @@ impl SpeakMessage {
                 )))
             }
             MessageContent::Category(c) => {
-                self.messages.pick(c, &speaker, req.listener.as_deref())?
+                // The name this person uses for the listener wins over the
+                // one given by the app or the CLI.
+                let listener = speaker.listener_name.as_deref().or(req.listener.as_deref());
+                self.messages.pick(c, &speaker, listener)?
             }
             MessageContent::FixedText(t) => MotivationalMessage::new(&t, None)?,
         };
@@ -148,6 +151,30 @@ mod tests {
         assert!(out.message.text().contains("Ana"));
         // initial tone suggested by the theme
         assert_eq!(out.script.tone.style, ToneStyle::Cheerful);
+    }
+
+    #[test]
+    fn the_name_the_person_uses_wins_over_the_app_listener() {
+        let f = Fakes::new();
+        let spk = f.speaker();
+        f.speakers
+            .save(&spk.clone().with_listener_name(Some("Filhote".into())))
+            .unwrap();
+        f.voice_profile(&spk);
+        let out = f
+            .speak_message()
+            .execute(SpeakRequest {
+                speaker_id: spk.id,
+                content: MessageContent::Category(MessageCategory::Motivation),
+                listener: Some("Evandro".into()),
+                tone: None,
+            })
+            .unwrap();
+        assert!(
+            out.message.text().contains("Filhote"),
+            "{}",
+            out.message.text()
+        );
     }
 
     #[test]
