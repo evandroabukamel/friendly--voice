@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warm, light Material 3 theme. The window itself is the sunrise gradient. -->
+    <style name="Theme.FriendlyVoice" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/cocoa</item>
+        <item name="colorOnPrimary">@color/cream_text</item>
+        <item name="colorPrimaryContainer">@color/honey</item>
+        <item name="colorOnPrimaryContainer">@color/cocoa</item>
+        <item name="colorSecondary">@color/terracotta</item>
+        <item name="colorOnSecondary">@color/cream_text</item>
+        <item name="colorSecondaryContainer">@color/honey</item>
+        <item name="colorOnSecondaryContainer">@color/cocoa</item>
+        <item name="colorTertiary">@color/apricot</item>
+        <item name="colorOnTertiary">@color/cocoa</item>
+        <item name="colorSurface">@color/card_cream_solid</item>
+        <item name="colorOnSurface">@color/cocoa</item>
+        <item name="colorOnSurfaceVariant">@color/cocoa_muted</item>
+        <item name="colorOutline">@color/cocoa_muted</item>
+        <item name="colorError">@color/error</item>
+        <item name="android:colorBackground">@color/card_cream_solid</item>
+        <item name="android:windowBackground">@drawable/bg_sunrise</item>
+        <item name="android:statusBarColor">@color/honey</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/card_cream_solid</item>
+        <item name="materialCardViewStyle">@style/Widget.FriendlyVoice.Card</item>
+        <item name="materialButtonStyle">@style/Widget.FriendlyVoice.Button</item>
+    </style>
+</resources>

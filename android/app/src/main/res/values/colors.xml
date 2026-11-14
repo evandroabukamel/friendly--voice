@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sunrise palette (background gradient, top to bottom). -->
+    <color name="honey">#FFB547</color>
+    <color name="apricot">#F38A4A</color>
+    <color name="terracotta">#D2553F</color>
+
+    <!-- Text. Cocoa on cards, cream on the gradient. -->
+    <color name="cocoa">#3B2416</color>
+    <color name="cocoa_muted">#6E4B36</color>
+    <color name="cream_text">#FFF8EE</color>
+    <color name="cream_text_muted">#FFEBD6</color>
+
+    <!-- Surfaces. -->
+    <color name="card_cream">#E6FFF4E6</color>
+    <color name="card_cream_solid">#FFF4E6</color>
+    <color name="nav_bar">#F2FFF4E6</color>
+    <color name="divider">#333B2416</color>
+    <color name="error">#8C1D18</color>
+    <color name="transparent">#00000000</color>
+    <color name="icon_black">#FF000000</color>
+    <color name="icon_white">#FFFFFFFF</color>
+</resources>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing. -->
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_s">8dp</dimen>
+    <dimen name="space_m">16dp</dimen>
+    <dimen name="space_l">24dp</dimen>
+    <dimen name="space_xl">32dp</dimen>
+    <dimen name="screen_padding">20dp</dimen>
+    <dimen name="list_bottom_padding">112dp</dimen>
+
+    <!-- Shapes and sizes. -->
+    <dimen name="card_radius">28dp</dimen>
+    <dimen name="field_radius">20dp</dimen>
+    <dimen name="button_height">64dp</dimen>
+    <dimen name="button_radius">32dp</dimen>
+    <dimen name="touch_min">48dp</dimen>
+    <dimen name="chip_size">48dp</dimen>
+    <dimen name="chip_radius">24dp</dimen>
+    <dimen name="icon_size">28dp</dimen>
+    <dimen name="fab_margin">24dp</dimen>
+
+    <!-- Type. Body >= 18sp, buttons >= 20sp. -->
+    <dimen name="text_caption">16sp</dimen>
+    <dimen name="text_body">18sp</dimen>
+    <dimen name="text_button">20sp</dimen>
+    <dimen name="text_card_title">24sp</dimen>
+    <dimen name="text_picker">28sp</dimen>
+    <dimen name="text_screen_title">34sp</dimen>
+    <dimen name="text_time">60sp</dimen>
+</resources>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Add recordings: pick files or record with the microphone. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/space_m"
+    android:orientation="vertical">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/add_files_button"
+        style="@style/Widget.FriendlyVoice.Button.Outlined"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/samples_add_files"
+        app:icon="@drawable/ic_file" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/record_button"
+        style="@style/Widget.FriendlyVoice.Button.Outlined"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_s"
+        android:text="@string/samples_record"
+        app:icon="@drawable/ic_record" />
+
+    <TextView
+        android:id="@+id/recording_status"
+        style="@style/Widget.FriendlyVoice.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_s"
+        android:accessibilityLiveRegion="polite"
+        android:gravity="center"
+        android:visibility="gone"
+        tools:text="Recording… 0:12 of 3:00"
+        tools:visibility="visible" />
+</LinearLayout>

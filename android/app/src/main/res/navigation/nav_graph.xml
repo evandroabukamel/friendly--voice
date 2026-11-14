@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/alarmsFragment">
+
+    <fragment
+        android:id="@+id/alarmsFragment"
+        android:name="app.friendlyvoice.ui.alarms.AlarmsFragment"
+        android:label="@string/tab_alarms"
+        tools:layout="@layout/fragment_alarms" />
+
+    <fragment
+        android:id="@+id/voicesFragment"
+        android:name="app.friendlyvoice.ui.voices.VoicesFragment"
+        android:label="@string/tab_voices"
+        tools:layout="@layout/fragment_voices" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="app.friendlyvoice.ui.settings.SettingsFragment"
+        android:label="@string/tab_settings"
+        tools:layout="@layout/fragment_settings" />
+
+    <!-- Create or edit an alarm. No scheduleId = create. -->
+    <fragment
+        android:id="@+id/editAlarmFragment"
+        android:name="app.friendlyvoice.ui.alarms.EditAlarmFragment"
+        android:label="@string/edit_alarm_title_new"
+        tools:layout="@layout/fragment_edit_alarm">
+        <argument
+            android:name="scheduleId"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
+
+    <!-- Register a voice or add recordings to it. No speakerId = new voice. -->
+    <fragment
+        android:id="@+id/importVoiceFragment"
+        android:name="app.friendlyvoice.ui.voices.ImportVoiceFragment"
+        android:label="@string/import_voice_title_new"
+        tools:layout="@layout/fragment_import_voice">
+        <argument
+            android:name="speakerId"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
+</navigation>

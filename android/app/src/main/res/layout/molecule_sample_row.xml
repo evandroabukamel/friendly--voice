@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One recording of a voice. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="@dimen/touch_min"
+    android:orientation="horizontal"
+    android:paddingTop="@dimen/space_xs"
+    android:paddingBottom="@dimen/space_xs">
+
+    <ImageView
+        android:layout_width="@dimen/icon_size"
+        android:layout_height="@dimen/icon_size"
+        android:importantForAccessibility="no"
+        app:srcCompat="@drawable/ic_file"
+        app:tint="@color/cocoa_muted" />
+
+    <TextView
+        android:id="@+id/sample_title"
+        style="@style/Widget.FriendlyVoice.Text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_m"
+        android:layout_weight="1"
+        tools:text="Recording 1" />
+
+    <TextView
+        android:id="@+id/sample_detail"
+        style="@style/Widget.FriendlyVoice.Text.Secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="12.4 s" />
+</LinearLayout>

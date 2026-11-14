@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One voice: name, language, readiness and how much was recorded. -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.FriendlyVoice.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_m"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="@dimen/space_l">
+
+        <ImageView
+            android:layout_width="@dimen/touch_min"
+            android:layout_height="@dimen/touch_min"
+            android:importantForAccessibility="no"
+            android:padding="@dimen/space_s"
+            app:srcCompat="@drawable/ic_mic"
+            app:tint="@color/cocoa" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_m"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/voice_name"
+                style="@style/Widget.FriendlyVoice.Text.CardTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="Grandma Lucia" />
+
+            <TextView
+                android:id="@+id/voice_language"
+                style="@style/Widget.FriendlyVoice.Text.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="Portuguese (Brazil)" />
+
+            <TextView
+                android:id="@+id/voice_status"
+                style="@style/Widget.FriendlyVoice.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_xs"
+                tools:text="@string/voice_status_ready" />
+
+            <TextView
+                android:id="@+id/voice_samples"
+                style="@style/Widget.FriendlyVoice.Text.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="3 recordings · 42 s" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

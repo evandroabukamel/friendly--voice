@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- How the alarm repeats: daily, chosen weekdays, every N minutes, once. -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.FriendlyVoice.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/space_m">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/space_l">
+
+        <TextView
+            style="@style/Widget.FriendlyVoice.Text.CardTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
+            android:text="@string/repeat_title" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/kind_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_s"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/kind_daily"
+                style="@style/Widget.FriendlyVoice.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/repeat_kind_daily" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/kind_weekly"
+                style="@style/Widget.FriendlyVoice.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/repeat_kind_weekly" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/kind_interval"
+                style="@style/Widget.FriendlyVoice.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/repeat_kind_interval" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/kind_once"
+                style="@style/Widget.FriendlyVoice.Chip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/repeat_kind_once" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Weekdays (weekly). -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/days_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_m"
+            app:chipSpacingHorizontal="@dimen/space_xs"
+            app:singleSelection="false">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/day_mon"
+                style="@style/Widget.FriendlyVoice.Chip.Day"
+                android:layout_width="@dimen/chip_size"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:contentDescription="@string/day_mon"
+                android:text="@string/day_mon_short" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/day_tue"
+                style="@style/Widget.FriendlyVoice.Chip.Day"
+                android:layout_width="@dimen/chip_size"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:contentDescription="@string/day_tue"
+                android:text="@string/day_tue_short" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/day_wed"
+                style="@style/Widget.FriendlyVoice.Chip.Day"
+                android:layout_width="@dimen/chip_size"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:contentDescription="@string/day_wed"
+                android:text="@string/day_wed_short" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/day_thu"
+                style="@style/Widget.FriendlyVoice.Chip.Day"
+                android:layout_width="@dimen/chip_size"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:contentDescription="@string/day_thu"
+                android:text="@string/day_thu_short" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/day_fri"
+                style="@style/Widget.FriendlyVoice.Chip.Day"
+                android:layout_width="@dimen/chip_size"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:contentDescription="@string/day_fri"
+                android:text="@string/day_fri_short" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/day_sat"
+                style="@style/Widget.FriendlyVoice.Chip.Day"
+                android:layout_width="@dimen/chip_size"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:contentDescription="@string/day_sat"
+                android:text="@string/day_sat_short" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/day_sun"
+                style="@style/Widget.FriendlyVoice.Chip.Day"
+                android:layout_width="@dimen/chip_size"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:contentDescription="@string/day_sun"
+                android:text="@string/day_sun_short" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Date (once). -->
+        <LinearLayout
+            android:id="@+id/date_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.FriendlyVoice.Text.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/repeat_date_label" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/date_button"
+                style="@style/Widget.FriendlyVoice.Button.Picker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="20/11/2026" />
+        </LinearLayout>
+
+        <!-- Time (daily, weekly, once). -->
+        <LinearLayout
+            android:id="@+id/time_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Widget.FriendlyVoice.Text.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/repeat_time_label" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/time_button"
+                style="@style/Widget.FriendlyVoice.Button.Picker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="08:00" />
+        </LinearLayout>
+
+        <!-- Every N minutes within a window (interval). -->
+        <LinearLayout
+            android:id="@+id/interval_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/every_layout"
+                style="@style/Widget.FriendlyVoice.TextField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_m"
+                android:hint="@string/repeat_every_hint"
+                app:suffixText="@string/repeat_every_suffix">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/every_input"
+                    style="@style/Widget.FriendlyVoice.Input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:maxLength="4" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                style="@style/Widget.FriendlyVoice.Text.Label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/repeat_window_label" />
+
+            <include
+                android:id="@+id/window"
+                layout="@layout/molecule_time_range" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

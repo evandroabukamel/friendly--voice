@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Item ids match the top-level destinations in navigation/nav_graph.xml. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/alarmsFragment"
+        android:icon="@drawable/ic_alarm"
+        android:title="@string/tab_alarms" />
+    <item
+        android:id="@+id/voicesFragment"
+        android:icon="@drawable/ic_mic"
+        android:title="@string/tab_voices" />
+    <item
+        android:id="@+id/settingsFragment"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/tab_settings" />
+</menu>

@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Atoms (Atomic Design): the smallest reusable visual pieces. Layouts use
+    these styles instead of repeating sizes and colors. See android/README.md.
+-->
+<resources>
+
+    <!-- ============================================================ Shapes -->
+
+    <style name="ShapeAppearance.FriendlyVoice.Card" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/card_radius</item>
+    </style>
+
+    <style name="ShapeAppearance.FriendlyVoice.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="ShapeAppearance.FriendlyVoice.Field" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/field_radius</item>
+    </style>
+
+    <!-- ============================================================= Text -->
+
+    <style name="Widget.FriendlyVoice.Text" parent="android:Widget.TextView">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textColor">@color/cocoa</item>
+    </style>
+
+    <!-- Big screen title on the gradient. -->
+    <style name="Widget.FriendlyVoice.Text.ScreenTitle" parent="Widget.FriendlyVoice.Text">
+        <item name="android:textSize">@dimen/text_screen_title</item>
+        <item name="android:textColor">@color/cream_text</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+        <item name="android:paddingTop">@dimen/space_l</item>
+        <item name="android:paddingBottom">@dimen/space_m</item>
+    </style>
+
+    <!-- Body text on the gradient (empty states, hints). -->
+    <style name="Widget.FriendlyVoice.Text.OnGradient" parent="Widget.FriendlyVoice.Text">
+        <item name="android:textColor">@color/cream_text</item>
+        <item name="android:textSize">@dimen/text_button</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
+    </style>
+
+    <!-- Alarm time: big, thin digits. -->
+    <style name="Widget.FriendlyVoice.Text.Time" parent="Widget.FriendlyVoice.Text">
+        <item name="android:textSize">@dimen/text_time</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Widget.FriendlyVoice.Text.CardTitle" parent="Widget.FriendlyVoice.Text">
+        <item name="android:textSize">@dimen/text_card_title</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Widget.FriendlyVoice.Text.Secondary" parent="Widget.FriendlyVoice.Text">
+        <item name="android:textColor">@color/cocoa_muted</item>
+    </style>
+
+    <!-- Small section label inside a card. -->
+    <style name="Widget.FriendlyVoice.Text.Label" parent="Widget.FriendlyVoice.Text">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textColor">@color/cocoa_muted</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingTop">@dimen/space_m</item>
+        <item name="android:paddingBottom">@dimen/space_s</item>
+    </style>
+
+    <!-- ========================================================== Buttons -->
+
+    <!-- Primary: cocoa pill, cream text, 64dp tall. -->
+    <style name="Widget.FriendlyVoice.Button" parent="Widget.Material3.Button">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">@dimen/text_button</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="cornerRadius">@dimen/button_radius</item>
+        <item name="iconSize">@dimen/icon_size</item>
+        <item name="iconGravity">textStart</item>
+    </style>
+
+    <!-- Secondary: outlined pill. -->
+    <style name="Widget.FriendlyVoice.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textSize">@dimen/text_button</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textColor">@color/cocoa</item>
+        <item name="cornerRadius">@dimen/button_radius</item>
+        <item name="strokeColor">@color/cocoa</item>
+        <item name="strokeWidth">2dp</item>
+        <item name="iconTint">@color/cocoa</item>
+        <item name="iconSize">@dimen/icon_size</item>
+        <item name="iconGravity">textStart</item>
+    </style>
+
+    <!-- A time or date the user taps to change ("08:00"). -->
+    <style name="Widget.FriendlyVoice.Button.Picker" parent="Widget.FriendlyVoice.Button.Outlined">
+        <item name="android:textSize">@dimen/text_picker</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+    </style>
+
+    <!-- Round icon button on the gradient (back). -->
+    <style name="Widget.FriendlyVoice.IconButton" parent="Widget.Material3.Button.IconButton">
+        <item name="android:minWidth">@dimen/touch_min</item>
+        <item name="android:minHeight">@dimen/touch_min</item>
+        <item name="iconTint">@color/cream_text</item>
+        <item name="iconSize">@dimen/icon_size</item>
+    </style>
+
+    <style name="Widget.FriendlyVoice.Fab" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="backgroundTint">@color/cocoa</item>
+        <item name="tint">@color/cream_text</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.FriendlyVoice.Pill</item>
+    </style>
+
+    <!-- ============================================================ Cards -->
+
+    <style name="Widget.FriendlyVoice.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/card_cream</item>
+        <item name="cardCornerRadius">@dimen/card_radius</item>
+        <item name="cardElevation">0dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.FriendlyVoice.Card</item>
+    </style>
+
+    <!-- ============================================== Switches and chips -->
+
+    <style name="Widget.FriendlyVoice.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="android:minWidth">@dimen/touch_min</item>
+        <item name="android:minHeight">@dimen/touch_min</item>
+    </style>
+
+    <!-- Choice among a few options (repeat kind). -->
+    <style name="Widget.FriendlyVoice.Chip" parent="Widget.Material3.Chip.Filter">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textColor">@color/chip_text</item>
+        <item name="chipBackgroundColor">@color/chip_background</item>
+        <item name="chipStrokeColor">@color/cocoa</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipMinHeight">@dimen/chip_size</item>
+        <item name="chipCornerRadius">@dimen/chip_radius</item>
+        <item name="checkedIconVisible">false</item>
+    </style>
+
+    <!-- Round weekday chip (M T W T F S S). -->
+    <style name="Widget.FriendlyVoice.Chip.Day" parent="Widget.FriendlyVoice.Chip">
+        <item name="android:gravity">center</item>
+        <item name="android:minWidth">@dimen/chip_size</item>
+        <item name="chipStartPadding">0dp</item>
+        <item name="chipEndPadding">0dp</item>
+        <item name="textStartPadding">0dp</item>
+        <item name="textEndPadding">0dp</item>
+    </style>
+
+    <!-- ========================================================== Fields -->
+
+    <style name="Widget.FriendlyVoice.TextField" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="shapeAppearance">@style/ShapeAppearance.FriendlyVoice.Field</item>
+        <item name="boxStrokeColor">@color/cocoa</item>
+        <item name="hintTextColor">@color/cocoa</item>
+        <item name="android:textColorHint">@color/cocoa_muted</item>
+    </style>
+
+    <style name="Widget.FriendlyVoice.Dropdown" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="shapeAppearance">@style/ShapeAppearance.FriendlyVoice.Field</item>
+        <item name="boxStrokeColor">@color/cocoa</item>
+        <item name="hintTextColor">@color/cocoa</item>
+        <item name="android:textColorHint">@color/cocoa_muted</item>
+    </style>
+
+    <!-- Text inside a field (EditText or dropdown). -->
+    <style name="Widget.FriendlyVoice.Input" parent="">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textColor">@color/cocoa</item>
+    </style>
+
+    <!-- ================================================== Bottom navigation -->
+
+    <style name="Widget.FriendlyVoice.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">@color/nav_bar</item>
+        <item name="itemIconTint">@color/nav_item</item>
+        <item name="itemTextColor">@color/nav_item</item>
+        <item name="itemIconSize">@dimen/icon_size</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.FriendlyVoice.BottomNav.Indicator</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
+
+    <style name="Widget.FriendlyVoice.BottomNav.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/honey</item>
+    </style>
+</resources>
