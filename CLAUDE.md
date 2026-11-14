@@ -27,18 +27,18 @@ afternoon.* Full stories with Gherkin criteria:
 
 | Epic | Delivered stories |
 |---|---|
-| E1 People & consent | US-01 register a person **only with recorded consent** (name + who authorized + timestamp) · US-27 language per person |
+| E1 People & consent | US-01 register a person **only with recorded consent** (name + who authorized + timestamp) · US-27 language per person · US-15 revoke consent / delete a person (samples, voice, engine voice and cache deleted; alarms disabled) · US-32 listener name per voice |
 | E2 Voice cloning | US-02 upload samples (transcript optional) · US-11 zero-shot cloning from all recordings + female/male detection · US-24 FLAC input |
-| E3 Messages | US-05 message now (theme or free text, personalized with the listener's name) · US-18 tone per message |
-| E4 Schedules | US-07 rules (daily, weekdays, every N min in a window, once) + quiet hours · US-08 fire due messages exactly once, single catch-up |
-| E5 Android | US-19 APK built in CI, release on `v*` tags · US-20 full flow on the phone with notifications |
+| E3 Messages | US-05 message now (theme or free text, personalized with the listener's name) · US-18 tone per message · US-33 synthesized speech cached locally (ADR 0008) |
+| E4 Schedules | US-07 rules (daily, weekdays, every N min in a window, once) + quiet hours · US-08 fire due messages exactly once, single catch-up · US-30 alarm on/off switch · US-31 edit an alarm |
+| E5 Android | US-19 APK built in CI, release on `v*` tags · US-20 full flow on the phone with notifications · Sprint 8: Alarms / Voices / Settings tabs, XML layouts only (Atomic Design, see `android/README.md`), MP3 decoded to WAV on the phone |
 | E6 Project | US-21 English docs and comments · US-25/26 English CLI and output |
 
 Withdrawn (ADR 0007): the accent rules, G2P, phone recognizer, pronunciation
 preview and accent intensity (US-03/04/06/09/10). Do not reintroduce them.
-Open backlog (respect when touching related code): US-15 revoking consent
-must delete samples and voice (Must), US-17 no repeated messages, US-16
-MP3/OGG/M4A, US-28 themes in other languages, US-29 gendered first-person words.
+Open backlog (respect when touching related code): US-17 no repeated
+messages, US-16 MP3/OGG/M4A in the CLI (the app already decodes them),
+US-28 themes in other languages, US-29 gendered first-person words.
 
 ## How it works
 
