@@ -62,6 +62,76 @@ model from the reference audio. The domain keeps what the app decides: the
 person's language, consent, the detected gender, the prosody used by the
 local sketch engine, the tone, and the schedules.
 
+## Synthesized-speech cache
+
+Every engine sits behind `CachedSpeechSynthesizer` (ADR 0008), wired in
+`bootstrap`. A talk is stored at `<data>/cache/speech/<speaker-id>/<key>.wav`,
+the key being a stable hash of the engine kind, the whole `VoiceProfile`
+(including `built_at`, the voice version) and the whole `SpeechScript`
+(final text, language, tone style, pitch shift, prosody). The same talk is
+never asked from the engine twice; a rebuilt voice or another tone misses.
+Files are written to a temp file and renamed, so a half file is never served.
+
+## Schedules
+
+`Schedule` fires the next occurrence after its anchor, the latest of
+`created_at`, `last_fired_at` and `active_since`. If the app was off it fires
+once (single catch-up, US-08). Two operations move the anchor to "now" so
+nothing missed is replayed:
+
+* `SetScheduleEnabled`: the alarm switch. Idempotent; re-enabling only fires
+  future occurrences; a one-time message whose date passed cannot be
+  re-enabled (edit it instead).
+* `UpdateSchedule`: edit an alarm. Replaces person, rule, content, tone and
+  quiet hours, keeping the id and the on/off state. An identical rule is a
+  no-op.
+
+## Listener name
+
+The messages call the listener by name. `Speaker.listener_name` (optional,
+per voice: "Filhote", "Campeão") wins over the name given by the caller (the
+app's Settings name or CLI `--my-name`), both for "speak now" and scheduled
+runs (`SpeakMessage`).
+
+## Android bridge (JNI)
+
+`app.friendlyvoice.NativeBridge` (Kotlin) → `crates/mobile/src/jni_bridge.rs`
+→ `crates/mobile/src/api.rs`. Every function returns
+`{"ok":true,"data":...}` or `{"ok":false,"error":"..."}`; Java `null` strings
+become `None`; panics never cross into the JVM.
+
+| Kotlin `external fun` (all return `String`) | `data` |
+|---|---|
+| `configure(dataDir: String, engineUrl: String?)` | `{engine}` |
+| `catalog()` | themes, tones, languages |
+| `listSpeakers()` | `[speaker item]` |
+| `registerSpeaker(name: String, relationship: String?, consentBy: String?, language: String?, listenerName: String?)` | the stored speaker plus the speaker item fields |
+| `setListenerName(speakerId: String, listenerName: String?)` | speaker item |
+| `addSample(speakerId: String, wav: ByteArray, transcript: String?)` | sample item |
+| `listSamples(speakerId: String)` | `[sample item]` |
+| `buildVoice(speakerId: String)` | `{language, gender, prosody, sample_count, total_audio_secs}` |
+| `speak(speakerId: String, category: String?, text: String?, tone: String?, pitchShift: Float, listener: String?)` | `{text, tone, language, audio_path}` |
+| `createSchedule(requestJson: String)` | schedule item |
+| `updateSchedule(id: String, requestJson: String)` | schedule item |
+| `setScheduleEnabled(id: String, enabled: Boolean)` | schedule item |
+| `listSchedules()` | `[schedule item]` |
+| `removeSchedule(id: String)` | `null` |
+| `runDueSchedules(listener: String?)` | `[{schedule_id, ok, text, tone, audio_path}]` (or `{schedule_id, ok: false, error}`) |
+
+* **speaker item:** `{id, name, relationship, language, consent_granted_by,
+  listener_name, voice_ready, gender, sample_count, total_sample_secs}`.
+* **sample item:** `{id, duration_secs, transcript, mean_pitch_hz}`.
+* **schedule request** (create/update): `{speaker_id, kind:
+  "daily"|"weekly"|"interval"|"once", at ("HH:MM", or "YYYY-MM-DD HH:MM" for
+  once), days ("mon,tue,..."), every_minutes, within ("HH:MM-HH:MM"), quiet
+  ("HH:MM-HH:MM"), category, text, tone, pitch_shift}`.
+* **schedule item:** the stored schedule (`id, speaker_id, recurrence,
+  content, tone, quiet_hours, enabled, created_at, last_fired_at,
+  active_since`) plus `speaker_name`, `next_due` ("dd/MM HH:mm", null when
+  disabled), `time` ("HH:mm", null for interval), `tone_label` and `request`,
+  the schedule request above; sending it back to `updateSchedule` yields the
+  same schedule.
+
 ## Tone of voice
 
 `VoiceTone` (domain) = style (`ToneStyle`) + pitch shift in semitones. Each

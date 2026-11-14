@@ -140,3 +140,16 @@ person's recordings; a language is chosen per person; female/male is detected.
   `VoiceGender` from the mean pitch, speaker embedding averaged over every
   recording with the closest reference window, retries for cut-off takes.
 
+## Sprint 8 — Alarm editing, listener name and speech cache
+**Increment:** the app can switch alarms on and off and edit them, each voice
+can call the listener by its own name, and generated speech is cached.
+* US-30 `SetScheduleEnabled`: re-enabling only fires future occurrences
+  (`Schedule.active_since`).
+* US-31 `UpdateSchedule`: keeps id and on/off state; `listSchedules` returns a
+  `request` that round-trips to `updateSchedule`.
+* US-32 `Speaker.listener_name` (`person add --listener-name`,
+  `setListenerName`), winning over `--my-name` / the app's Settings name.
+* US-33 `CachedSpeechSynthesizer` around every engine (ADR 0008);
+  `VoiceProfile.built_at` versions the voice.
+* Bridge: `listSamples`, richer `listSpeakers` (sample totals, consent,
+  listener name). US-16 MP3 import in progress on the Android side.

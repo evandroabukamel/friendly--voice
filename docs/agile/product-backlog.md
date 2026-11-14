@@ -190,6 +190,45 @@ Scenario: invalid values
   Then I get an error explaining the valid options
 ```
 
+### US-32 · Per-voice listener name — *Should* · 2 pts · ✅ Sprint 8
+> As a user, I want each loved one to call me the way they do ("Filhote",
+> "Campeão"), instead of one name for every voice.
+
+```gherkin
+Scenario: the person's name for me wins
+  Given "Mãe" registered with listener name "Filhote"
+  And my name in the settings is "Evandro"
+  When "Mãe" speaks a message (now or scheduled)
+  Then the message says "Filhote"
+
+Scenario: fallback
+  Given a person without a listener name
+  Then the message uses my name from the settings or --my-name
+
+Scenario: old data
+  Given a speakers.json saved before this story
+  Then it still loads, with no listener name
+```
+
+### US-33 · Cache the synthesized speech — *Should* · 3 pts · ✅ Sprint 8
+> As a user, I want generated talks to be kept on my device, so that the same
+> message is not asked from the voice server again (faster, works offline).
+
+```gherkin
+Scenario: same talk, no new request
+  Given a talk already generated for this voice, text, language, tone and pitch
+  When it is spoken again
+  Then the voice server is not called
+
+Scenario: anything that changes the audio
+  When the text, tone, pitch shift or language changes, or the voice is regenerated
+  Then the voice server is called
+
+Scenario: crash safety
+  Given the app stops while writing a cached file
+  Then a half-written file is never played (ADR 0008)
+```
+
 ## Epic E4 — Schedules
 
 ### US-07 · Schedule messages with rules — *Must* · 5 pts · ✅ Sprint 3
@@ -210,6 +249,47 @@ Scenario: impossible rule
 ### US-08 · Fire the schedules that are due — *Must* · 3 pts · ✅ Sprint 3
 > As a user, I want due messages to be spoken exactly once, even if the app was
 > off.
+
+### US-30 · Alarm on/off switch — *Must* · 2 pts · ✅ Sprint 8
+> As a user, I want to switch a scheduled message off and on without deleting
+> it, so that I can pause it on holidays.
+
+```gherkin
+Scenario: re-enabling does not replay what was missed
+  Given the schedule "every day at 08:00" switched off on Monday
+  When I switch it on again on Thursday at 09:00
+  Then nothing is spoken for Monday to Thursday
+  And it fires on Friday at 08:00
+
+Scenario: idempotent switch
+  When I switch an enabled schedule on again
+  Then nothing changes
+
+Scenario: a passed one-time message
+  Given a one-time message that already fired
+  When I switch it on
+  Then I am told to edit it with a new date
+```
+
+### US-31 · Edit an alarm — *Must* · 3 pts · ✅ Sprint 8
+> As a user, I want to change the rule, text, tone, quiet hours or person of a
+> schedule, keeping it (same id, same on/off state).
+
+```gherkin
+Scenario: edit keeps identity
+  Given a schedule switched off
+  When I change it to "fri@07:30" with the theme "calm"
+  Then it keeps its id and stays off
+  And the new rule only fires occurrences after the edit
+
+Scenario: round trip
+  When the app sends back the "request" of a listed schedule unchanged
+  Then the schedule is identical
+
+Scenario: unknown schedule
+  When I edit a schedule that does not exist
+  Then I get "schedule '<id>' not found"
+```
 
 ## Epic E5 — Android
 
@@ -251,7 +331,7 @@ Scenario: continuous delivery
 |----|-------|----------|-----|
 | US-14 | ~~Mobile app with notifications using the use cases~~ → delivered on Android (US-19/US-20) | — | — |
 | US-15 | Revoking consent deletes the person's samples and voice (app and engine) | Must | 3 |
-| US-16 | ~~FLAC support on import~~ → delivered (US-24); MP3/OGG/M4A still pending | Should | 2 |
+| US-16 | ~~FLAC support on import~~ → delivered (US-24); MP3/OGG/M4A 🚧 in progress: decoded to WAV on Android before reaching the core; CLI still pending | Should | 2 |
 | US-17 | Avoid repeating the same message in a row (history) | Could | 2 |
 | US-22 | ~~Inaudible watermark on cloned audio~~ → every Chatterbox output carries the Perth watermark (Sprint 7) | — | — |
 | US-23 | ~~Base voice closest to the person~~ → no base voice since zero-shot cloning (ADR 0007) | — | — |

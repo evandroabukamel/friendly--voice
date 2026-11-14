@@ -73,6 +73,8 @@ export FRIENDLY_VOICE_PLAYER="aplay"     # optional: play the audio (afplay on m
 fv person add --name "Vó Lúcia" --relationship avó --consent-by "Lúcia"
 #   Person registered: Vó Lúcia (id: spk-..., speaks Portuguese)
 fv person add --name "Grandpa Joe" --consent-by "Joe" --language en-US
+# How this person calls you (wins over FRIENDLY_VOICE_ME / --my-name)
+fv person add --name "Mãe" --consent-by "Mãe" --listener-name "Filhote"
 
 # Upload .wav or .flac recordings (2 s – 180 s each, ≥ 16 kHz).
 # A transcript is optional (--transcript, or recording.txt next to the file).
@@ -105,7 +107,10 @@ command and option names (`pessoa adicionar --nome`, `falar --tema`, ...) are
 still accepted as hidden aliases, so existing scripts keep working.
 
 Generated audio files and a note with the text, language and tone are written
-to `.friendly-voice/outbox/`.
+to `.friendly-voice/outbox/`. Every generated talk is also cached in
+`.friendly-voice/cache/speech/<person>/`, so the same text, tone and voice is
+never asked from the voice server again; regenerating the voice invalidates
+it, and deleting the folder is always safe (ADR 0008).
 
 Without `--features http-engine` / `FRIENDLY_VOICE_ENGINE_URL`, the app uses a
 **local prosody sketch engine**: it renders audio with the person's rhythm and
@@ -117,7 +122,9 @@ The same Rust core runs on Android: `crates/mobile` exposes the use cases via
 JNI and `android/` is the Kotlin app — register the person (with the
 language), upload `.wav`/`.flac` samples, generate the voice, ask for a
 message choosing **the tone**, and schedule messages (fired by WorkManager
-every 15 minutes, with a notification and audio). Point it at the voice engine
+every 15 minutes, with a notification and audio), switch them on and off and
+edit them. The JNI functions and their JSON are listed in
+[`docs/architecture.md`](docs/architecture.md#android-bridge-jni). Point it at the voice engine
 in its settings to use the cloned voice.
 
 ```bash
