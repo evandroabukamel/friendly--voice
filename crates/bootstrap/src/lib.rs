@@ -152,6 +152,14 @@ impl Container {
         )
     }
 
+    pub fn delete_speaker(&self) -> DeleteSpeaker {
+        DeleteSpeaker::new(
+            self.speakers.clone(),
+            self.voice_data_eraser(),
+            self.clock.clone(),
+        )
+    }
+
     pub fn add_voice_sample(&self) -> AddVoiceSample {
         let mut uc = AddVoiceSample::new(
             self.speakers.clone(),

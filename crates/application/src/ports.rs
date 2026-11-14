@@ -39,6 +39,8 @@ pub trait SpeakerRepository: Send + Sync {
     fn save(&self, speaker: &Speaker) -> PortResult<()>;
     fn find(&self, id: &SpeakerId) -> PortResult<Option<Speaker>>;
     fn list(&self) -> PortResult<Vec<Speaker>>;
+    /// Idempotent: `false` when there was nothing to delete.
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool>;
 }
 
 pub trait SampleRepository: Send + Sync {

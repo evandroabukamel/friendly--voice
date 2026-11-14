@@ -2,6 +2,7 @@
 //! the constructor as `Arc<dyn Port>` (DIP) and exposes a single `execute`.
 mod add_voice_sample;
 mod build_voice_profile;
+mod delete_speaker;
 mod erase_voice_data;
 mod list_samples;
 mod list_speakers;
@@ -15,6 +16,7 @@ mod update_schedule;
 
 pub use add_voice_sample::{AddVoiceSample, AddVoiceSampleInput};
 pub use build_voice_profile::BuildVoiceProfile;
+pub use delete_speaker::DeleteSpeaker;
 pub use erase_voice_data::VoiceDataEraser;
 pub use list_samples::ListSamples;
 pub use list_speakers::{ListSpeakers, SpeakerOverview};

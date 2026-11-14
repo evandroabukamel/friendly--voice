@@ -96,6 +96,9 @@ impl SpeakerRepository for JsonRepository<Speaker> {
     fn list(&self) -> PortResult<Vec<Speaker>> {
         self.all()
     }
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool> {
+        Ok(self.remove_where(|s| &s.id == id)? > 0)
+    }
 }
 
 impl SampleRepository for JsonRepository<VoiceSample> {
@@ -218,6 +221,9 @@ mod tests {
         repo.save(&s).unwrap();
         assert_eq!(repo.list().unwrap(), vec![s.clone()]);
         assert_eq!(repo.find(&SpeakerId::new("1")).unwrap(), Some(s));
+        assert!(repo.delete(&SpeakerId::new("1")).unwrap());
+        assert!(!repo.delete(&SpeakerId::new("1")).unwrap());
+        assert!(repo.list().unwrap().is_empty());
         fs::remove_dir_all(dir).unwrap();
     }
 

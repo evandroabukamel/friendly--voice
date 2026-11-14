@@ -2,8 +2,8 @@
 //! are testable without I/O — a direct benefit of dependency inversion.
 use crate::ports::*;
 use crate::use_cases::{
-    AddVoiceSample, BuildVoiceProfile, CreateSchedule, RevokeConsent, SetScheduleEnabled,
-    SpeakMessage, VoiceDataEraser,
+    AddVoiceSample, BuildVoiceProfile, CreateSchedule, DeleteSpeaker, RevokeConsent,
+    SetScheduleEnabled, SpeakMessage, VoiceDataEraser,
 };
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 use friendly_voice_domain::{
@@ -32,6 +32,12 @@ impl SpeakerRepository for MemSpeakers {
     }
     fn list(&self) -> PortResult<Vec<Speaker>> {
         Ok(self.0.lock().unwrap().clone())
+    }
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool> {
+        let mut v = self.0.lock().unwrap();
+        let before = v.len();
+        v.retain(|s| &s.id != id);
+        Ok(v.len() != before)
     }
 }
 
@@ -407,6 +413,10 @@ impl Fakes {
 
     pub fn revoke_consent(&self) -> RevokeConsent {
         RevokeConsent::new(self.speakers.clone(), self.eraser(), self.clock.clone())
+    }
+
+    pub fn delete_speaker(&self) -> DeleteSpeaker {
+        DeleteSpeaker::new(self.speakers.clone(), self.eraser(), self.clock.clone())
     }
 
     pub fn create_schedule(&self) -> CreateSchedule {
