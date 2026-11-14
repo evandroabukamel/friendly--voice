@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- European Portuguese: only what differs from values-pt. -->
+<resources>
+    <string name="action_save">Guardar</string>
+    <string name="error_generic">Algo correu mal. Tente novamente.</string>
+    <string name="error_playback">Não foi possível reproduzir a mensagem.</string>
+    <string name="error_file_open">Não foi possível abrir o ficheiro.</string>
+    <string name="error_no_audio_track">Este ficheiro não tem áudio. Use um ficheiro WAV, MP3 ou FLAC.</string>
+    <string name="error_audio_format">Este formato de áudio não é suportado. Converta o ficheiro para WAV.</string>
+    <string name="error_audio_too_long">Esta gravação tem mais de 3 minutos: divida-a em partes.</string>
+    <string name="error_recording_failed">A gravação falhou. Tente novamente.</string>
+    <string name="tab_settings">Definições</string>
+    <string name="alarms_empty">Ainda não há alarmes.\nToque em + para ouvir quem ama à hora certa.</string>
+    <string name="alarm_no_voices">Ainda não há vozes prontas. Crie uma primeiro no separador Vozes.</string>
+    <string name="pitch_natural">Tom: natural</string>
+    <string name="pitch_description">Ajuste de tom em semitons</string>
+    <string name="alarm_play_now">Ouvir já</string>
+    <string name="alarm_playing">A preparar a mensagem…</string>
+    <string name="repeat_kind_daily">Todos os dias</string>
+    <string name="repeat_label_daily">Todos os dias</string>
+    <string name="repeat_pick_date">Escolha uma data</string>
+    <string name="voices_empty">Ainda não há vozes.\nToque em + para adicionar a voz de quem ama.</string>
+    <string name="voice_name_hint">Nome (ex.: Avó Lúcia)</string>
+    <string name="voice_listener_hint">Como esta voz o trata</string>
+    <string name="voice_listener_help">Opcional, ex.: uma alcunha. Vazio: o seu nome das Definições.</string>
+    <string name="voice_registered">Voz guardada. Agora adicione gravações.</string>
+    <string name="voice_saved">Guardado.</string>
+    <string name="voice_created">Voz criada! Já está pronta para os seus alarmes.</string>
+    <string name="samples_save_first">Guarde a voz primeiro e depois adicione gravações.</string>
+    <string name="samples_add_files">Adicionar ficheiros de áudio</string>
+    <string name="recording_status">A gravar… %1$s de %2$s</string>
+    <string name="record_permission_denied">Permita o acesso ao microfone para gravar uma voz.</string>
+    <string name="delete_voice_message">As gravações e a voz criada são apagadas deste telemóvel e do servidor de voz. Os alarmes que a usam ficam desligados e guardados, para poder escolher outra voz.</string>
+    <string name="create_voice_running">A criar a voz…</string>
+    <string name="settings_title">Definições</string>
+    <string name="settings_listener_hint">O seu nome</string>
+    <string name="settings_listener_help">Usado nas mensagens quando a voz não tem uma alcunha para si.</string>
+    <string name="settings_saved">Definições guardadas.</string>
+    <string name="settings_language_hint">Idioma da aplicação</string>
+    <string name="language_system_default">Predefinição do sistema</string>
+    <string name="notification_title">Uma mensagem para si</string>
+    <plurals name="pitch_higher">
+        <item quantity="one">Tom: %1$d semitom mais agudo</item>
+        <item quantity="many">Tom: %1$d semitons mais agudo</item>
+        <item quantity="other">Tom: %1$d semitons mais agudo</item>
+    </plurals>
+    <plurals name="pitch_lower">
+        <item quantity="one">Tom: %1$d semitom mais grave</item>
+        <item quantity="many">Tom: %1$d semitons mais grave</item>
+        <item quantity="other">Tom: %1$d semitons mais grave</item>
+    </plurals>
+</resources>

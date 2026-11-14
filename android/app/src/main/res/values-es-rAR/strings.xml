@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Argentine Spanish (voseo): only what differs from values-es. -->
+<resources>
+    <string name="error_generic">Algo salió mal. Probá de nuevo.</string>
+    <string name="error_no_audio_track">Este archivo no tiene audio. Usá un archivo WAV, MP3 o FLAC.</string>
+    <string name="error_audio_format">Este formato de audio no es compatible. Convertí el archivo a WAV.</string>
+    <string name="error_audio_too_long">Esta grabación dura más de 3 minutos: dividila en partes.</string>
+    <string name="error_recording_failed">La grabación falló. Probá de nuevo.</string>
+    <string name="alarms_empty">Todavía no hay alarmas.\nTocá + para escuchar a quien querés en el momento justo.</string>
+    <string name="alarms_add">Agregar alarma</string>
+    <string name="alarm_voice_unavailable">Voz no disponible — tocá para elegir otra</string>
+    <string name="alarm_no_voices">Todavía no hay ninguna voz lista. Creá una primero en la pestaña Voces.</string>
+    <string name="repeat_pick_date">Elegí una fecha</string>
+    <string name="form_error_no_voice">Primero elegí una voz.</string>
+    <string name="form_error_no_theme">Elegí un tema.</string>
+    <string name="form_error_no_days">Elegí al menos un día.</string>
+    <string name="form_error_interval">Indicá cuántos minutos entre mensajes (1 o más).</string>
+    <string name="form_error_no_date">Elegí la fecha.</string>
+    <string name="voices_empty">Todavía no hay voces.\nTocá + para agregar la voz de alguien a quien querés.</string>
+    <string name="voices_add">Agregar voz</string>
+    <string name="voice_name_required">Escribí el nombre.</string>
+    <string name="voice_consent_help">Obligatorio: usá una voz solo con el permiso de la persona.</string>
+    <string name="voice_consent_required">Escribí quién autorizó el uso de esta voz.</string>
+    <string name="voice_listener_help">Opcional, p. ej., un apodo. Vacío: tu nombre de Configuración.</string>
+    <string name="voice_registered">Voz guardada. Ahora agregá grabaciones.</string>
+    <string name="samples_save_first">Primero guardá la voz y después agregá grabaciones.</string>
+    <string name="samples_add_files">Agregar archivos de audio</string>
+    <string name="samples_added">Grabaciones agregadas: %1$d</string>
+    <string name="record_permission_denied">Permití el micrófono para grabar una voz.</string>
+    <string name="delete_voice_message">Sus grabaciones y la voz creada se borran de este celular y del servidor de voz. Las alarmas que la usan se desactivan y se guardan, para que elijas otra voz.</string>
+    <string name="create_voice_hint">Agregá al menos 10 segundos de grabaciones (WAV, MP3 o FLAC, de 2 s a 3 min cada una) y después creá la voz.</string>
+    <string name="create_voice_hint_ready">La voz está lista. ¿Agregaste más grabaciones? Creala de nuevo para mejorarla.</string>
+    <string name="tab_settings">Configuración</string>
+    <string name="settings_title">Configuración</string>
+    <string name="settings_saved">Configuración guardada.</string>
+</resources>

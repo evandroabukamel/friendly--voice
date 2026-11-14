@@ -71,7 +71,7 @@
     <string name="repeat_label_daily">Daily</string>
     <string name="repeat_label_weekdays">Weekdays</string>
     <string name="repeat_label_weekends">Weekends</string>
-    <string name="repeat_label_within">%1$s · %2$s–%3$s</string>
+    <string name="repeat_label_within" translatable="false">%1$s · %2$s–%3$s</string>
     <string name="repeat_label_once">Once · %1$s</string>
     <plurals name="repeat_label_every">
         <item quantity="one">Every minute</item>

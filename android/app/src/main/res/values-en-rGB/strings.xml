@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- British spelling: only what differs from the US-English default. -->
+<resources>
+    <string name="voice_consent_hint">Who authorised the use of this voice</string>
+    <string name="voice_consent_required">Enter who authorised the use of this voice.</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mexican Spanish: only what differs from values-es. -->
+<resources>
+    <string name="alarms_add">Agregar alarma</string>
+    <string name="voices_add">Agregar voz</string>
+    <string name="voices_empty">Aún no hay voces.\nToca + para agregar la voz de alguien a quien quieres.</string>
+    <string name="voice_registered">Voz guardada. Ahora agrega grabaciones.</string>
+    <string name="samples_save_first">Guarda primero la voz y luego agrega grabaciones.</string>
+    <string name="samples_add_files">Agregar archivos de audio</string>
+    <string name="samples_added">Grabaciones agregadas: %1$d</string>
+    <string name="create_voice_hint">Agrega al menos 10 segundos de grabaciones (WAV, MP3 o FLAC, de 2 s a 3 min cada una) y luego crea la voz.</string>
+    <string name="create_voice_hint_ready">La voz está lista. ¿Agregaste más grabaciones? Créala de nuevo para mejorarla.</string>
+    <string name="delete_voice_message">Sus grabaciones y la voz creada se borran de este celular y del servidor de voz. Las alarmas que la usan se desactivan y se conservan, para que elijas otra voz.</string>
+    <string name="tab_settings">Configuración</string>
+    <string name="settings_title">Configuración</string>
+    <string name="settings_saved">Configuración guardada.</string>
+    <string name="voice_listener_help">Opcional, p. ej., un apodo. Vacío: tu nombre de Configuración.</string>
+</resources>
