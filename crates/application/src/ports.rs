@@ -44,11 +44,15 @@ pub trait SpeakerRepository: Send + Sync {
 pub trait SampleRepository: Send + Sync {
     fn save(&self, sample: &VoiceSample) -> PortResult<()>;
     fn list_by_speaker(&self, speaker: &SpeakerId) -> PortResult<Vec<VoiceSample>>;
+    /// Deletes every sample entry of the person; returns how many. Idempotent.
+    fn delete_by_speaker(&self, speaker: &SpeakerId) -> PortResult<usize>;
 }
 
 pub trait VoiceProfileRepository: Send + Sync {
     fn save(&self, profile: &VoiceProfile) -> PortResult<()>;
     fn find(&self, speaker: &SpeakerId) -> PortResult<Option<VoiceProfile>>;
+    /// Idempotent: `false` when there was nothing to delete.
+    fn delete(&self, speaker: &SpeakerId) -> PortResult<bool>;
 }
 
 pub trait ScheduleRepository: Send + Sync {
@@ -64,6 +68,8 @@ pub trait ScheduleRepository: Send + Sync {
 pub trait AudioStore: Send + Sync {
     fn store(&self, speaker: &SpeakerId, sample: &SampleId, bytes: &[u8]) -> PortResult<String>;
     fn load(&self, locator: &str) -> PortResult<Vec<u8>>;
+    /// Deletes every stored audio file of the person. Idempotent.
+    fn delete_all(&self, speaker: &SpeakerId) -> PortResult<()>;
 }
 
 // ---------- Audio ----------

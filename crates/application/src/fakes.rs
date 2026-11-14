@@ -1,7 +1,10 @@
 //! Test doubles (in-memory) for the ports. They show that the use cases
 //! are testable without I/O — a direct benefit of dependency inversion.
 use crate::ports::*;
-use crate::use_cases::SpeakMessage;
+use crate::use_cases::{
+    AddVoiceSample, BuildVoiceProfile, CreateSchedule, RevokeConsent, SetScheduleEnabled,
+    SpeakMessage, VoiceDataEraser,
+};
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 use friendly_voice_domain::{
     audio::{AcousticFeatures, AudioClip},
@@ -49,6 +52,12 @@ impl SampleRepository for MemSamples {
             .cloned()
             .collect())
     }
+    fn delete_by_speaker(&self, id: &SpeakerId) -> PortResult<usize> {
+        let mut v = self.0.lock().unwrap();
+        let before = v.len();
+        v.retain(|s| &s.speaker_id != id);
+        Ok(before - v.len())
+    }
 }
 
 #[derive(Default)]
@@ -63,6 +72,9 @@ impl VoiceProfileRepository for MemProfiles {
     }
     fn find(&self, id: &SpeakerId) -> PortResult<Option<VoiceProfile>> {
         Ok(self.0.lock().unwrap().get(id).cloned())
+    }
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool> {
+        Ok(self.0.lock().unwrap().remove(id).is_some())
     }
 }
 
@@ -101,6 +113,19 @@ impl AudioStore for MemAudio {
             .get(loc)
             .cloned()
             .ok_or_else(|| PortError::new("missing"))
+    }
+    fn delete_all(&self, spk: &SpeakerId) -> PortResult<()> {
+        let prefix = format!("{spk}/");
+        self.0
+            .lock()
+            .unwrap()
+            .retain(|k, _| !k.starts_with(&prefix));
+        Ok(())
+    }
+}
+impl MemAudio {
+    pub fn len(&self) -> usize {
+        self.0.lock().unwrap().len()
     }
 }
 
@@ -147,6 +172,8 @@ pub struct FakeEngine {
     enrolled: Mutex<(usize, Option<VoiceGender>)>,
     spoken: Mutex<Vec<SpeechScript>>,
     forgotten: Mutex<Vec<String>>,
+    /// When set, `forget` fails (voice server unreachable).
+    pub forget_fails: Mutex<bool>,
 }
 impl FakeEngine {
     pub fn enrolled_references(&self) -> usize {
@@ -157,6 +184,9 @@ impl FakeEngine {
     }
     pub fn spoken(&self) -> Vec<SpeechScript> {
         self.spoken.lock().unwrap().clone()
+    }
+    pub fn forgotten(&self) -> Vec<String> {
+        self.forgotten.lock().unwrap().clone()
     }
 }
 impl VoiceCloningEngine for FakeEngine {
@@ -170,6 +200,9 @@ impl VoiceCloningEngine for FakeEngine {
         Ok(format!("fake-voice:{}", s.id))
     }
     fn forget(&self, voice_id: &str) -> PortResult<()> {
+        if *self.forget_fails.lock().unwrap() {
+            return Err(PortError::new("voice server unreachable"));
+        }
         self.forgotten.lock().unwrap().push(voice_id.to_string());
         Ok(())
     }
@@ -356,6 +389,62 @@ impl Fakes {
             self.messages.clone(),
             self.engine.clone(),
             self.delivery.clone(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn eraser(&self) -> VoiceDataEraser {
+        VoiceDataEraser {
+            schedules: self.schedules.clone(),
+            samples: self.samples.clone(),
+            store: self.store.clone(),
+            profiles: self.profiles.clone(),
+            engine: self.engine.clone(),
+            cache: self.speech_cache.clone(),
+            clock: self.clock.clone(),
+        }
+    }
+
+    pub fn revoke_consent(&self) -> RevokeConsent {
+        RevokeConsent::new(self.speakers.clone(), self.eraser(), self.clock.clone())
+    }
+
+    pub fn create_schedule(&self) -> CreateSchedule {
+        CreateSchedule::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.ids.clone(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn set_schedule_enabled(&self) -> SetScheduleEnabled {
+        SetScheduleEnabled::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn add_voice_sample(&self) -> AddVoiceSample {
+        AddVoiceSample::new(
+            self.speakers.clone(),
+            self.samples.clone(),
+            self.store.clone(),
+            self.decoder.clone(),
+            self.analyzer.clone(),
+            self.ids.clone(),
+        )
+    }
+
+    pub fn build_voice_profile(&self) -> BuildVoiceProfile {
+        BuildVoiceProfile::new(
+            self.speakers.clone(),
+            self.samples.clone(),
+            self.profiles.clone(),
+            self.store.clone(),
+            self.engine.clone(),
+            self.speech_cache.clone(),
             self.clock.clone(),
         )
     }

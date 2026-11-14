@@ -132,6 +132,26 @@ impl Container {
         SetListenerName::new(self.speakers.clone())
     }
 
+    fn voice_data_eraser(&self) -> VoiceDataEraser {
+        VoiceDataEraser {
+            schedules: self.schedules.clone(),
+            samples: self.samples.clone(),
+            store: self.store.clone(),
+            profiles: self.profiles.clone(),
+            engine: self.cloning.clone(),
+            cache: self.speech_cache.clone(),
+            clock: self.clock.clone(),
+        }
+    }
+
+    pub fn revoke_consent(&self) -> RevokeConsent {
+        RevokeConsent::new(
+            self.speakers.clone(),
+            self.voice_data_eraser(),
+            self.clock.clone(),
+        )
+    }
+
     pub fn add_voice_sample(&self) -> AddVoiceSample {
         let mut uc = AddVoiceSample::new(
             self.speakers.clone(),
@@ -196,7 +216,11 @@ impl Container {
     }
 
     pub fn set_schedule_enabled(&self) -> SetScheduleEnabled {
-        SetScheduleEnabled::new(self.schedules.clone(), self.clock.clone())
+        SetScheduleEnabled::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.clock.clone(),
+        )
     }
 
     pub fn run_due_schedules(&self) -> RunDueSchedules {

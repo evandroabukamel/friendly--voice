@@ -63,6 +63,7 @@ impl SpeakMessage {
             .speakers
             .find(&req.speaker_id)?
             .ok_or_else(|| AppError::not_found("person", &req.speaker_id))?;
+        speaker.ensure_active()?;
         let voice = self.profiles.find(&req.speaker_id)?.ok_or_else(|| {
             AppError::Precondition(format!(
                 "the voice of {} has not been generated yet; add samples and run `voice generate`",

@@ -11,6 +11,14 @@ pub struct Consent {
     pub statement: String,
 }
 
+/// Withdrawal of the consent (US-15). The person is kept only as a record;
+/// their recordings and voice are deleted.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConsentRevocation {
+    pub by: Option<String>,
+    pub at: NaiveDateTime,
+}
+
 /// Person chosen to "speak" the messages (e.g. mom, grandma, a friend).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Speaker {
@@ -25,6 +33,9 @@ pub struct Speaker {
     /// it wins over the name given by the app or the CLI.
     #[serde(default)]
     pub listener_name: Option<String>,
+    /// Set when the consent was revoked: the voice can no longer be used.
+    #[serde(default)]
+    pub consent_revoked: Option<ConsentRevocation>,
 }
 
 impl Speaker {
@@ -49,6 +60,7 @@ impl Speaker {
             consent,
             language: Language::default(),
             listener_name: None,
+            consent_revoked: None,
         })
     }
 
@@ -58,6 +70,28 @@ impl Speaker {
             .map(|n| n.trim().to_string())
             .filter(|n| !n.is_empty());
         self
+    }
+
+    /// Revokes the consent. Idempotent: the first revocation is kept.
+    pub fn revoke(&mut self, by: Option<String>, at: NaiveDateTime) {
+        if self.consent_revoked.is_none() {
+            self.consent_revoked = Some(ConsentRevocation {
+                by: by.map(|b| b.trim().to_string()).filter(|b| !b.is_empty()),
+                at,
+            });
+        }
+    }
+
+    pub fn is_revoked(&self) -> bool {
+        self.consent_revoked.is_some()
+    }
+
+    /// Refuses any use of a voice whose consent was revoked.
+    pub fn ensure_active(&self) -> Result<(), DomainError> {
+        if self.is_revoked() {
+            return Err(DomainError::ConsentRevoked(self.name.clone()));
+        }
+        Ok(())
     }
 
     pub fn with_language(mut self, language: Language) -> Self {
@@ -119,5 +153,32 @@ mod tests {
         let s: Speaker = serde_json::from_str(old).unwrap();
         assert_eq!(s.listener_name, None);
         assert_eq!(s.language.tag(), "pt-BR");
+    }
+
+    #[test]
+    fn revoking_is_permanent_and_idempotent() {
+        let mut s = Speaker::new(SpeakerId::new("s1"), "Mãe", None, Some(consent("Mãe"))).unwrap();
+        assert!(s.ensure_active().is_ok());
+        let at = NaiveDateTime::default();
+        s.revoke(Some(" Ana ".into()), at);
+        let first = s.consent_revoked.clone().unwrap();
+        assert_eq!(first.by.as_deref(), Some("Ana"));
+        s.revoke(None, at + chrono::Duration::days(1));
+        assert_eq!(
+            s.consent_revoked,
+            Some(first),
+            "the first revocation is kept"
+        );
+        let err = s.ensure_active().unwrap_err();
+        assert_eq!(err, DomainError::ConsentRevoked("Mãe".into()));
+        assert!(err.to_string().contains("register"), "{err}");
+    }
+
+    #[test]
+    fn old_speakers_are_not_revoked() {
+        let old = r#"{"id":"spk-1","name":"Mãe","relationship":null,
+            "consent":{"granted_by":"Mãe","granted_at":"2026-11-02T10:00:00","statement":"ok"}}"#;
+        let s: Speaker = serde_json::from_str(old).unwrap();
+        assert_eq!(s.consent_revoked, None);
     }
 }

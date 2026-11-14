@@ -1,17 +1,26 @@
 use crate::error::{AppError, AppResult};
-use crate::ports::{Clock, ScheduleRepository};
+use crate::ports::{Clock, ScheduleRepository, SpeakerRepository};
 use friendly_voice_domain::{ids::ScheduleId, schedule::Schedule};
 use std::sync::Arc;
 
 /// Alarm on/off switch: turns a schedule on or off without losing it.
 pub struct SetScheduleEnabled {
+    speakers: Arc<dyn SpeakerRepository>,
     schedules: Arc<dyn ScheduleRepository>,
     clock: Arc<dyn Clock>,
 }
 
 impl SetScheduleEnabled {
-    pub fn new(schedules: Arc<dyn ScheduleRepository>, clock: Arc<dyn Clock>) -> Self {
-        Self { schedules, clock }
+    pub fn new(
+        speakers: Arc<dyn SpeakerRepository>,
+        schedules: Arc<dyn ScheduleRepository>,
+        clock: Arc<dyn Clock>,
+    ) -> Self {
+        Self {
+            speakers,
+            schedules,
+            clock,
+        }
     }
 
     pub fn execute(&self, id: &ScheduleId, enabled: bool) -> AppResult<Schedule> {
@@ -19,6 +28,17 @@ impl SetScheduleEnabled {
             .schedules
             .find(id)?
             .ok_or_else(|| AppError::not_found("schedule", id))?;
+        if enabled && !schedule.enabled {
+            let available = self
+                .speakers
+                .find(&schedule.speaker_id)?
+                .is_some_and(|s| !s.is_revoked());
+            if !available {
+                return Err(AppError::Precondition(
+                    "the voice of this schedule is no longer available (consent revoked or person deleted); edit the schedule to choose another voice".into(),
+                ));
+            }
+        }
         if schedule.enabled != enabled {
             schedule.set_enabled(enabled, self.clock.now())?;
             self.schedules.save(&schedule)?;
@@ -60,7 +80,7 @@ mod tests {
     fn switching_off_and_on_skips_what_was_missed() {
         let f = Fakes::new();
         let s = daily_at_eight(&f);
-        let uc = SetScheduleEnabled::new(f.schedules.clone(), f.clock.clone());
+        let uc = f.set_schedule_enabled();
         let run = RunDueSchedules::new(
             f.schedules.clone(),
             std::sync::Arc::new(f.speak_message()),
@@ -89,7 +109,7 @@ mod tests {
     fn is_idempotent_and_reports_unknown_ids() {
         let f = Fakes::new();
         let s = daily_at_eight(&f);
-        let uc = SetScheduleEnabled::new(f.schedules.clone(), f.clock.clone());
+        let uc = f.set_schedule_enabled();
         let first = uc.execute(&s.id, true).unwrap();
         assert_eq!(first, s, "enabling an enabled schedule changes nothing");
         let off = uc.execute(&s.id, false).unwrap();

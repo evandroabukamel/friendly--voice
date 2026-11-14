@@ -32,7 +32,8 @@ impl UpdateSchedule {
             .ok_or_else(|| AppError::not_found("schedule", id))?;
         self.speakers
             .find(&input.speaker_id)?
-            .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?;
+            .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?
+            .ensure_active()?;
         let revised = current.clone().revise(
             input.speaker_id,
             input.recurrence,
