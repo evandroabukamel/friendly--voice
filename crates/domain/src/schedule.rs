@@ -190,6 +190,38 @@ impl Schedule {
         self.enabled && self.next_due().is_some_and(|t| t <= now)
     }
 
+    /// Replaces the rule (person, recurrence, content, tone, quiet hours),
+    /// keeping the id, creation time and on/off state. The new rule is
+    /// validated as a new schedule and only fires occurrences after `now`.
+    /// Revising with the same rule changes nothing (idempotent).
+    pub fn revise(
+        self,
+        speaker_id: SpeakerId,
+        recurrence: Recurrence,
+        content: MessageContent,
+        tone: Option<VoiceTone>,
+        quiet_hours: Option<TimeWindow>,
+        now: NaiveDateTime,
+    ) -> Result<Self, DomainError> {
+        let unchanged = self.speaker_id == speaker_id
+            && self.recurrence == recurrence
+            && self.content == content
+            && self.tone == tone
+            && self.quiet_hours == quiet_hours;
+        if unchanged {
+            return Ok(self);
+        }
+        let fresh = Self::new(self.id, speaker_id, recurrence, content, quiet_hours, now)?;
+        Ok(Self {
+            tone,
+            enabled: self.enabled,
+            created_at: self.created_at,
+            last_fired_at: self.last_fired_at,
+            active_since: Some(now),
+            ..fresh
+        })
+    }
+
     /// Turns the schedule on or off. Idempotent: setting the current state
     /// changes nothing. Re-enabling only fires future occurrences (US-08: what
     /// was missed while off is not caught up).
@@ -372,5 +404,61 @@ mod tests {
         let s: Schedule = serde_json::from_str(old).unwrap();
         assert_eq!(s.active_since, None);
         assert_eq!(s.next_due(), Some(dt(3, 8, 0)));
+    }
+
+    #[test]
+    fn revising_keeps_identity_and_switch_and_starts_counting_now() {
+        let mut s = make(Recurrence::Daily { at: t(8, 0) }, None).unwrap();
+        s.set_enabled(false, dt(2, 12, 0)).unwrap();
+        let revised = s
+            .clone()
+            .revise(
+                SpeakerId::new("other"),
+                Recurrence::Daily { at: t(7, 0) },
+                MessageContent::FixedText("oi".into()),
+                Some(VoiceTone::of(crate::tone::ToneStyle::Warm)),
+                None,
+                dt(5, 9, 0),
+            )
+            .unwrap();
+        assert_eq!(revised.id, s.id);
+        assert!(!revised.enabled, "keeps the on/off state");
+        assert_eq!(revised.created_at, s.created_at);
+        assert_eq!(revised.speaker_id, SpeakerId::new("other"));
+        assert_eq!(revised.recurrence, Recurrence::Daily { at: t(7, 0) });
+        assert!(revised.tone.is_some());
+        // The new rule counts from the edit: 07:00 on the 5th already passed.
+        assert_eq!(revised.next_due(), Some(dt(6, 7, 0)));
+    }
+
+    #[test]
+    fn revising_with_the_same_rule_changes_nothing() {
+        let s = make(Recurrence::Daily { at: t(8, 0) }, None).unwrap();
+        let same = s
+            .clone()
+            .revise(
+                s.speaker_id.clone(),
+                s.recurrence.clone(),
+                s.content.clone(),
+                s.tone,
+                s.quiet_hours,
+                dt(5, 9, 0),
+            )
+            .unwrap();
+        assert_eq!(same, s);
+    }
+
+    #[test]
+    fn revising_validates_the_new_rule() {
+        let s = make(Recurrence::Daily { at: t(8, 0) }, None).unwrap();
+        let past = s.clone().revise(
+            s.speaker_id.clone(),
+            Recurrence::Once { at: dt(3, 9, 0) },
+            s.content.clone(),
+            None,
+            None,
+            dt(4, 9, 0),
+        );
+        assert!(past.is_err());
     }
 }

@@ -273,26 +273,40 @@ fn recurrence(r: &ScheduleRequest) -> Result<Recurrence, String> {
     })
 }
 
+/// Parses the app's schedule request into the use-case input.
+fn schedule_input(request_json: &str) -> Result<CreateScheduleInput, String> {
+    let r: ScheduleRequest =
+        serde_json::from_str(request_json).map_err(|e| format!("invalid request: {e}"))?;
+    Ok(CreateScheduleInput {
+        speaker_id: SpeakerId::new(r.speaker_id.clone()),
+        recurrence: recurrence(&r)?,
+        content: content(r.category.clone(), r.text.clone())?,
+        tone: tone(r.tone.clone(), r.pitch_shift)?,
+        quiet_hours: non_empty(r.quiet.clone())
+            .as_deref()
+            .map(parse::window)
+            .transpose()?,
+    })
+}
+
 pub fn create_schedule(request_json: String) -> String {
     respond((|| {
-        let r: ScheduleRequest =
-            serde_json::from_str(&request_json).map_err(|e| format!("invalid request: {e}"))?;
+        let input = schedule_input(&request_json)?;
+        let s = container()?.create_schedule().execute(input).map_err(app)?;
+        schedule_item(&s)
+    })())
+}
+
+/// Edits a schedule (same request as `create_schedule`), keeping its id and
+/// its on/off state.
+pub fn update_schedule(id: String, request_json: String) -> String {
+    respond((|| {
+        let input = schedule_input(&request_json)?;
         let s = container()?
-            .create_schedule()
-            .execute(CreateScheduleInput {
-                speaker_id: SpeakerId::new(r.speaker_id.clone()),
-                recurrence: recurrence(&r)?,
-                content: content(r.category.clone(), r.text.clone())?,
-                tone: tone(r.tone.clone(), r.pitch_shift)?,
-                quiet_hours: non_empty(r.quiet.clone())
-                    .as_deref()
-                    .map(parse::window)
-                    .transpose()?,
-            })
+            .update_schedule()
+            .execute(&ScheduleId::new(id), input)
             .map_err(app)?;
-        let mut v = to_value(&s)?;
-        v["next_due"] = json!(s.next_due().map(|d| d.format("%d/%m %H:%M").to_string()));
-        Ok(v)
+        schedule_item(&s)
     })())
 }
 
@@ -480,6 +494,16 @@ mod tests {
         let missing: Value =
             serde_json::from_str(&set_schedule_enabled("nope".into(), true)).unwrap();
         assert_eq!(missing["ok"], false);
+
+        let edit = json!({ "speaker_id": id, "kind": "interval", "every_minutes": 90, "within": "09:00-18:00", "quiet": "12:00-13:00", "text": "Respira fundo", "tone": "calm", "pitch_shift": 1.0 });
+        let edited = data(&update_schedule(sid.clone(), edit.to_string()));
+        assert_eq!(edited["id"], sid);
+        assert_eq!(edited["enabled"], true);
+        assert_eq!(edited["content"]["FixedText"], "Respira fundo");
+        assert_eq!(data(&list_schedules()).as_array().unwrap().len(), 1);
+        let unknown: Value =
+            serde_json::from_str(&update_schedule("nope".into(), edit.to_string())).unwrap();
+        assert!(unknown["error"].as_str().unwrap().contains("not found"));
         data(&remove_schedule(s["id"].as_str().unwrap().into()));
         data(&run_due_schedules(None));
 

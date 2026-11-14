@@ -6,6 +6,7 @@ mod register_speaker;
 mod schedules;
 mod set_schedule_enabled;
 mod speak_message;
+mod update_schedule;
 
 pub use add_voice_sample::{AddVoiceSample, AddVoiceSampleInput};
 pub use build_voice_profile::BuildVoiceProfile;
@@ -16,3 +17,4 @@ pub use schedules::{
 };
 pub use set_schedule_enabled::SetScheduleEnabled;
 pub use speak_message::{SpeakMessage, SpeakRequest, SpokenMessage};
+pub use update_schedule::UpdateSchedule;

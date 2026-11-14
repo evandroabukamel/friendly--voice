@@ -153,6 +153,18 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_removeSchedule<'l>(
 }
 
 #[no_mangle]
+pub extern "system" fn Java_app_friendlyvoice_NativeBridge_updateSchedule<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    id: JString<'l>,
+    request_json: JString<'l>,
+) -> jstring {
+    let id = req(&mut env, &id);
+    let request = req(&mut env, &request_json);
+    guarded(&mut env, || api::update_schedule(id, request))
+}
+
+#[no_mangle]
 pub extern "system" fn Java_app_friendlyvoice_NativeBridge_setScheduleEnabled<'l>(
     mut env: JNIEnv<'l>,
     _class: JClass<'l>,

@@ -156,6 +156,14 @@ impl Container {
         RemoveSchedule::new(self.schedules.clone())
     }
 
+    pub fn update_schedule(&self) -> UpdateSchedule {
+        UpdateSchedule::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.clock.clone(),
+        )
+    }
+
     pub fn set_schedule_enabled(&self) -> SetScheduleEnabled {
         SetScheduleEnabled::new(self.schedules.clone(), self.clock.clone())
     }
