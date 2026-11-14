@@ -366,3 +366,4 @@ Scenario: continuous delivery
 | US-23 | ~~Base voice closest to the person~~ → no base voice since zero-shot cloning (ADR 0007) | — | — |
 | US-28 | Message themes written in other languages | Could | 3 |
 | US-29 | First-person words agreeing with the speaker's gender ("obrigado"/"obrigada") | Could | 2 |
+| US-34 | **TODO** — Android 11 (API 30) compatibility: run every screen on an Android 11 device/emulator and adjust what differs from newer versions (system bars and insets/edge-to-edge, notification permission and channels, per-app language stored by AppCompat instead of the system, Material 3 dynamic behaviour, back navigation). minSdk 26 already allows installing it; this story is about verified behaviour. Not started. | TBD | TBD |
