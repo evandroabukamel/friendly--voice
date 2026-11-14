@@ -92,6 +92,28 @@ pub extern "system" fn Java_app_friendlyvoice_NativeBridge_setListenerName<'l>(
 }
 
 #[no_mangle]
+pub extern "system" fn Java_app_friendlyvoice_NativeBridge_revokeConsent<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    speaker_id: JString<'l>,
+    revoked_by: JString<'l>,
+) -> jstring {
+    let speaker_id = req(&mut env, &speaker_id);
+    let revoked_by = opt(&mut env, &revoked_by);
+    guarded(&mut env, || api::revoke_consent(speaker_id, revoked_by))
+}
+
+#[no_mangle]
+pub extern "system" fn Java_app_friendlyvoice_NativeBridge_deleteSpeaker<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    speaker_id: JString<'l>,
+) -> jstring {
+    let speaker_id = req(&mut env, &speaker_id);
+    guarded(&mut env, || api::delete_speaker(speaker_id))
+}
+
+#[no_mangle]
 pub extern "system" fn Java_app_friendlyvoice_NativeBridge_addSample<'l>(
     mut env: JNIEnv<'l>,
     _class: JClass<'l>,

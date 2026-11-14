@@ -324,6 +324,31 @@ fn recurrence(r: &ScheduleRequest) -> Result<Recurrence, String> {
     })
 }
 
+/// US-15: revokes the consent of a person. Their recordings, voice (also on
+/// the voice server) and cached speech are deleted, their schedules switched
+/// off; the person is no longer listed. Idempotent.
+pub fn revoke_consent(speaker_id: String, revoked_by: Option<String>) -> String {
+    respond((|| {
+        container()?
+            .revoke_consent()
+            .execute(&SpeakerId::new(speaker_id), non_empty(revoked_by))
+            .map_err(app)?;
+        Ok(Value::Null)
+    })())
+}
+
+/// Deletes a person and everything made from their voice; their schedules
+/// are switched off and kept. Idempotent (an unknown id is fine).
+pub fn delete_speaker(speaker_id: String) -> String {
+    respond((|| {
+        container()?
+            .delete_speaker()
+            .execute(&SpeakerId::new(speaker_id))
+            .map_err(app)?;
+        Ok(Value::Null)
+    })())
+}
+
 /// Parses the app's schedule request into the use-case input.
 fn schedule_input(request_json: &str) -> Result<CreateScheduleInput, String> {
     let r: ScheduleRequest =
@@ -428,11 +453,9 @@ fn schedule_request(s: &Schedule) -> Value {
 /// One schedule as the app shows it (item of `listSchedules`, also returned
 /// by create/update/setEnabled).
 fn schedule_item(c: &Container, s: &Schedule) -> ApiResult {
-    let speaker_name = c
-        .speakers
-        .find(&s.speaker_id)
-        .map_err(|e| e.to_string())?
-        .map(|p| p.name);
+    let speaker = c.speakers.find(&s.speaker_id).map_err(|e| e.to_string())?;
+    let voice_available = speaker.as_ref().is_some_and(|p| !p.is_revoked());
+    let speaker_name = speaker.map(|p| p.name);
     let time = match &s.recurrence {
         Recurrence::Daily { at } | Recurrence::Weekly { at, .. } => Some(hhmm(*at)),
         Recurrence::Once { at } => Some(hhmm(at.time())),
@@ -440,6 +463,7 @@ fn schedule_item(c: &Container, s: &Schedule) -> ApiResult {
     };
     let mut v = to_value(s)?;
     v["speaker_name"] = json!(speaker_name);
+    v["voice_available"] = json!(voice_available);
     v["next_due"] = json!(s
         .next_due()
         .filter(|_| s.enabled)
@@ -751,9 +775,120 @@ mod tests {
         data(&remove_schedule(s["id"].as_str().unwrap().into()));
         data(&run_due_schedules(None));
 
-        let bad: Value =
-            serde_json::from_str(&speak(id, None, None, Some("bravo".into()), 0.0, None)).unwrap();
+        let bad: Value = serde_json::from_str(&speak(
+            id.clone(),
+            None,
+            None,
+            Some("bravo".into()),
+            0.0,
+            None,
+        ))
+        .unwrap();
         assert!(bad["error"].as_str().unwrap().contains("bravo"));
+
+        // US-15: revoke consent / delete a person.
+        let failed = |json: String| -> String {
+            let v: Value = serde_json::from_str(&json).unwrap();
+            assert_eq!(v["ok"], false, "{json}");
+            v["error"].as_str().unwrap().to_string()
+        };
+        let aunt = data(&register_speaker(
+            "Tia".into(),
+            None,
+            Some("Tia".into()),
+            None,
+            None,
+        ))["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        data(&add_sample(aunt.clone(), wav(12.0), None));
+        data(&build_voice(aunt.clone()));
+        let rule = json!({ "speaker_id": aunt, "kind": "daily", "at": "09:00", "text": "Oi" });
+        let alarm = data(&create_schedule(rule.to_string()));
+        assert_eq!(alarm["voice_available"], true);
+        let alarm_id = alarm["id"].as_str().unwrap().to_string();
+
+        assert_eq!(
+            data(&revoke_consent(aunt.clone(), Some("Tia".into()))),
+            Value::Null
+        );
+        assert_eq!(
+            data(&revoke_consent(aunt.clone(), None)),
+            Value::Null,
+            "idempotent"
+        );
+        assert!(!data(&list_speakers())
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["id"] == aunt.as_str()));
+        assert!(data(&list_samples(aunt.clone()))
+            .as_array()
+            .unwrap()
+            .is_empty());
+        assert!(failed(speak(
+            aunt.clone(),
+            None,
+            Some("Oi".into()),
+            None,
+            0.0,
+            None
+        ))
+        .contains("revoked"));
+        assert!(failed(add_sample(aunt.clone(), wav(6.0), None)).contains("revoked"));
+        assert!(!dir.join("cache").join("speech").join(&aunt).exists());
+        assert!(!dir.join("audio").join(&aunt).exists());
+
+        let off = data(&list_schedules())
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["id"] == alarm_id.as_str())
+            .unwrap()
+            .clone();
+        assert_eq!(off["enabled"], false);
+        assert_eq!(off["voice_available"], false);
+        assert_eq!(off["speaker_name"], "Tia");
+        assert!(failed(set_schedule_enabled(alarm_id.clone(), true)).contains("edit the schedule"));
+        let mut moved = off["request"].clone();
+        moved["speaker_id"] = json!(id);
+        let moved = data(&update_schedule(alarm_id.clone(), moved.to_string()));
+        assert_eq!(moved["voice_available"], true);
+        assert_eq!(moved["enabled"], false, "keeps its on/off state");
+        assert_eq!(
+            data(&set_schedule_enabled(alarm_id.clone(), true))["enabled"],
+            true
+        );
+
+        let uncle = data(&register_speaker(
+            "Tio".into(),
+            None,
+            Some("Tio".into()),
+            None,
+            None,
+        ))["id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let rule = json!({ "speaker_id": uncle, "kind": "daily", "at": "10:00", "text": "Oi" });
+        let other = data(&create_schedule(rule.to_string()));
+        assert_eq!(data(&delete_speaker(uncle.clone())), Value::Null);
+        assert_eq!(
+            data(&delete_speaker(uncle.clone())),
+            Value::Null,
+            "idempotent"
+        );
+        let orphan = data(&list_schedules())
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["id"] == other["id"])
+            .unwrap()
+            .clone();
+        assert_eq!(orphan["speaker_name"], Value::Null);
+        assert_eq!(orphan["voice_available"], false);
+        assert_eq!(orphan["enabled"], false);
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

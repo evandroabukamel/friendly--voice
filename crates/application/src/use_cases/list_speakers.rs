@@ -12,7 +12,7 @@ pub struct SpeakerOverview {
     pub total_sample_secs: f32,
 }
 
-/// Lists the people, with sample totals (so the UI knows whether there is
+/// Lists the people whose consent stands, with sample totals (so the UI knows whether there is
 /// enough material to generate the voice) and their voice, if generated.
 pub struct ListSpeakers {
     speakers: Arc<dyn SpeakerRepository>,
@@ -37,6 +37,8 @@ impl ListSpeakers {
         self.speakers
             .list()?
             .into_iter()
+            // A revoked person stays only as a record; it can't be chosen.
+            .filter(|s| !s.is_revoked())
             .map(|s| self.one(s))
             .collect()
     }
@@ -79,5 +81,21 @@ mod tests {
             (0, 0.0, true)
         );
         assert_eq!(uc.one(mom).unwrap(), *m);
+    }
+
+    #[test]
+    fn revoked_people_are_not_listed() {
+        let f = Fakes::new();
+        let mom = f.speaker();
+        let dad = f.speaker();
+        f.revoke_consent().execute(&dad.id, None).unwrap();
+        let uc = ListSpeakers::new(f.speakers.clone(), f.samples.clone(), f.profiles.clone());
+        let ids: Vec<_> = uc
+            .execute()
+            .unwrap()
+            .into_iter()
+            .map(|o| o.speaker.id)
+            .collect();
+        assert_eq!(ids, vec![mom.id]);
     }
 }
