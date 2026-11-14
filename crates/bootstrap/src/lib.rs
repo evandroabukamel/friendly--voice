@@ -18,7 +18,7 @@ use friendly_voice_infrastructure::{
     messages::CuratedMessageCatalog,
     persistence::{FileAudioStore, JsonRepository},
     system::{SystemClock, TimeIdGenerator},
-    voice::{LocalVoiceBank, ProsodySketchSynthesizer},
+    voice::{CachedSpeechSynthesizer, LocalVoiceBank, ProsodySketchSynthesizer},
 };
 use std::path::Path;
 use std::sync::Arc;
@@ -62,6 +62,16 @@ impl Container {
             ),
             Some(url) => Self::http(url)?,
         };
+        // Every engine sits behind the speech cache (ADR 0008).
+        let synthesizer: Arc<dyn SpeechSynthesizer> = Arc::new(CachedSpeechSynthesizer::new(
+            synthesizer,
+            data.join("cache").join("speech"),
+            if engine_url.is_some() {
+                "neural"
+            } else {
+                "sketch"
+            },
+        ));
         Ok(Self {
             speakers: Arc::new(JsonRepository::<Speaker>::new(data.join("speakers.json"))),
             samples: Arc::new(JsonRepository::<VoiceSample>::new(
@@ -141,6 +151,7 @@ impl Container {
             self.profiles.clone(),
             self.store.clone(),
             self.cloning.clone(),
+            self.clock.clone(),
         )
     }
 

@@ -666,6 +666,32 @@ mod tests {
         ));
         assert_eq!(default_tone["tone"], "calm");
 
+        // Synthesized speech is cached under the data folder, per person.
+        let cached = || {
+            std::fs::read_dir(dir.join("cache").join("speech").join(&id))
+                .map(|d| d.count())
+                .unwrap_or(0)
+        };
+        let before = cached();
+        assert!(before >= 1, "speech is cached");
+        data(&speak(
+            id.clone(),
+            None,
+            Some("Oi, tudo bem?".into()),
+            None,
+            0.0,
+            None,
+        ));
+        data(&speak(
+            id.clone(),
+            None,
+            Some("Oi, tudo bem?".into()),
+            None,
+            0.0,
+            None,
+        ));
+        assert_eq!(cached(), before + 1, "the same talk is stored once");
+
         let req = json!({ "speaker_id": id, "kind": "weekly", "days": "mon,fri", "at": "07:30", "category": "good-morning", "tone": "warm" });
         let s = data(&create_schedule(req.to_string()));
         assert_eq!(s["tone"]["style"], "Warm");

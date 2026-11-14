@@ -1,6 +1,6 @@
 use crate::error::{AppError, AppResult};
 use crate::ports::{
-    AudioStore, ReferenceAudio, SampleRepository, SpeakerRepository, VoiceCloningEngine,
+    AudioStore, Clock, ReferenceAudio, SampleRepository, SpeakerRepository, VoiceCloningEngine,
     VoiceProfileRepository,
 };
 use friendly_voice_domain::{
@@ -17,6 +17,7 @@ pub struct BuildVoiceProfile {
     profiles: Arc<dyn VoiceProfileRepository>,
     store: Arc<dyn AudioStore>,
     engine: Arc<dyn VoiceCloningEngine>,
+    clock: Arc<dyn Clock>,
     policy: EnrollmentPolicy,
 }
 
@@ -27,6 +28,7 @@ impl BuildVoiceProfile {
         profiles: Arc<dyn VoiceProfileRepository>,
         store: Arc<dyn AudioStore>,
         engine: Arc<dyn VoiceCloningEngine>,
+        clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             speakers,
@@ -34,6 +36,7 @@ impl BuildVoiceProfile {
             profiles,
             store,
             engine,
+            clock,
             policy: EnrollmentPolicy::default(),
         }
     }
@@ -72,6 +75,7 @@ impl BuildVoiceProfile {
             prosody,
             sample_count: samples.len(),
             total_audio_secs: samples.iter().map(|s| s.duration_secs).sum(),
+            built_at: Some(self.clock.now()),
         };
         self.profiles.save(&profile)?;
         Ok(profile)
@@ -82,6 +86,7 @@ impl BuildVoiceProfile {
 mod tests {
     use super::*;
     use crate::fakes::Fakes;
+    use crate::ports::Clock;
 
     fn uc(f: &Fakes) -> BuildVoiceProfile {
         BuildVoiceProfile::new(
@@ -90,6 +95,7 @@ mod tests {
             f.profiles.clone(),
             f.store.clone(),
             f.engine.clone(),
+            f.clock.clone(),
         )
     }
 
@@ -106,6 +112,7 @@ mod tests {
         assert_eq!(profile.gender, Some(VoiceGender::Female));
         assert_eq!(f.engine.enrolled_gender(), Some(VoiceGender::Female));
         assert_eq!(profile.language.code(), "en");
+        assert_eq!(profile.built_at, Some(f.clock.now()), "versions the voice");
         assert!(f.profiles.find(&spk.id).unwrap().is_some());
     }
 

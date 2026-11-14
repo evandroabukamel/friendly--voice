@@ -322,6 +322,7 @@ impl Fakes {
                 },
                 sample_count: 1,
                 total_audio_secs: 10.0,
+                built_at: None,
             })
             .unwrap();
     }

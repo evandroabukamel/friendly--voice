@@ -333,6 +333,7 @@ mod tests {
             prosody: ProsodyProfile::default(),
             sample_count: 1,
             total_audio_secs: 10.0,
+            built_at: None,
         };
         let script = SpeechScript {
             text: "Boa noite, meu bem.".into(),
