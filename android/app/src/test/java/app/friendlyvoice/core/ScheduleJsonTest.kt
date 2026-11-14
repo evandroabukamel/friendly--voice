@@ -106,6 +106,32 @@ class ScheduleJsonTest {
     }
 
     @Test
+    fun `an alarm whose voice was deleted is parsed as unavailable`() {
+        val item = JSONObject(
+            """{"id":"s2","speaker_id":"gone","speaker_name":null,"enabled":false,"voice_available":false,
+               "next_due":null,"time":"07:00","tone_label":"warm",
+               "request":{"speaker_id":"gone","kind":"daily","at":"07:00","category":"calm","pitch_shift":0}}""",
+        )
+        val s = NativeJson.schedule(item)
+
+        assertFalse(s.voiceAvailable)
+        assertNull(s.speakerName)
+        assertFalse(s.enabled)
+    }
+
+    @Test
+    fun `an item without voice_available counts as available`() {
+        val item = JSONObject("""{"id":"s3","speaker_id":"g","speaker_name":"Grandma","request":{"kind":"daily","at":"08:00"}}""")
+        assertTrue(NativeJson.schedule(item).voiceAvailable)
+    }
+
+    @Test
+    fun `registering returns the id of the speaker object`() {
+        val data = NativeJson.unwrap("""{"ok":true,"data":{"id":"grandma-lucia","name":"Grandma Lucia","language":"pt-BR"}}""")
+        assertEquals("grandma-lucia", NativeJson.speakerId(data as JSONObject))
+    }
+
+    @Test
     fun `an error envelope becomes an exception with the core message`() {
         val error = runCatching { NativeJson.unwrap("""{"ok":false,"error":"sample too long: split it into pieces"}""") }
             .exceptionOrNull()

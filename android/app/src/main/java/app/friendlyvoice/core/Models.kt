@@ -51,8 +51,11 @@ data class FiredMessage(val ok: Boolean, val text: String, val tone: String, val
 data class Schedule(
     val id: String,
     val speakerId: String,
-    val speakerName: String,
+    /** Null when the voice was deleted. */
+    val speakerName: String?,
     val enabled: Boolean,
+    /** False when the alarm's voice was deleted or its consent revoked: pick another voice. */
+    val voiceAvailable: Boolean,
     val nextDue: String?,
     val time: String?,
     val toneLabel: String,

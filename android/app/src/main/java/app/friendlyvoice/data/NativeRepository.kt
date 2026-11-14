@@ -92,7 +92,11 @@ class NativeRepository(
         listenerName: String?,
     ): Result<String> = call({
         NativeBridge.registerSpeaker(name, null, consentBy, language, listenerName)
-    }) { obj(it).getString("id") }
+    }) { NativeJson.speakerId(obj(it)) }
+
+    /** Deletes the person, samples and voice; their alarms are disabled but kept. */
+    suspend fun deleteSpeaker(speakerId: String): Result<Unit> =
+        call({ NativeBridge.deleteSpeaker(speakerId) }) { }
 
     suspend fun setListenerName(speakerId: String, listenerName: String?): Result<Unit> =
         call({ NativeBridge.setListenerName(speakerId, listenerName) }) { }

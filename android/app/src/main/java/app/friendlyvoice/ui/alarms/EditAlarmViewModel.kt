@@ -77,9 +77,7 @@ class EditAlarmViewModel(
                     .firstOrNull { it.id == scheduleId }
                 if (schedule != null) form = AlarmForm.from(schedule.request)
             }
-            if (form.speakerId == null || voices.none { it.id == form.speakerId }) {
-                form = form.copy(speakerId = voices.firstOrNull()?.id ?: form.speakerId)
-            }
+            form = form.withSelectableVoice(voices.map { it.id }, editing = scheduleId != null)
             if (form.category == null && form.text.isNullOrBlank()) {
                 form = form.copy(category = catalog.categories.firstOrNull()?.slug)
             }

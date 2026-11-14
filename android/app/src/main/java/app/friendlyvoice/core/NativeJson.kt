@@ -44,6 +44,9 @@ object NativeJson {
         totalSampleSecs = o.optDouble("total_sample_secs", 0.0).takeUnless { it.isNaN() } ?: 0.0,
     )
 
+    /** `registerSpeaker` returns the speaker object; the app needs its id. */
+    fun speakerId(o: JSONObject): String = o.getString("id")
+
     fun speakers(a: JSONArray): List<Speaker> = a.mapObjects(::speaker)
 
     fun samples(a: JSONArray): List<Sample> = a.mapObjects {
@@ -84,8 +87,9 @@ object NativeJson {
         return Schedule(
             id = o.getString("id"),
             speakerId = speakerId,
-            speakerName = o.str("speaker_name").orEmpty(),
+            speakerName = o.str("speaker_name"),
             enabled = o.optBoolean("enabled", true),
+            voiceAvailable = o.optBoolean("voice_available", true),
             nextDue = o.str("next_due"),
             time = o.str("time"),
             toneLabel = o.str("tone_label").orEmpty(),

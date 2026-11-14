@@ -55,4 +55,19 @@ class AlarmFormTest {
         assertEquals(21 to 30, AlarmForm.parseHhmm("21:30"))
         assertEquals(8 to 0, AlarmForm.parseHhmm("bad"))
     }
+
+    @Test
+    fun `a new alarm starts with the first ready voice`() =
+        assertEquals("a", AlarmForm().withSelectableVoice(listOf("a", "b"), editing = false).speakerId)
+
+    @Test
+    fun `editing keeps a voice that is still selectable`() =
+        assertEquals("b", valid.copy(speakerId = "b").withSelectableVoice(listOf("a", "b"), editing = true).speakerId)
+
+    @Test
+    fun `editing an alarm whose voice is gone leaves the voice empty and blocks saving`() {
+        val form = valid.copy(speakerId = "gone").withSelectableVoice(listOf("a"), editing = true)
+        assertEquals(null, form.speakerId)
+        assertEquals(FormError.NO_VOICE, invalid(form))
+    }
 }

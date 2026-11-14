@@ -67,6 +67,17 @@ data class AlarmForm(
         )
     }
 
+    /**
+     * Makes the voice match the selectable (ready) voices: a new alarm starts
+     * with the first one; an edited alarm whose voice is gone gets no voice, so
+     * the user must choose one before saving.
+     */
+    fun withSelectableVoice(voiceIds: List<String>, editing: Boolean): AlarmForm = when {
+        speakerId != null && speakerId in voiceIds -> this
+        editing -> copy(speakerId = null)
+        else -> copy(speakerId = voiceIds.firstOrNull())
+    }
+
     companion object {
         /** Pre-fills the form from a saved schedule (tap on an alarm card). */
         fun from(r: ScheduleRequest): AlarmForm {

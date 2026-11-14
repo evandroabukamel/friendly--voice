@@ -28,6 +28,12 @@ object NativeBridge {
         listenerName: String?,
     ): String
 
+    /** Deletes the person, samples, voice and cache; disables (keeps) their alarms. */
+    @JvmStatic external fun deleteSpeaker(speakerId: String): String
+
+    /** Withdraws consent (ADR 0004). No UI calls it yet. */
+    @JvmStatic external fun revokeConsent(speakerId: String, revokedBy: String?): String
+
     @JvmStatic external fun setListenerName(speakerId: String, listenerName: String?): String
 
     @JvmStatic external fun listSamples(speakerId: String): String
