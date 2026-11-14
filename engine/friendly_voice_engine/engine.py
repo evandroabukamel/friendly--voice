@@ -119,6 +119,12 @@ class Engine:
         self.voices.save(meta, conditionals, fx.encode_wav(window, refs.ANALYSIS_RATE))
         return meta
 
+    def forget(self, voice_id: str) -> bool:
+        """Deletes a cloned voice (consent revoked or person removed).
+        ``False`` when it was already gone."""
+        with self._lock:
+            return self.voices.delete(voice_id)
+
     def _conditionals(self, window16: np.ndarray, speaker: np.ndarray):
         from chatterbox.models.t3.modules.cond_enc import T3Cond
         from chatterbox.mtl_tts import Conditionals

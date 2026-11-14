@@ -100,6 +100,9 @@ pub trait VoiceCloningEngine: Send + Sync {
         gender: Option<VoiceGender>,
         references: &[ReferenceAudio],
     ) -> PortResult<String>;
+    /// Deletes a voice from the engine. Idempotent: an unknown voice is not
+    /// an error.
+    fn forget(&self, voice_id: &str) -> PortResult<()>;
 }
 
 #[derive(Debug, Clone, PartialEq)]

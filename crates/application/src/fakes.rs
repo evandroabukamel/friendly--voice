@@ -146,6 +146,7 @@ impl Transcriber for FakeTranscriber {
 pub struct FakeEngine {
     enrolled: Mutex<(usize, Option<VoiceGender>)>,
     spoken: Mutex<Vec<SpeechScript>>,
+    forgotten: Mutex<Vec<String>>,
 }
 impl FakeEngine {
     pub fn enrolled_references(&self) -> usize {
@@ -167,6 +168,10 @@ impl VoiceCloningEngine for FakeEngine {
     ) -> PortResult<String> {
         *self.enrolled.lock().unwrap() = (refs.len(), gender);
         Ok(format!("fake-voice:{}", s.id))
+    }
+    fn forget(&self, voice_id: &str) -> PortResult<()> {
+        self.forgotten.lock().unwrap().push(voice_id.to_string());
+        Ok(())
     }
 }
 impl SpeechSynthesizer for FakeEngine {
