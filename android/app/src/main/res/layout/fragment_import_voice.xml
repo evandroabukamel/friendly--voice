@@ -172,5 +172,18 @@
                     app:indicatorColor="@color/cocoa" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Existing voice only. Asks for confirmation first. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/delete_voice_button"
+            style="@style/Widget.FriendlyVoice.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_l"
+            android:text="@string/delete_voice"
+            android:textColor="@color/cream_text"
+            android:visibility="gone"
+            app:strokeColor="@color/cream_text"
+            tools:visibility="visible" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

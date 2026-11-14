@@ -79,9 +79,14 @@ class ImportVoiceViewModel(
     private val _messages = Channel<UiMessage>(Channel.BUFFERED)
     val messages: Flow<UiMessage> = _messages.receiveAsFlow()
 
+    /** Emits once the voice is deleted: the screen goes back to the list. */
+    private val _closed = Channel<Unit>(Channel.CONFLATED)
+    val closed: Flow<Unit> = _closed.receiveAsFlow()
+
     /** Save and Create voice are single-flight: repeated taps never reach the core twice. */
     private val saveFlight = SingleFlight()
     private val buildFlight = SingleFlight()
+    private val deleteFlight = SingleFlight()
 
     private var recorder: VoiceRecorder? = null
     private var recordJob: Job? = null
@@ -205,8 +210,7 @@ class ImportVoiceViewModel(
         if (recordJob?.isActive == true || _state.value.busy) return
         val rec = VoiceRecorder()
         recorder = rec
-        val safeId = id.replace(Regex("[^A-Za-z0-9_-]"), "_")
-        val file = File(File(recordingsDir, safeId), "${System.currentTimeMillis()}.wav")
+        val file = File(recordingsFolder(id), "${System.currentTimeMillis()}.wav")
         recordJob = viewModelScope.launch {
             _state.update { it.copy(recording = true, recordSeconds = 0) }
             try {
@@ -248,6 +252,25 @@ class ImportVoiceViewModel(
             _state.update { it.copy(building = false) }
         }
     }
+
+    /** Deletes the voice in the core, then the app's own recordings folder (off the main thread). */
+    fun deleteVoice() {
+        val id = speakerId ?: return
+        if (_state.value.busy) return
+        deleteFlight.launch(viewModelScope) {
+            _state.update { it.copy(saving = true) }
+            repository.deleteSpeaker(id)
+                .onSuccess {
+                    withContext(Dispatchers.IO) { recordingsFolder(id).deleteRecursively() }
+                    send(UiMessage.Res(R.string.voice_deleted))
+                    _closed.send(Unit)
+                }
+                .onFailure { send(UiMessage.error(it)) }
+            _state.update { it.copy(saving = false) }
+        }
+    }
+
+    private fun recordingsFolder(id: String) = File(recordingsDir, id.replace(Regex("[^A-Za-z0-9_-]"), "_"))
 
     override fun onCleared() {
         recorder?.stop()

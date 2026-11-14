@@ -1,6 +1,7 @@
 package app.friendlyvoice.ui.alarms
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -41,11 +42,15 @@ class AlarmAdapter(
         val theme = item.request.category?.let(::humanize) ?: res.getString(R.string.alarm_own_text)
         b.alarmTheme.text = res.getString(R.string.alarm_theme_line, theme, item.toneLabel)
         b.alarmRepeat.text = RepeatLabel.format(repeat, words)
-        b.alarmVoice.text = item.speakerName
-        b.root.alpha = if (item.enabled) 1f else DISABLED_ALPHA
+        // A deleted voice: the switch stays off and locked; tapping the card opens edit.
+        b.alarmVoice.visibility = if (item.voiceAvailable) View.VISIBLE else View.GONE
+        b.alarmVoiceUnavailable.visibility = if (item.voiceAvailable) View.GONE else View.VISIBLE
+        b.alarmVoice.text = item.speakerName.orEmpty()
+        b.root.alpha = if (item.enabled && item.voiceAvailable) 1f else DISABLED_ALPHA
 
         b.alarmSwitch.setOnCheckedChangeListener(null)
-        b.alarmSwitch.isChecked = item.enabled
+        b.alarmSwitch.isChecked = item.enabled && item.voiceAvailable
+        b.alarmSwitch.isEnabled = item.voiceAvailable
         b.alarmSwitch.setOnCheckedChangeListener { _, checked -> onToggle(item.id, checked) }
         b.root.setOnClickListener { onOpen(item) }
     }

@@ -21,6 +21,7 @@ import app.friendlyvoice.ui.appViewModels
 import app.friendlyvoice.ui.collectWhileStarted
 import app.friendlyvoice.ui.dropdownAdapter
 import app.friendlyvoice.ui.showMessage
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -69,12 +70,24 @@ class ImportVoiceFragment : Fragment() {
         b.sampleActions.addFilesButton.setOnClickListener { pickFiles.launch(arrayOf("audio/*")) }
         b.sampleActions.recordButton.setOnClickListener { onRecordTapped() }
         b.createVoiceButton.setOnClickListener { viewModel.createVoice() }
+        b.deleteVoiceButton.setOnClickListener { confirmDelete() }
 
         collectWhileStarted(viewModel.state) { state ->
             render(state)
             samples.submitList(state.samples)
         }
         collectWhileStarted(viewModel.messages) { showMessage(it) }
+        collectWhileStarted(viewModel.closed) { findNavController().navigateUp() }
+    }
+
+    /** Dialog text and buttons come from strings.xml; no view is built here. */
+    private fun confirmDelete() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_voice_title)
+            .setMessage(R.string.delete_voice_message)
+            .setNegativeButton(R.string.action_cancel, null)
+            .setPositiveButton(R.string.delete_voice_confirm) { _, _ -> viewModel.deleteVoice() }
+            .show()
     }
 
     override fun onStop() {
@@ -148,6 +161,8 @@ class ImportVoiceFragment : Fragment() {
         b.createHint.text = getString(
             if (state.speaker?.voiceReady == true) R.string.create_voice_hint_ready else R.string.create_voice_hint,
         )
+        b.deleteVoiceButton.visibility = if (state.registered) View.VISIBLE else View.GONE
+        b.deleteVoiceButton.isEnabled = !state.busy
         b.createVoiceButton.isEnabled = state.canCreateVoice
         b.createVoiceButton.setText(if (state.building) R.string.create_voice_running else R.string.create_voice)
         b.progress.visibility = if (state.loading || state.busy && !state.recording) View.VISIBLE else View.GONE

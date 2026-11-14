@@ -73,5 +73,16 @@
                 android:maxLines="1"
                 tools:text="Grandma" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/alarm_voice_unavailable"
+            style="@style/Widget.FriendlyVoice.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xs"
+            android:text="@string/alarm_voice_unavailable"
+            android:textColor="@color/error"
+            android:visibility="gone"
+            tools:visibility="visible" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -23,6 +23,7 @@
     <string name="alarm_time_interval">%1$d min</string>
     <string name="alarm_theme_line">%1$s · %2$s</string>
     <string name="alarm_own_text">Your own text</string>
+    <string name="alarm_voice_unavailable">Voice unavailable — tap to choose another</string>
 
     <!-- Create alarm -->
     <string name="edit_alarm_title_new">New alarm</string>
@@ -145,6 +146,12 @@
     <string name="sample_duration">%1$.1f s</string>
     <string name="recording_status">Recording… %1$s of %2$s</string>
     <string name="record_permission_denied">Allow the microphone to record a voice.</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="delete_voice">Delete voice</string>
+    <string name="delete_voice_title">Delete this voice?</string>
+    <string name="delete_voice_message">Its recordings and the created voice are deleted from this phone and the voice server. Alarms that use it are turned off and kept, so you can choose another voice.</string>
+    <string name="delete_voice_confirm">Delete</string>
+    <string name="voice_deleted">Voice deleted.</string>
     <string name="create_voice">Create voice</string>
     <string name="create_voice_running">Creating the voice…</string>
     <string name="create_voice_hint">Add at least 10 seconds of recordings (WAV, MP3 or FLAC, 2 s to 3 min each), then create the voice.</string>
