@@ -17,6 +17,9 @@ pub struct SpeakRequest {
     pub content: MessageContent,
     /// Name of the listener (personalizes the message).
     pub listener: Option<String>,
+    /// Name chosen for this one message; wins over the person's stored
+    /// listener name and over `listener`.
+    pub listener_override: Option<String>,
     /// Tone of voice of this message. `None` = initial tone suggested by the theme
     /// (e.g. "calma" → calmo, "celebracao" → animado; free text → natural).
     pub tone: Option<VoiceTone>,
@@ -81,9 +84,13 @@ impl SpeakMessage {
                 )))
             }
             MessageContent::Category(c) => {
-                // The name this person uses for the listener wins over the
-                // one given by the app or the CLI.
-                let listener = speaker.listener_name.as_deref().or(req.listener.as_deref());
+                // A name chosen for this message, else the name this person
+                // uses for the listener, else the app's or the CLI's.
+                let listener = req
+                    .listener_override
+                    .as_deref()
+                    .or(speaker.listener_name.as_deref())
+                    .or(req.listener.as_deref());
                 self.messages.pick(c, &speaker, listener)?
             }
             MessageContent::FixedText(t) => MotivationalMessage::new(&t, None)?,
@@ -132,6 +139,7 @@ mod tests {
                 speaker_id: spk.id.clone(),
                 content: MessageContent::FixedText("leite quente".into()),
                 listener: None,
+                listener_override: None,
                 tone: None,
             })
             .unwrap();
@@ -146,6 +154,7 @@ mod tests {
                 speaker_id: spk.id,
                 content: MessageContent::Category(MessageCategory::Motivation),
                 listener: Some("Ana".into()),
+                listener_override: None,
                 tone: None,
             })
             .unwrap();
@@ -168,11 +177,35 @@ mod tests {
                 speaker_id: spk.id,
                 content: MessageContent::Category(MessageCategory::Motivation),
                 listener: Some("Evandro".into()),
+                listener_override: None,
                 tone: None,
             })
             .unwrap();
         assert!(
             out.message.text().contains("Filhote"),
+            "{}",
+            out.message.text()
+        );
+    }
+
+    #[test]
+    fn a_name_chosen_for_one_message_wins_over_everything() {
+        let f = Fakes::new();
+        let spk = f.speaker().with_listener_name(Some("Filhote".into()));
+        f.speakers.save(&spk).unwrap();
+        f.voice_profile(&spk);
+        let out = f
+            .speak_message()
+            .execute(SpeakRequest {
+                speaker_id: spk.id,
+                content: MessageContent::Category(MessageCategory::Motivation),
+                listener: Some("Evandro".into()),
+                listener_override: Some("Campeão".into()),
+                tone: None,
+            })
+            .unwrap();
+        assert!(
+            out.message.text().contains("Campeão"),
             "{}",
             out.message.text()
         );
@@ -191,6 +224,7 @@ mod tests {
                 speaker_id: spk.id,
                 content: MessageContent::Category(MessageCategory::Celebration),
                 listener: None,
+                listener_override: None,
                 tone: Some(tone),
             })
             .unwrap();
@@ -212,6 +246,7 @@ mod tests {
                 speaker_id: spk.id,
                 content: MessageContent::FixedText("oi".into()),
                 listener: None,
+                listener_override: None,
                 tone: None,
             })
             .unwrap_err();
@@ -227,6 +262,7 @@ mod tests {
             speaker_id: spk.id.clone(),
             content,
             listener: None,
+            listener_override: None,
             tone: None,
         };
         let err = f

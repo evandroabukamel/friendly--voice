@@ -135,6 +135,7 @@ impl RunDueSchedules {
                 speaker_id: schedule.speaker_id.clone(),
                 content: schedule.content.clone(),
                 listener: self.listener.clone(),
+                listener_override: None,
                 tone: schedule.tone,
             });
             schedule.mark_fired(now);

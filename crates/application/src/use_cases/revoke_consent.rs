@@ -130,6 +130,7 @@ mod tests {
             speaker_id: spk.id.clone(),
             content: MessageContent::FixedText("oi".into()),
             listener: None,
+            listener_override: None,
             tone: None,
         });
         assert!(revoked(speak.unwrap_err()));

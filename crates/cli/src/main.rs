@@ -51,6 +51,7 @@ fn run(cli: Cli) -> CliResult {
                     speaker_id: SpeakerId::new(a.speaker),
                     content: content(&a.content)?,
                     listener,
+                    listener_override: a.listener_name.clone(),
                     tone: tone(&a.tone)?,
                 })
                 .map_err(app_err)?;
@@ -148,8 +149,8 @@ fn person(c: &Container, cmd: PersonCmd) -> CliResult {
             println!("Consent: {}", s.consent.statement);
         }
         PersonCmd::List => {
-            for s in c.speakers.list().map_err(|e| e.to_string())? {
-                let voice = c.profiles.find(&s.id).map_err(|e| e.to_string())?;
+            for o in c.list_speakers().execute().map_err(app_err)? {
+                let s = o.speaker;
                 println!(
                     "{}  {}{}  [{}]  — voice: {}",
                     s.id,
@@ -158,11 +159,36 @@ fn person(c: &Container, cmd: PersonCmd) -> CliResult {
                         .map(|r| format!(" ({r})"))
                         .unwrap_or_default(),
                     s.language,
-                    voice
+                    o.voice
                         .map(|v| format!("generated, {}", gender_label(v.gender)))
                         .unwrap_or("not generated".into())
                 );
             }
+        }
+        PersonCmd::SetListenerName {
+            speaker,
+            listener_name,
+        } => {
+            let s = c
+                .set_listener_name()
+                .execute(&SpeakerId::new(speaker), listener_name)
+                .map_err(app_err)?;
+            match &s.listener_name {
+                Some(n) => println!("{} calls you {n}", s.name),
+                None => println!("Listener name of {} cleared.", s.name),
+            }
+        }
+        PersonCmd::Revoke { speaker, by } => {
+            c.revoke_consent()
+                .execute(&SpeakerId::new(speaker), by)
+                .map_err(app_err)?;
+            println!("Consent revoked: recordings, voice and cached speech deleted; schedules switched off.");
+        }
+        PersonCmd::Delete { speaker } => {
+            c.delete_speaker()
+                .execute(&SpeakerId::new(speaker))
+                .map_err(app_err)?;
+            println!("Person deleted with their recordings, voice and cached speech; schedules switched off.");
         }
     }
     Ok(())

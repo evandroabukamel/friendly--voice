@@ -258,6 +258,7 @@ pub fn speak(
                 speaker_id: SpeakerId::new(speaker_id),
                 content: content(category, text)?,
                 listener: non_empty(listener),
+                listener_override: None,
                 tone: tone(tone_style, pitch_shift)?,
             })
             .map_err(app)?;
