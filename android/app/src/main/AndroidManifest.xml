@@ -5,17 +5,22 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Notify when a scheduled message arrives. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Record a loved one's voice (asked at runtime, only when tapping Record). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- usesCleartextTraffic: allows a voice server on the local network (http://). -->
     <application
+        android:name=".FriendlyVoiceApp"
         android:allowBackup="false"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@android:style/Theme.Material.Light.DarkActionBar"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.FriendlyVoice"
         android:usesCleartextTraffic="true">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

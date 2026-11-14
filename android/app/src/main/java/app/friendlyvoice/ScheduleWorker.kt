@@ -12,32 +12,34 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.Worker
 import androidx.work.WorkerParameters
+import app.friendlyvoice.ui.MainActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
  * Periodically fires the schedules that are due (user-defined rules and tones
  * live in the Rust core). Android limits periodic work to at least 15 minutes,
- * so that is the precision of the firings.
+ * so that is the precision of the firings. Goes through the app's single
+ * NativeRepository, so it never writes the core's files at the same time as
+ * the screens.
  */
-class ScheduleWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
+class ScheduleWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result {
         val ctx = applicationContext
-        if (!NativeBridge.configure(ctx).ok) return Result.retry()
-        val res = NativeResult(NativeBridge.runDueSchedules(Prefs(ctx).listener))
-        if (!res.ok) return Result.retry()
-        val fired = res.arr()
-        for (i in 0 until fired.length()) {
-            val item = fired.getJSONObject(i)
-            if (item.optBoolean("ok")) {
-                notify(ctx, i, item.getString("text"), item.optString("tone"))
-                play(item.getString("audio_path"))
+        val repository = (ctx as FriendlyVoiceApp).repository
+        val fired = repository.runDueSchedules().getOrElse { return Result.retry() }
+        fired.forEachIndexed { i, message ->
+            if (message.ok) {
+                notify(ctx, i, message.text, message.tone)
+                message.audioPath?.let { play(it) }
             }
         }
         return Result.success()
@@ -59,10 +61,10 @@ class ScheduleWorker(context: Context, params: WorkerParameters) : Worker(contex
             PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(ctx, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
-            .setContentTitle("A message for you 💛")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(ctx.getString(R.string.notification_title))
             .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n(tone: $tone)"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(ctx.getString(R.string.notification_body, text, tone)))
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()
@@ -70,19 +72,25 @@ class ScheduleWorker(context: Context, params: WorkerParameters) : Worker(contex
     }
 
     /** Plays the audio and waits for it to finish (the worker must not end before). */
-    private fun play(path: String) {
-        val done = CountDownLatch(1)
-        val player = MediaPlayer()
-        try {
-            player.setDataSource(path)
-            player.setOnCompletionListener { done.countDown() }
-            player.prepare()
-            player.start()
-            done.await(3, TimeUnit.MINUTES)
-        } catch (e: Exception) {
-            // No audio: the notification already delivered the text.
-        } finally {
-            player.release()
+    private suspend fun play(path: String) {
+        withContext(Dispatchers.IO) {
+            val done = CountDownLatch(1)
+            val player = MediaPlayer()
+            try {
+                player.setDataSource(path)
+                player.setOnCompletionListener { done.countDown() }
+                player.setOnErrorListener { _, _, _ ->
+                    done.countDown()
+                    true
+                }
+                player.prepare()
+                player.start()
+                done.await(3, TimeUnit.MINUTES)
+            } catch (e: Exception) {
+                // No audio: the notification already delivered the text.
+            } finally {
+                player.release()
+            }
         }
     }
 
