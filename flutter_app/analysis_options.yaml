@@ -1,0 +1,14 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - lib/src/rust/**
+    - rust_builder/**
+    - android/**
+    - ios/**
+
+linter:
+  rules:
+    # The app is not a published package: public API docs are not required.
+    public_member_api_docs: false
