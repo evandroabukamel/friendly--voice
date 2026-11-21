@@ -56,10 +56,18 @@ void main() {
       await pumpHome(
         tester,
         core: core,
-        overrides: [audioPickerProvider.overrideWithValue(FakeAudioPicker())],
+        overrides: [
+          audioPickerProvider.overrideWithValue(
+            FakeAudioPicker([wav(10), null]),
+          ),
+        ],
       );
       await press(tester, 'Choose a .wav or .flac file');
-      expect(find.text('Voice engine: local (prosody sketch)'), findsOneWidget);
+      await press(tester, 'Choose a .wav or .flac file'); // cancelled
+      expect(
+        find.text('File chosen (10 KB). Fill in the text and add it.'),
+        findsOneWidget,
+      );
       await press(tester, 'Generate voice');
       expect(
         find.text('⚠️ not enough voice material: 0 sample(s)'),
