@@ -1,0 +1,147 @@
+name: Flutter app
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.50.1"
+  FRB_VERSION: "2.13.0"
+
+jobs:
+  test:
+    name: Lint, tests (incl. native Rust core) and generated code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: flutter-bridge
+
+      - name: Flutter SDK (official archive)
+        uses: actions/cache@v4
+        id: flutter-cache
+        with:
+          path: ~/flutter
+          key: flutter-linux-${{ env.FLUTTER_VERSION }}
+      - if: steps.flutter-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sfL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" | tar xJ -C ~
+      - run: |
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Install the bridge code generator
+        run: |
+          cargo install flutter_rust_bridge_codegen --version "$FRB_VERSION" --locked
+          cargo install cargo-expand --locked
+
+      - name: Generated bindings are up to date
+        working-directory: flutter_app
+        run: |
+          flutter pub get
+          flutter_rust_bridge_codegen generate
+          cd .. && cargo fmt --all
+          git diff --exit-code -- flutter_app/lib/src/rust flutter_app/rust/src/frb_generated.rs
+
+      - name: Rust bridge tests
+        run: cargo test -p friendly_voice_bridge
+
+      - name: Host build of the bridge (for the native Dart tests)
+        run: cargo build -p friendly_voice_bridge
+
+      - name: Format, analyze, test
+        working-directory: flutter_app
+        run: |
+          dart format --set-exit-if-changed lib test
+          flutter analyze
+          flutter test
+
+  android:
+    name: Android APK
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: flutter-android
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Flutter SDK (official archive)
+        run: |
+          curl -sfL "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz" | tar xJ -C ~
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Version from the tag
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "BUILD_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "BUILD_NAME=0.1.0-dev.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          fi
+      - name: Build the APK (cargokit compiles the Rust bridge)
+        working-directory: flutter_app
+        run: |
+          flutter pub get
+          flutter build apk --release --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: friendly-voice-flutter-apk
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  ios:
+    name: iOS (unsigned)
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: flutter-ios
+      - name: Flutter SDK (official archive)
+        run: |
+          curl -sfL -o flutter.zip "https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_${FLUTTER_VERSION}-stable.zip"
+          unzip -q flutter.zip -d ~ && rm flutter.zip
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - name: Build for iOS without code signing
+        working-directory: flutter_app
+        run: |
+          flutter pub get
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos && zip -qr ../../../friendly-voice-ios-unsigned.zip Runner.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: friendly-voice-flutter-ios
+          path: flutter_app/friendly-voice-ios-unsigned.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish release (CD)
+    needs: [android, ios]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/friendly-voice-flutter-apk/app-release.apk
+            dist/friendly-voice-flutter-ios/friendly-voice-ios-unsigned.zip
+          generate_release_notes: true
