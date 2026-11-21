@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_rust_bridge: 2.13.0
+  friendly_voice_bridge:
+    path: rust_builder
   material_ui: ^1.11.1
 
 dev_dependencies:

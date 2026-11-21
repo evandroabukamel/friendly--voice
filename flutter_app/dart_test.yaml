@@ -1,0 +1,3 @@
+tags:
+  # Calls the real Rust core through the host build of the bridge.
+  native:
