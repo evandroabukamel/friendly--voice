@@ -175,7 +175,8 @@ final class FakeVoiceCore implements VoiceCore {
 
   @override
   ScheduleSummary createSchedule(ScheduleRequest request) {
-    if (request.at == null && request.kind != ScheduleKind.interval) {
+    final noTime = request.at == null || request.at!.trim().isEmpty;
+    if (noTime && request.kind != ScheduleKind.interval) {
       throw const AppFailure(message: 'provide the time (HH:MM)');
     }
     scheduleRequests.add(request);

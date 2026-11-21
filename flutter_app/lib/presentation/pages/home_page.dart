@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/presentation/organisms/message_section.dart';
 import 'package:friendly_voice/presentation/organisms/person_section.dart';
 import 'package:friendly_voice/presentation/organisms/samples_section.dart';
+import 'package:friendly_voice/presentation/organisms/schedule_section.dart';
 import 'package:friendly_voice/presentation/organisms/settings_section.dart';
 import 'package:friendly_voice/presentation/state/providers.dart';
 import 'package:friendly_voice/presentation/templates/sectioned_page.dart';
@@ -20,6 +21,7 @@ class HomePage extends ConsumerWidget {
         PersonSection(),
         SamplesSection(),
         MessageSection(),
+        ScheduleSection(),
       ],
     );
   }
