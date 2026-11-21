@@ -9,20 +9,43 @@ import 'package:material_ui/material_ui.dart';
 import 'fakes.dart';
 
 /// Pumps the home page over fakes and returns the fake core.
+/// Overrides that replace every platform adapter with a fake (tests never
+/// touch the real plugins).
+List<Override> fakeAdapters({
+  FakeVoiceCoreFactory? factory,
+  AppSettings? settings,
+  FakeSettingsStore? store,
+  FakeAudioPicker? picker,
+  FakeAudioPlayer? player,
+  FakeAlarmScheduler? scheduler,
+}) => [
+  settingsStoreProvider.overrideWithValue(store ?? FakeSettingsStore(settings)),
+  voiceCoreFactoryProvider.overrideWithValue(factory ?? FakeVoiceCoreFactory()),
+  audioPickerProvider.overrideWithValue(picker ?? FakeAudioPicker()),
+  audioPlayerProvider.overrideWithValue(player ?? FakeAudioPlayer()),
+  alarmSchedulerProvider.overrideWithValue(scheduler ?? FakeAlarmScheduler()),
+  deliveryIntervalProvider.overrideWithValue(null),
+];
+
+/// Pumps the home page over fakes and returns the fake core.
 Future<FakeVoiceCore> pumpHome(
   WidgetTester tester, {
   FakeVoiceCore? core,
   AppSettings? settings,
-  List<Override> overrides = const [],
+  FakeAudioPicker? picker,
+  FakeAudioPlayer? player,
+  FakeAlarmScheduler? scheduler,
 }) async {
   final fake = core ?? FakeVoiceCore();
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [
-        settingsStoreProvider.overrideWithValue(FakeSettingsStore(settings)),
-        voiceCoreFactoryProvider.overrideWithValue(FakeVoiceCoreFactory(fake)),
-        ...overrides,
-      ],
+      overrides: fakeAdapters(
+        factory: FakeVoiceCoreFactory(fake),
+        settings: settings,
+        picker: picker,
+        player: player,
+        scheduler: scheduler,
+      ),
       child: const MaterialApp(home: HomePage()),
     ),
   );

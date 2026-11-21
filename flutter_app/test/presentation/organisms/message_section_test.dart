@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friendly_voice/domain/app_settings.dart';
-import 'package:friendly_voice/presentation/state/message.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../support/app_harness.dart';
@@ -24,7 +23,7 @@ void main() {
       tester,
       core: FakeCoreWithPeople.make(),
       settings: AppSettings(listener: 'Evandro'),
-      overrides: [audioPlayerProvider.overrideWithValue(player)],
+      player: player,
     );
     expect(find.text('3. Message'), findsOneWidget);
     expect(
@@ -55,7 +54,7 @@ void main() {
     final core = await pumpHome(
       tester,
       core: FakeCoreWithPeople.make(),
-      overrides: [audioPlayerProvider.overrideWithValue(FakeAudioPlayer())],
+      player: FakeAudioPlayer(),
     );
     await type(
       tester,
@@ -76,10 +75,7 @@ void main() {
   });
 
   testWidgets('without a person it asks to register first', (tester) async {
-    await pumpHome(
-      tester,
-      overrides: [audioPlayerProvider.overrideWithValue(FakeAudioPlayer())],
-    );
+    await pumpHome(tester, player: FakeAudioPlayer());
     await press(tester, 'Speak now');
     expect(find.text('Register and select a person first.'), findsOneWidget);
   });

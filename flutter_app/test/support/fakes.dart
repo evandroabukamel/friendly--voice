@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:friendly_voice/domain/alarms.dart';
 import 'package:friendly_voice/domain/app_settings.dart';
 import 'package:friendly_voice/domain/audio_files.dart';
 import 'package:friendly_voice/domain/audio_player.dart';
@@ -248,4 +250,22 @@ final class FakeAudioPlayer implements AudioPlayer {
 
   @override
   Future<void> play(String path) async => played.add(path);
+}
+
+/// Records the alarms it was asked to keep, and lets tests emit taps.
+final class FakeAlarmScheduler implements AlarmScheduler {
+  final List<List<Alarm>> replaced = [];
+  int permissionsRequested = 0;
+  final _taps = StreamController<void>.broadcast();
+
+  void tap() => _taps.add(null);
+
+  @override
+  Stream<void> get taps => _taps.stream;
+
+  @override
+  Future<void> requestPermissions() async => permissionsRequested++;
+
+  @override
+  Future<void> replaceAll(List<Alarm> alarms) async => replaced.add(alarms);
 }

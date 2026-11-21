@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:friendly_voice/domain/alarms.dart';
 import 'package:friendly_voice/domain/app_settings.dart';
 import 'package:friendly_voice/domain/audio_files.dart';
 import 'package:friendly_voice/domain/audio_player.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
 import 'package:friendly_voice/infrastructure/file_picker_audio_picker.dart';
+import 'package:friendly_voice/infrastructure/local_notifications_alarm_scheduler.dart';
 import 'package:friendly_voice/infrastructure/preferences_settings_store.dart';
 import 'package:friendly_voice/infrastructure/rust_voice_core.dart';
 import 'package:friendly_voice/infrastructure/soloud_audio_player.dart';
@@ -24,6 +26,16 @@ final audioPickerProvider = Provider<AudioFilePicker>(
 );
 
 final audioPlayerProvider = Provider<AudioPlayer>((ref) => SoloudAudioPlayer());
+
+final alarmSchedulerProvider = Provider<AlarmScheduler>(
+  (ref) => LocalNotificationsAlarmScheduler(),
+);
+
+/// How often due messages are checked while the app is open (`null` =
+/// never; the OS alarms still fire).
+final deliveryIntervalProvider = Provider<Duration?>(
+  (ref) => const Duration(minutes: 1),
+);
 
 /// The core opened with the current settings.
 final class Connection {
@@ -83,9 +95,14 @@ class StatusNotifier extends Notifier<String?> {
   /// runs, then its success message or the failure with a warning sign.
   /// A `null` result means nothing happened (e.g. a cancelled file choice):
   /// the previous status is kept.
-  Future<void> run(Future<String?> Function() action) async {
+  ///
+  /// A [quiet] run (background checks) does not show "Processing…".
+  Future<void> run(
+    Future<String?> Function() action, {
+    bool quiet = false,
+  }) async {
     final previous = state;
-    state = 'Processing…';
+    if (!quiet) state = 'Processing…';
     try {
       state = await action() ?? previous;
     } on Notice catch (n) {

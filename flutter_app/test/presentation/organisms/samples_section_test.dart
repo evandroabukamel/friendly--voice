@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friendly_voice/domain/audio_files.dart';
-import 'package:friendly_voice/presentation/state/samples.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/fakes.dart';
@@ -16,11 +15,7 @@ void main() {
   ) async {
     final core = FakeCoreWithPeople.make();
     final picker = FakeAudioPicker([wav(10), wav(20)]);
-    await pumpHome(
-      tester,
-      core: core,
-      overrides: [audioPickerProvider.overrideWithValue(picker)],
-    );
+    await pumpHome(tester, core: core, picker: picker);
     expect(find.text('2. Audio samples'), findsOneWidget);
 
     await press(tester, 'Choose a .wav or .flac file');
@@ -56,11 +51,7 @@ void main() {
       await pumpHome(
         tester,
         core: core,
-        overrides: [
-          audioPickerProvider.overrideWithValue(
-            FakeAudioPicker([wav(10), null]),
-          ),
-        ],
+        picker: FakeAudioPicker([wav(10), null]),
       );
       await press(tester, 'Choose a .wav or .flac file');
       await press(tester, 'Choose a .wav or .flac file'); // cancelled
@@ -79,12 +70,7 @@ void main() {
   testWidgets('without a person the samples ask to register first', (
     tester,
   ) async {
-    await pumpHome(
-      tester,
-      overrides: [
-        audioPickerProvider.overrideWithValue(FakeAudioPicker([wav(1)])),
-      ],
-    );
+    await pumpHome(tester, picker: FakeAudioPicker([wav(1)]));
     await press(tester, 'Choose a .wav or .flac file');
     await press(tester, 'Add sample');
     expect(find.text('Register and select a person first.'), findsOneWidget);

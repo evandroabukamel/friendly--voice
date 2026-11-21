@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friendly_voice/domain/app_settings.dart';
 import 'package:friendly_voice/presentation/pages/home_page.dart';
-import 'package:friendly_voice/presentation/state/providers.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../support/app_harness.dart';
 import '../../support/fakes.dart';
 
 void main() {
@@ -15,10 +15,7 @@ void main() {
     final factory = FakeVoiceCoreFactory();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          settingsStoreProvider.overrideWithValue(store),
-          voiceCoreFactoryProvider.overrideWithValue(factory),
-        ],
+        overrides: fakeAdapters(store: store, factory: factory),
         child: const MaterialApp(home: HomePage()),
       ),
     );
@@ -37,10 +34,7 @@ void main() {
     final factory = FakeVoiceCoreFactory();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          settingsStoreProvider.overrideWithValue(store),
-          voiceCoreFactoryProvider.overrideWithValue(factory),
-        ],
+        overrides: fakeAdapters(store: store, factory: factory),
         child: const MaterialApp(home: HomePage()),
       ),
     );

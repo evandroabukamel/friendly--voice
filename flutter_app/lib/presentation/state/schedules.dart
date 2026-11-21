@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
+import 'package:friendly_voice/presentation/state/alarms.dart';
 import 'package:friendly_voice/presentation/state/message.dart';
 import 'package:friendly_voice/presentation/state/people.dart';
 import 'package:friendly_voice/presentation/state/providers.dart';
@@ -57,12 +60,14 @@ class SchedulesNotifier extends Notifier<List<ScheduleSummary>> {
       ),
     );
     refresh();
+    unawaited(ref.read(alarmsProvider.notifier).reschedule());
     return 'Scheduled! Next: ${created.nextDue ?? '—'}';
   }
 
   String remove(String id) {
     requireCore(ref).removeSchedule(id.trim());
     refresh();
+    unawaited(ref.read(alarmsProvider.notifier).reschedule());
     return 'Removed.';
   }
 }

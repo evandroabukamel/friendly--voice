@@ -4,6 +4,7 @@ import 'package:friendly_voice/presentation/organisms/person_section.dart';
 import 'package:friendly_voice/presentation/organisms/samples_section.dart';
 import 'package:friendly_voice/presentation/organisms/schedule_section.dart';
 import 'package:friendly_voice/presentation/organisms/settings_section.dart';
+import 'package:friendly_voice/presentation/state/alarms.dart';
 import 'package:friendly_voice/presentation/state/providers.dart';
 import 'package:friendly_voice/presentation/templates/sectioned_page.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,6 +15,7 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(alarmsProvider); // keeps the alarms and deliveries running
     return SectionedPage(
       status: ref.watch(statusLineProvider),
       sections: const [
