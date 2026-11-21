@@ -12,6 +12,7 @@ One-week sprints. Every sprint delivers a **usable, tested increment**
 | 4 | Tone of voice per message and Android app with CI/CD | US-18, US-19, US-20 | 21 |
 | 5 | Real timbre cloning (OpenVoice) and English documentation | US-11, US-21 | 11 |
 | 6 | FLAC input; CLI commands and output in English | US-24, US-25, US-26 | 7 |
+| 8 | Flutter app for Android and iOS; Kotlin app removed | US-30 | 13 |
 
 Average velocity (sprints 1–5): **~14 pts/sprint**.
 
@@ -139,4 +140,28 @@ person's recordings; a language is chosen per person; female/male is detected.
 * Added: `Language` (23 languages, `person add --language`, `languages`),
   `VoiceGender` from the mean pitch, speaker embedding averaged over every
   recording with the closest reference window, retries for cut-off takes.
+
+## Sprint 8 — Flutter app for Android and iOS
+**Increment:** the same app on Android and iOS, built by CI on every push and
+released on `v*` tags; the Kotlin app, its JNI crate and its workflow removed.
+Every technical choice was made by the product owner (ADR 0008).
+* `flutter_app/` (Flutter 3.50.1), same application/bundle id; typed
+  flutter_rust_bridge API over the use cases (opaque `Session`, `AppFailure`).
+* Domain rule added in Rust: `Schedule::upcoming` (next firings for exact
+  notifications, capped below iOS's 64 pending).
+* Dart: ports + adapters (Rust core, preferences, file picker, SoLoud player,
+  local notifications), Riverpod state, atomic design (atoms → molecules →
+  organisms → template → page) reproducing the Kotlin screen in Material 3.
+* `flutter.yml`: bindings must match, Rust + Dart tests (incl. native),
+  Android APK (release signing from secrets), unsigned iOS build.
+
+**Retrospective**
+* 👍 Test-first found real bugs before users: `usize` arriving as `BigInt`,
+  a cancelled file choice leaving "Processing…", and the hand-written fake
+  drifting from the Rust rules — fixed once with a shared contract test that
+  runs against both.
+* 👎 Two CI failures came from setup details: generated comments that
+  depended on the rustc version (`derive(Eq)`), and the compileSdk 37
+  required by flutter_local_notifications 23. **Action:** both rules are now
+  in CLAUDE.md.
 

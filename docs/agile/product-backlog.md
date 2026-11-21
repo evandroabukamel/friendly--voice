@@ -211,7 +211,7 @@ Scenario: impossible rule
 > As a user, I want due messages to be spoken exactly once, even if the app was
 > off.
 
-## Epic E5 — Android
+## Epic E5 — Mobile
 
 ### US-19 · Build the Android app in CI/CD — *Must* · 8 pts · ✅ Sprint 4
 > As a maintainer, I want every push to build the Android app (APK) from the
@@ -235,6 +235,29 @@ Scenario: continuous delivery
 > As a user, I want to register the person, upload recordings, generate the
 > voice, ask for messages (choosing the tone) and schedule them on my phone,
 > getting a notification and audio when a scheduled message arrives.
+
+### US-30 · The app on Android and iOS (Flutter) — *Must* · 13 pts · ✅ Sprint 8
+> As a user with an iPhone or an Android phone, I want the same app — same
+> screen, same features — on both, with scheduled messages that wake me at
+> the chosen time.
+
+```gherkin
+Scenario: same features and look as the Kotlin app
+  Given the Flutter app is connected to the core
+  Then I see the status line and the sections Settings, 1. Person of the voice,
+       2. Audio samples, 3. Message and 4. Schedule with the former texts
+  And every action shows "Processing…", then its result or "⚠️ <failure>"
+
+Scenario: exact alarms on both platforms
+  Given a daily schedule at 08:00
+  Then an OS notification is scheduled for the next 08:00 (Android and iOS)
+  When I tap it, or open the app, the due message is spoken once and played
+
+Scenario: built and released by CI
+  When I push, CI checks the generated bindings, runs the Rust and Dart tests
+       (some against the real Rust core) and builds the APK and the iOS app
+  When I tag v1.0.0, a release carries the APK and the unsigned iOS app
+```
 
 ## Epic E6 — Project
 

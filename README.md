@@ -5,7 +5,7 @@ a message right now or schedule them with your own rules.
 
 Written in **Rust**, following **Clean Architecture** and **SOLID**, and
 developed in an **agile** way (backlog, sprints, Definition of Done — see
-[`docs/agile`](docs/agile)). The interface (CLI and Android), code and
+[`docs/agile`](docs/agile)). The interface (CLI and mobile app), code and
 documentation are in English. Each person has a **language** (Brazilian
 Portuguese by default, or any of 23 languages): the recordings are in that
 language and the messages are spoken in it.
@@ -30,7 +30,7 @@ language and the messages are spoken in it.
   free text in the person's language.
 * Schedules: daily, on weekdays, every N minutes inside a time window, once;
   quiet hours; a single catch-up firing if the app was off.
-* Android app built from the same Rust core, with CI/CD.
+* Mobile app for Android and iOS (Flutter) on the same Rust core, with CI/CD.
 
 ## How the voice is produced
 
@@ -111,21 +111,26 @@ Without `--features http-engine` / `FRIENDLY_VOICE_ENGINE_URL`, the app uses a
 **local prosody sketch engine**: it renders audio with the person's rhythm and
 melody (useful for development and tests) but **not** their voice.
 
-## Android app
+## Mobile app (Android and iOS)
 
-The same Rust core runs on Android: `crates/mobile` exposes the use cases via
-JNI and `android/` is the Kotlin app — register the person (with the
-language), upload `.wav`/`.flac` samples, generate the voice, ask for a
-message choosing **the tone**, and schedule messages (fired by WorkManager
-every 15 minutes, with a notification and audio). Point it at the voice engine
-in its settings to use the cloned voice.
+`flutter_app/` is the Flutter app (Flutter 3.50.1) for Android and iOS. It
+runs the same Rust core through flutter_rust_bridge (`flutter_app/rust/`):
+register the person (with consent and language), upload `.wav`/`.flac`
+samples, generate the voice, ask for a message choosing **the tone** and the
+pitch shift, and schedule messages. Schedules wake the phone with **exact
+notifications** (Android 14+ asks for the exact-alarm permission; without it
+they may be a few minutes late); the app speaks what is due when it opens,
+when an alarm is tapped and every minute while open. Point it at the voice
+engine in its settings to use the cloned voice. Design: ADR 0008.
 
 ```bash
-rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-cargo install cargo-ndk
-export ANDROID_NDK_HOME=/path/to/ndk
-scripts/build-android.sh            # debug APK in android/app/build/outputs/apk/
-scripts/build-android.sh --release  # release APK (signed if ANDROID_KEYSTORE_* are set)
+cd flutter_app
+cargo install flutter_rust_bridge_codegen --version 2.13.0 cargo-expand  # only to regenerate bindings
+flutter pub get
+flutter test                      # native tests need: cargo build -p friendly_voice_bridge
+flutter run                       # device/emulator; cargokit compiles the Rust bridge
+flutter build apk --release       # Android (rustup targets for the ABIs)
+flutter build ios --no-codesign   # iOS, on macOS (rustup iOS targets)
 ```
 
 ## CI/CD
@@ -134,12 +139,13 @@ scripts/build-android.sh --release  # release APK (signed if ANDROID_KEYSTORE_* 
 |---|---|---|
 | `ci.yml` | every push/PR | `fmt`, `clippy -D warnings`, all Rust tests |
 | `engine.yml` | every push/PR | engine unit + integration tests with the real model, CLI ⇄ engine end-to-end, Docker image build |
-| `android.yml` | every push/PR | tests the mobile bridge, builds the Rust library for `arm64-v8a`, `armeabi-v7a` and `x86_64` (cargo-ndk), the CLI for Android/Termux (arm64), the debug and release APKs (Gradle) and lint; publishes everything as artifacts |
-| `android.yml` → `release` | tag `v*` | creates the GitHub Release with the APKs and the arm64 binary |
+| `flutter.yml` | every push/PR | regenerated bridge bindings must match, Rust bridge tests, Dart format/analyze/tests (some against the real Rust core), Android release APK, unsigned iOS build (macOS) |
+| `flutter.yml` → `release` | tag `v*` | creates the GitHub Release with the APK and the unsigned iOS app |
 
 To sign the release APK, add the secrets `ANDROID_KEYSTORE_BASE64` (keystore
 in base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
-`ANDROID_KEY_PASSWORD`. Without them the release APK is unsigned.
+`ANDROID_KEY_PASSWORD`. Without them the release APK is signed with the debug
+key. The iOS build is unsigned (signing needs an Apple Developer account).
 
 ## Architecture
 
@@ -148,10 +154,10 @@ crates/
 ├── domain/          pure rules: Speaker, Language, AudioClip, voice (gender, prosody), tone, schedules
 ├── application/     use cases + ports (traits)
 ├── infrastructure/  WAV/FLAC, DSP, JSON, voice engines, catalog, delivery
-├── bootstrap/       shared composition root (CLI and Android)
-├── cli/             command line interface
-└── mobile/          native library for Android (JNI → use cases)
-android/             Android app (Kotlin) using the native library
+├── bootstrap/       shared composition root (CLI and the Flutter app)
+└── cli/             command line interface
+flutter_app/         Flutter app (Android + iOS): atomic design, Riverpod, Clean Architecture
+└── rust/            flutter_rust_bridge API over the use cases (workspace member)
 engine/              voice cloning server (Python: Chatterbox Multilingual)
 ```
 

@@ -30,11 +30,14 @@ the `Cargo.toml` of `domain` depends on no other crate of the project, and
 | `friendly-voice-infrastructure` | Port implementations | `domain`, `application`, `hound`, `serde_json`, (`ureq`) |
 | `friendly-voice-bootstrap` | Composition root (dependency wiring) | `domain`, `application`, `infrastructure` |
 | `friendly-voice` (cli) | Command line interface | `bootstrap` |
-| `friendly-voice-mobile` | Android interface: JNI bridge with JSON in/out | `bootstrap`, `jni` |
+| `friendly_voice_bridge` (`flutter_app/rust`) | Mobile interface: typed flutter_rust_bridge API (opaque `Session`, `AppFailure`) | `bootstrap`, `flutter_rust_bridge` |
 
-The Android app (`android/`, Kotlin) is just another presentation layer:
-it calls `NativeBridge` → `crates/mobile` → use cases. No business rule is
-rewritten in Kotlin (see ADR 0005).
+The Flutter app (`flutter_app/`, Android and iOS) is just another
+presentation layer: Riverpod state → Dart ports (`VoiceCore`, ...) →
+`RustVoiceCore` → the bridge → use cases. No business rule is rewritten in
+Dart; the Dart side has its own clean layers (domain ports, application,
+infrastructure adapters, atomic-design presentation). See ADR 0008, which
+supersedes the Kotlin/JNI app of ADR 0005.
 
 The voice engine (`engine/`, Python) is an external system behind the ports
 `VoiceCloningEngine`, `SpeechSynthesizer` and `Transcriber`, reached through

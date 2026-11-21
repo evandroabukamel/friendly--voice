@@ -2,7 +2,7 @@
 
 Positive, motivational messages spoken **in the voice of someone you love**,
 on demand or on a schedule. Rust core (Clean Architecture), a Python
-voice-cloning server, a CLI and an Android app.
+voice-cloning server, a CLI and a Flutter app (Android + iOS).
 
 Start here, then follow the links: [`README.md`](README.md) (usage),
 [`docs/architecture.md`](docs/architecture.md) (layers, data flow),
@@ -31,7 +31,7 @@ afternoon.* Full stories with Gherkin criteria:
 | E2 Voice cloning | US-02 upload samples (transcript optional) · US-11 zero-shot cloning from all recordings + female/male detection · US-24 FLAC input |
 | E3 Messages | US-05 message now (theme or free text, personalized with the listener's name) · US-18 tone per message |
 | E4 Schedules | US-07 rules (daily, weekdays, every N min in a window, once) + quiet hours · US-08 fire due messages exactly once, single catch-up |
-| E5 Android | US-19 APK built in CI, release on `v*` tags · US-20 full flow on the phone with notifications |
+| E5 Mobile | US-19 APK built in CI, release on `v*` tags · US-20 full flow on the phone with notifications · US-30 Flutter app for Android and iOS (ADR 0008) |
 | E6 Project | US-21 English docs and comments · US-25/26 English CLI and output |
 
 Withdrawn (ADR 0007): the accent rules, G2P, phone recognizer, pronunciation
@@ -70,10 +70,10 @@ robotic in listening tests and was replaced.
 crates/domain          pure rules; depends on no project crate (chrono, serde, thiserror only)
 crates/application     use cases (one per file) + ports (traits); depends only on domain
 crates/infrastructure  adapters: WAV/FLAC decode, DSP, JSON repos, HTTP engine, sketch engine, delivery
-crates/bootstrap       the ONLY composition root, shared by CLI and Android
+crates/bootstrap       the ONLY composition root, shared by the CLI and the Flutter app
 crates/cli             `friendly-voice` binary (clap)
-crates/mobile          JNI bridge, JSON in/out, panic-safe (ADR 0005)
-android/               Kotlin app — presentation only, no business rules
+flutter_app/           Flutter app (Android + iOS) — presentation only, no business rules (ADR 0008)
+flutter_app/rust       flutter_rust_bridge API (typed, opaque Session, AppFailure); workspace member
 engine/                Python FastAPI server: Chatterbox Multilingual
 ```
 
@@ -114,6 +114,27 @@ Engine gotchas:
 - Voices from engine 0.1 (OpenVoice) are not compatible: regenerate them.
 - Style → (`exaggeration`, `cfg_weight`) table in `engine.py`; there is no
   direct speaking-rate control.
+
+### Flutter app (`flutter_app/`)
+
+- Layers: `lib/domain` (ports; data types are the FRB-generated ones),
+  `lib/application` (`DeliverDueMessages`), `lib/infrastructure` (adapters),
+  `lib/presentation` (Riverpod state; atoms → molecules → organisms →
+  templates → pages). Providers in `presentation/state/providers.dart` are
+  the only composition root.
+- Bridge API in `flutter_app/rust/src/api/`: plain structs and plain enums
+  only (rich enums would need freezed); counts as `u32` (usize becomes
+  BigInt in Dart); derive `PartialEq` only (`Eq` leaks into the generated
+  comments and differs between rustc versions). Regenerate and commit
+  `lib/src/rust/` — CI fails on any diff.
+- Tests use hand-written fakes (`test/support`) and every platform adapter
+  is faked via `fakeAdapters()`; `test/contract` runs the same scenarios
+  against the fake and the real Rust core (native, tag `native`).
+- Package rule: well-ranked packages released in the last 4 months;
+  flutter.dev packages excepted. Ask before adding any package.
+- Android compileSdk 37 (flutter_local_notifications 23); exact alarms via
+  `SCHEDULE_EXACT_ALARM`, inexact fallback; iOS: notifications delegate,
+  `NSAllowsLocalNetworking` for a LAN voice server.
 
 ### App configuration
 
@@ -168,6 +189,7 @@ Agile, one-week sprints, MoSCoW + story points
 | 5 | Real timbre cloning with OpenVoice V2, engine server, English docs |
 | 6 | FLAC input, English CLI and output |
 | 7 | Zero-shot cloning with Chatterbox; language per person; gender detection; accent rules removed |
+| 8 | Flutter app for Android + iOS over the Rust core (flutter_rust_bridge, atomic design, Riverpod, exact alarms); Kotlin app removed |
 
 ## Commands
 
@@ -179,12 +201,14 @@ cargo fmt --all
 (cd engine && pytest -q)                        # integration tests need chatterbox-tts
 scripts/engine-e2e.sh                           # CLI ⇄ running engine
 docker build -t friendly-voice-engine engine/ && docker run --gpus all -p 8020:8020 -v fv-voices:/data friendly-voice-engine
-scripts/build-android.sh [--release]            # needs cargo-ndk + ANDROID_NDK_HOME
+(cd flutter_app && flutter test)                # Dart tests; native ones need: cargo build -p friendly_voice_bridge
+(cd flutter_app && flutter_rust_bridge_codegen generate)  # after changing flutter_app/rust/src/api (FRB 2.13.0 + cargo-expand)
+(cd flutter_app && flutter build apk --release) # or: flutter build ios --no-codesign (macOS)
 ```
 
 CI (`.github/workflows`): `ci.yml` (fmt, clippy, tests), `engine.yml` (engine
-tests with the real model on CPU, e2e, Docker build), `android.yml` (3 ABIs,
-Termux CLI, APKs, lint; GitHub Release on `v*`).
+tests with the real model on CPU, e2e, Docker build), `flutter.yml` (bindings
+up to date, bridge + Dart tests, Android APK, unsigned iOS; GitHub Release on `v*`).
 
 ## Definition of Done (summary)
 
