@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "app.friendlyvoice"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_local_notifications 23 (and androidx.core 1.19) compile against
+    // API 37; targetSdk and minSdk stay at the Flutter defaults.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
