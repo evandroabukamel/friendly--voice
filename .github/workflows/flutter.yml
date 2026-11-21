@@ -65,6 +65,12 @@ jobs:
     name: Android APK
     needs: test
     runs-on: ubuntu-latest
+    env:
+      # Release signing (optional). Configure in Settings → Secrets.
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -88,6 +94,11 @@ jobs:
           else
             echo "BUILD_NAME=0.1.0-dev.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
           fi
+      - name: Prepare the signing keystore
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
       - name: Build the APK (cargokit compiles the Rust bridge)
         working-directory: flutter_app
         run: |
