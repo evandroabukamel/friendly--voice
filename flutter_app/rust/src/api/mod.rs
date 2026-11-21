@@ -4,6 +4,7 @@
 pub mod catalog;
 pub mod failure;
 pub mod messages;
+pub mod schedules;
 pub mod session;
 pub mod speakers;
 pub mod voice;

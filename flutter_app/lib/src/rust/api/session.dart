@@ -9,6 +9,7 @@ import 'messages.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'schedules.dart';
 import 'speakers.dart';
 import 'voice.dart';
 
@@ -27,7 +28,11 @@ abstract class Session implements RustOpaqueInterface {
   /// Generates (or regenerates) the person's voice from all their samples.
   Future<VoiceSummary> buildVoice({required String speakerId});
 
+  ScheduleSummary createSchedule({required ScheduleRequest request});
+
   String get engineName;
+
+  List<ScheduleSummary> listSchedules();
 
   List<SpeakerSummary> listSpeakers();
 
@@ -48,6 +53,11 @@ abstract class Session implements RustOpaqueInterface {
     String? language,
   });
 
+  void removeSchedule({required String id});
+
+  /// Speaks every schedule that is due (each one exactly once).
+  Future<List<DueMessage>> runDueSchedules({String? listener});
+
   /// Speaks a message now in the person's voice and returns the WAV path.
   Future<SpokenMessage> speak({
     required String speakerId,
@@ -57,4 +67,8 @@ abstract class Session implements RustOpaqueInterface {
     required double pitchShift,
     String? listener,
   });
+
+  /// The next `limit` firings of all schedules, soonest first, within the
+  /// look-ahead horizon (iOS keeps at most 64 pending notifications).
+  List<Alarm> upcomingAlarms({required int limit});
 }

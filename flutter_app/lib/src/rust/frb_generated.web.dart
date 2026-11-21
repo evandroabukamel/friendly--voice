@@ -9,6 +9,7 @@
 import 'api/catalog.dart';
 import 'api/failure.dart';
 import 'api/messages.dart';
+import 'api/schedules.dart';
 import 'api/session.dart';
 import 'api/speakers.dart';
 import 'api/voice.dart';
@@ -54,6 +55,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  Alarm dco_decode_alarm(dynamic raw);
+
+  @protected
   AppFailure dco_decode_app_failure(dynamic raw);
 
   @protected
@@ -63,7 +67,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Gender dco_decode_box_autoadd_gender(dynamic raw);
 
   @protected
+  ScheduleRequest dco_decode_box_autoadd_schedule_request(dynamic raw);
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
   Catalog dco_decode_catalog(dynamic raw);
+
+  @protected
+  DueMessage dco_decode_due_message(dynamic raw);
 
   @protected
   double dco_decode_f_32(dynamic raw);
@@ -75,7 +88,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_i_32(dynamic raw);
 
   @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
   LanguageOption dco_decode_language_option(dynamic raw);
+
+  @protected
+  List<Alarm> dco_decode_list_alarm(dynamic raw);
+
+  @protected
+  List<DueMessage> dco_decode_list_due_message(dynamic raw);
 
   @protected
   List<LanguageOption> dco_decode_list_language_option(dynamic raw);
@@ -85,6 +107,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<ScheduleSummary> dco_decode_list_schedule_summary(dynamic raw);
 
   @protected
   List<SpeakerSummary> dco_decode_list_speaker_summary(dynamic raw);
@@ -102,7 +127,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Gender? dco_decode_opt_box_autoadd_gender(dynamic raw);
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+
+  @protected
   SampleSummary dco_decode_sample_summary(dynamic raw);
+
+  @protected
+  ScheduleKind dco_decode_schedule_kind(dynamic raw);
+
+  @protected
+  ScheduleRequest dco_decode_schedule_request(dynamic raw);
+
+  @protected
+  ScheduleSummary dco_decode_schedule_summary(dynamic raw);
 
   @protected
   SpeakerSummary dco_decode_speaker_summary(dynamic raw);
@@ -153,6 +190,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  Alarm sse_decode_alarm(SseDeserializer deserializer);
+
+  @protected
   AppFailure sse_decode_app_failure(SseDeserializer deserializer);
 
   @protected
@@ -162,7 +202,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Gender sse_decode_box_autoadd_gender(SseDeserializer deserializer);
 
   @protected
+  ScheduleRequest sse_decode_box_autoadd_schedule_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
   Catalog sse_decode_catalog(SseDeserializer deserializer);
+
+  @protected
+  DueMessage sse_decode_due_message(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_32(SseDeserializer deserializer);
@@ -174,7 +225,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
   LanguageOption sse_decode_language_option(SseDeserializer deserializer);
+
+  @protected
+  List<Alarm> sse_decode_list_alarm(SseDeserializer deserializer);
+
+  @protected
+  List<DueMessage> sse_decode_list_due_message(SseDeserializer deserializer);
 
   @protected
   List<LanguageOption> sse_decode_list_language_option(
@@ -186,6 +246,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<ScheduleSummary> sse_decode_list_schedule_summary(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<SpeakerSummary> sse_decode_list_speaker_summary(
@@ -205,7 +270,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Gender? sse_decode_opt_box_autoadd_gender(SseDeserializer deserializer);
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
   SampleSummary sse_decode_sample_summary(SseDeserializer deserializer);
+
+  @protected
+  ScheduleKind sse_decode_schedule_kind(SseDeserializer deserializer);
+
+  @protected
+  ScheduleRequest sse_decode_schedule_request(SseDeserializer deserializer);
+
+  @protected
+  ScheduleSummary sse_decode_schedule_summary(SseDeserializer deserializer);
 
   @protected
   SpeakerSummary sse_decode_speaker_summary(SseDeserializer deserializer);
@@ -259,6 +336,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_alarm(Alarm self, SseSerializer serializer);
+
+  @protected
   void sse_encode_app_failure(AppFailure self, SseSerializer serializer);
 
   @protected
@@ -268,7 +348,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_gender(Gender self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_schedule_request(
+    ScheduleRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_catalog(Catalog self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_due_message(DueMessage self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
@@ -280,8 +372,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
   void sse_encode_language_option(
     LanguageOption self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_alarm(List<Alarm> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_due_message(
+    List<DueMessage> self,
     SseSerializer serializer,
   );
 
@@ -297,6 +401,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_schedule_summary(
+    List<ScheduleSummary> self,
     SseSerializer serializer,
   );
 
@@ -328,7 +438,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_sample_summary(SampleSummary self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_schedule_kind(ScheduleKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_schedule_request(
+    ScheduleRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_schedule_summary(
+    ScheduleSummary self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_speaker_summary(

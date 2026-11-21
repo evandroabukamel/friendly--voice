@@ -629,6 +629,7 @@ dependencies = [
 name = "friendly_voice_bridge"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "flutter_rust_bridge",
  "friendly-voice-application",
  "friendly-voice-bootstrap",

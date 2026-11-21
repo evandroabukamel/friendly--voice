@@ -6,6 +6,7 @@
 import 'api/catalog.dart';
 import 'api/failure.dart';
 import 'api/messages.dart';
+import 'api/schedules.dart';
 import 'api/session.dart';
 import 'api/speakers.dart';
 import 'api/voice.dart';
@@ -74,7 +75,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1736623173;
+  int get rustContentHash => 1911674618;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -98,7 +99,16 @@ abstract class RustLibApi extends BaseApi {
     required String speakerId,
   });
 
+  ScheduleSummary crateApiSessionSessionCreateSchedule({
+    required Session that,
+    required ScheduleRequest request,
+  });
+
   String crateApiSessionSessionEngineName({required Session that});
+
+  List<ScheduleSummary> crateApiSessionSessionListSchedules({
+    required Session that,
+  });
 
   List<SpeakerSummary> crateApiSessionSessionListSpeakers({
     required Session that,
@@ -117,6 +127,16 @@ abstract class RustLibApi extends BaseApi {
     String? language,
   });
 
+  void crateApiSessionSessionRemoveSchedule({
+    required Session that,
+    required String id,
+  });
+
+  Future<List<DueMessage>> crateApiSessionSessionRunDueSchedules({
+    required Session that,
+    String? listener,
+  });
+
   Future<SpokenMessage> crateApiSessionSessionSpeak({
     required Session that,
     required String speakerId,
@@ -125,6 +145,11 @@ abstract class RustLibApi extends BaseApi {
     String? toneStyle,
     required double pitchShift,
     String? listener,
+  });
+
+  List<Alarm> crateApiSessionSessionUpcomingAlarms({
+    required Session that,
+    required int limit,
   });
 
   Catalog crateApiCatalogCatalog();
@@ -227,6 +252,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  ScheduleSummary crateApiSessionSessionCreateSchedule({
+    required Session that,
+    required ScheduleRequest request,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_schedule_request(request, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_schedule_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionCreateScheduleConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionCreateScheduleConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_create_schedule",
+        argNames: ["that", "request"],
+      );
+
+  @override
   String crateApiSessionSessionEngineName({required Session that}) {
     return handler.executeSync(
       SyncTask(
@@ -236,7 +294,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -253,6 +311,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "Session_engine_name", argNames: ["that"]);
 
   @override
+  List<ScheduleSummary> crateApiSessionSessionListSchedules({
+    required Session that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_schedule_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionListSchedulesConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionListSchedulesConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_list_schedules",
+        argNames: ["that"],
+      );
+
+  @override
   List<SpeakerSummary> crateApiSessionSessionListSpeakers({
     required Session that,
   }) {
@@ -264,7 +353,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_speaker_summary,
@@ -294,7 +383,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dataDir, serializer);
           sse_encode_opt_String(engineUrl, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -333,7 +422,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_opt_String(relationship, serializer);
           sse_encode_opt_String(consentBy, serializer);
           sse_encode_opt_String(language, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_speaker_summary,
@@ -350,6 +439,77 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "Session_register_speaker",
         argNames: ["that", "name", "relationship", "consentBy", "language"],
+      );
+
+  @override
+  void crateApiSessionSessionRemoveSchedule({
+    required Session that,
+    required String id,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(id, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionRemoveScheduleConstMeta,
+        argValues: [that, id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionRemoveScheduleConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_remove_schedule",
+        argNames: ["that", "id"],
+      );
+
+  @override
+  Future<List<DueMessage>> crateApiSessionSessionRunDueSchedules({
+    required Session that,
+    String? listener,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_opt_String(listener, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_due_message,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionRunDueSchedulesConstMeta,
+        argValues: [that, listener],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionRunDueSchedulesConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_run_due_schedules",
+        argNames: ["that", "listener"],
       );
 
   @override
@@ -379,7 +539,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 11,
             port: port_,
           );
         },
@@ -417,12 +577,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  List<Alarm> crateApiSessionSessionUpcomingAlarms({
+    required Session that,
+    required int limit,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(limit, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_alarm,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionUpcomingAlarmsConstMeta,
+        argValues: [that, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionUpcomingAlarmsConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_upcoming_alarms",
+        argNames: ["that", "limit"],
+      );
+
+  @override
   Catalog crateApiCatalogCatalog() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_catalog,
@@ -447,7 +640,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 14,
             port: port_,
           );
         },
@@ -507,6 +700,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Alarm dco_decode_alarm(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return Alarm(
+      scheduleId: dco_decode_String(arr[0]),
+      atEpochMs: dco_decode_i_64(arr[1]),
+    );
+  }
+
+  @protected
   AppFailure dco_decode_app_failure(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -528,6 +733,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ScheduleRequest dco_decode_box_autoadd_schedule_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_schedule_request(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   Catalog dco_decode_catalog(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -538,6 +755,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       tones: dco_decode_list_tone_option(arr[1]),
       languages: dco_decode_list_language_option(arr[2]),
       maxPitchShift: dco_decode_f_32(arr[3]),
+    );
+  }
+
+  @protected
+  DueMessage dco_decode_due_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return DueMessage(
+      scheduleId: dco_decode_String(arr[0]),
+      text: dco_decode_opt_String(arr[1]),
+      tone: dco_decode_opt_String(arr[2]),
+      audioPath: dco_decode_opt_String(arr[3]),
+      error: dco_decode_opt_String(arr[4]),
     );
   }
 
@@ -560,6 +792,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
   LanguageOption dco_decode_language_option(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -569,6 +807,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       code: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
     );
+  }
+
+  @protected
+  List<Alarm> dco_decode_list_alarm(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_alarm).toList();
+  }
+
+  @protected
+  List<DueMessage> dco_decode_list_due_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_due_message).toList();
   }
 
   @protected
@@ -587,6 +837,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  List<ScheduleSummary> dco_decode_list_schedule_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_schedule_summary).toList();
   }
 
   @protected
@@ -620,6 +876,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
   SampleSummary dco_decode_sample_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -630,6 +892,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       durationSecs: dco_decode_f_32(arr[1]),
       meanPitchHz: dco_decode_f_32(arr[2]),
       transcript: dco_decode_opt_String(arr[3]),
+    );
+  }
+
+  @protected
+  ScheduleKind dco_decode_schedule_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ScheduleKind.values[raw as int];
+  }
+
+  @protected
+  ScheduleRequest dco_decode_schedule_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return ScheduleRequest(
+      speakerId: dco_decode_String(arr[0]),
+      kind: dco_decode_schedule_kind(arr[1]),
+      at: dco_decode_opt_String(arr[2]),
+      days: dco_decode_opt_String(arr[3]),
+      everyMinutes: dco_decode_opt_box_autoadd_u_32(arr[4]),
+      within: dco_decode_opt_String(arr[5]),
+      quiet: dco_decode_opt_String(arr[6]),
+      theme: dco_decode_opt_String(arr[7]),
+      text: dco_decode_opt_String(arr[8]),
+      tone: dco_decode_opt_String(arr[9]),
+      pitchShift: dco_decode_f_32(arr[10]),
+    );
+  }
+
+  @protected
+  ScheduleSummary dco_decode_schedule_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ScheduleSummary(
+      id: dco_decode_String(arr[0]),
+      speakerId: dco_decode_String(arr[1]),
+      toneLabel: dco_decode_String(arr[2]),
+      nextDue: dco_decode_opt_String(arr[3]),
     );
   }
 
@@ -769,6 +1072,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Alarm sse_decode_alarm(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_scheduleId = sse_decode_String(deserializer);
+    var var_atEpochMs = sse_decode_i_64(deserializer);
+    return Alarm(scheduleId: var_scheduleId, atEpochMs: var_atEpochMs);
+  }
+
+  @protected
   AppFailure sse_decode_app_failure(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_message = sse_decode_String(deserializer);
@@ -788,6 +1099,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ScheduleRequest sse_decode_box_autoadd_schedule_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_schedule_request(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_32(deserializer));
+  }
+
+  @protected
   Catalog sse_decode_catalog(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_themes = sse_decode_list_theme_option(deserializer);
@@ -799,6 +1124,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       tones: var_tones,
       languages: var_languages,
       maxPitchShift: var_maxPitchShift,
+    );
+  }
+
+  @protected
+  DueMessage sse_decode_due_message(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_scheduleId = sse_decode_String(deserializer);
+    var var_text = sse_decode_opt_String(deserializer);
+    var var_tone = sse_decode_opt_String(deserializer);
+    var var_audioPath = sse_decode_opt_String(deserializer);
+    var var_error = sse_decode_opt_String(deserializer);
+    return DueMessage(
+      scheduleId: var_scheduleId,
+      text: var_text,
+      tone: var_tone,
+      audioPath: var_audioPath,
+      error: var_error,
     );
   }
 
@@ -822,11 +1164,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
   LanguageOption sse_decode_language_option(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_code = sse_decode_String(deserializer);
     var var_name = sse_decode_String(deserializer);
     return LanguageOption(code: var_code, name: var_name);
+  }
+
+  @protected
+  List<Alarm> sse_decode_list_alarm(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <Alarm>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_alarm(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DueMessage> sse_decode_list_due_message(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DueMessage>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_due_message(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -855,6 +1227,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<ScheduleSummary> sse_decode_list_schedule_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ScheduleSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_schedule_summary(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -918,6 +1304,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   SampleSummary sse_decode_sample_summary(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -929,6 +1326,57 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       durationSecs: var_durationSecs,
       meanPitchHz: var_meanPitchHz,
       transcript: var_transcript,
+    );
+  }
+
+  @protected
+  ScheduleKind sse_decode_schedule_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ScheduleKind.values[inner];
+  }
+
+  @protected
+  ScheduleRequest sse_decode_schedule_request(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_speakerId = sse_decode_String(deserializer);
+    var var_kind = sse_decode_schedule_kind(deserializer);
+    var var_at = sse_decode_opt_String(deserializer);
+    var var_days = sse_decode_opt_String(deserializer);
+    var var_everyMinutes = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_within = sse_decode_opt_String(deserializer);
+    var var_quiet = sse_decode_opt_String(deserializer);
+    var var_theme = sse_decode_opt_String(deserializer);
+    var var_text = sse_decode_opt_String(deserializer);
+    var var_tone = sse_decode_opt_String(deserializer);
+    var var_pitchShift = sse_decode_f_32(deserializer);
+    return ScheduleRequest(
+      speakerId: var_speakerId,
+      kind: var_kind,
+      at: var_at,
+      days: var_days,
+      everyMinutes: var_everyMinutes,
+      within: var_within,
+      quiet: var_quiet,
+      theme: var_theme,
+      text: var_text,
+      tone: var_tone,
+      pitchShift: var_pitchShift,
+    );
+  }
+
+  @protected
+  ScheduleSummary sse_decode_schedule_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_speakerId = sse_decode_String(deserializer);
+    var var_toneLabel = sse_decode_String(deserializer);
+    var var_nextDue = sse_decode_opt_String(deserializer);
+    return ScheduleSummary(
+      id: var_id,
+      speakerId: var_speakerId,
+      toneLabel: var_toneLabel,
+      nextDue: var_nextDue,
     );
   }
 
@@ -1066,6 +1514,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_alarm(Alarm self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.scheduleId, serializer);
+    sse_encode_i_64(self.atEpochMs, serializer);
+  }
+
+  @protected
   void sse_encode_app_failure(AppFailure self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.message, serializer);
@@ -1084,12 +1539,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_schedule_request(
+    ScheduleRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_schedule_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self, serializer);
+  }
+
+  @protected
   void sse_encode_catalog(Catalog self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_theme_option(self.themes, serializer);
     sse_encode_list_tone_option(self.tones, serializer);
     sse_encode_list_language_option(self.languages, serializer);
     sse_encode_f_32(self.maxPitchShift, serializer);
+  }
+
+  @protected
+  void sse_encode_due_message(DueMessage self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.scheduleId, serializer);
+    sse_encode_opt_String(self.text, serializer);
+    sse_encode_opt_String(self.tone, serializer);
+    sse_encode_opt_String(self.audioPath, serializer);
+    sse_encode_opt_String(self.error, serializer);
   }
 
   @protected
@@ -1111,6 +1591,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
   void sse_encode_language_option(
     LanguageOption self,
     SseSerializer serializer,
@@ -1118,6 +1604,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.code, serializer);
     sse_encode_String(self.name, serializer);
+  }
+
+  @protected
+  void sse_encode_list_alarm(List<Alarm> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_alarm(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_due_message(
+    List<DueMessage> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_due_message(item, serializer);
+    }
   }
 
   @protected
@@ -1152,6 +1659,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_list_schedule_summary(
+    List<ScheduleSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_schedule_summary(item, serializer);
+    }
   }
 
   @protected
@@ -1214,12 +1733,59 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_sample_summary(SampleSummary self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.id, serializer);
     sse_encode_f_32(self.durationSecs, serializer);
     sse_encode_f_32(self.meanPitchHz, serializer);
     sse_encode_opt_String(self.transcript, serializer);
+  }
+
+  @protected
+  void sse_encode_schedule_kind(ScheduleKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_schedule_request(
+    ScheduleRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.speakerId, serializer);
+    sse_encode_schedule_kind(self.kind, serializer);
+    sse_encode_opt_String(self.at, serializer);
+    sse_encode_opt_String(self.days, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.everyMinutes, serializer);
+    sse_encode_opt_String(self.within, serializer);
+    sse_encode_opt_String(self.quiet, serializer);
+    sse_encode_opt_String(self.theme, serializer);
+    sse_encode_opt_String(self.text, serializer);
+    sse_encode_opt_String(self.tone, serializer);
+    sse_encode_f_32(self.pitchShift, serializer);
+  }
+
+  @protected
+  void sse_encode_schedule_summary(
+    ScheduleSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.speakerId, serializer);
+    sse_encode_String(self.toneLabel, serializer);
+    sse_encode_opt_String(self.nextDue, serializer);
   }
 
   @protected
@@ -1330,8 +1896,16 @@ class SessionImpl extends RustOpaque implements Session {
       .api
       .crateApiSessionSessionBuildVoice(that: this, speakerId: speakerId);
 
+  ScheduleSummary createSchedule({required ScheduleRequest request}) => RustLib
+      .instance
+      .api
+      .crateApiSessionSessionCreateSchedule(that: this, request: request);
+
   String get engineName =>
       RustLib.instance.api.crateApiSessionSessionEngineName(that: this);
+
+  List<ScheduleSummary> listSchedules() =>
+      RustLib.instance.api.crateApiSessionSessionListSchedules(that: this);
 
   List<SpeakerSummary> listSpeakers() =>
       RustLib.instance.api.crateApiSessionSessionListSpeakers(that: this);
@@ -1351,6 +1925,15 @@ class SessionImpl extends RustOpaque implements Session {
     language: language,
   );
 
+  void removeSchedule({required String id}) => RustLib.instance.api
+      .crateApiSessionSessionRemoveSchedule(that: this, id: id);
+
+  /// Speaks every schedule that is due (each one exactly once).
+  Future<List<DueMessage>> runDueSchedules({String? listener}) => RustLib
+      .instance
+      .api
+      .crateApiSessionSessionRunDueSchedules(that: this, listener: listener);
+
   /// Speaks a message now in the person's voice and returns the WAV path.
   Future<SpokenMessage> speak({
     required String speakerId,
@@ -1368,4 +1951,9 @@ class SessionImpl extends RustOpaque implements Session {
     pitchShift: pitchShift,
     listener: listener,
   );
+
+  /// The next `limit` firings of all schedules, soonest first, within the
+  /// look-ahead horizon (iOS keeps at most 64 pending notifications).
+  List<Alarm> upcomingAlarms({required int limit}) => RustLib.instance.api
+      .crateApiSessionSessionUpcomingAlarms(that: this, limit: limit);
 }
