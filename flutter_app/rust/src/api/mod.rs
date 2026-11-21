@@ -2,6 +2,8 @@
 //! presentation layer: it only translates inputs/outputs and delegates to the
 //! use cases wired by `friendly-voice-bootstrap`.
 pub mod catalog;
+pub mod failure;
+pub mod session;
 
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {

@@ -22,3 +22,6 @@ Future<void> initNative() async {
     );
   }
 }
+
+/// A fresh data folder for one test.
+Directory tempDataDir() => Directory.systemTemp.createTempSync('fv-native-');

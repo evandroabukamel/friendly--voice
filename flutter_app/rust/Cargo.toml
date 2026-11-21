@@ -9,6 +9,9 @@ license.workspace = true
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [features]
+# The app talks to the voice engine over HTTP; the local sketch engine is
+# used when no engine URL is configured.
+default = ["http-engine"]
 http-engine = ["friendly-voice-bootstrap/http-engine"]
 
 [dependencies]
