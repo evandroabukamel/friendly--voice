@@ -1,7 +1,7 @@
 //! # Friendly Voice — Bootstrap
 //!
 //! Composition root: the only place that knows the concrete implementations.
-//! It is shared by every interface (CLI, Android app via JNI).
+//! It is shared by every interface (CLI, Flutter app via flutter_rust_bridge).
 //! Swapping an adapter (e.g. JSON → SQLite, sketch → neural engine) means
 //! changing one line here — no use case changes (OCP + DIP).
 pub mod parse;
