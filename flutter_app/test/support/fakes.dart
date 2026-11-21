@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:friendly_voice/domain/app_settings.dart';
+import 'package:friendly_voice/domain/audio_files.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
 
 /// In-memory [SettingsStore].
@@ -226,4 +227,14 @@ abstract final class FakeCoreWithPeople {
         voiceReady: false,
       ),
     ]);
+}
+
+/// Picker that returns the queued files, in order (`null` = cancelled).
+final class FakeAudioPicker implements AudioFilePicker {
+  new([List<PickedAudio?>? queue]) : queue = queue ?? [];
+
+  final List<PickedAudio?> queue;
+
+  @override
+  Future<PickedAudio?> pick() async => queue.isEmpty ? null : queue.removeAt(0);
 }

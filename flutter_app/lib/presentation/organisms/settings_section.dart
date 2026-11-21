@@ -25,12 +25,12 @@ class _SettingsSectionState extends ConsumerState<SettingsSection> {
   }
 
   Future<void> _save() => ref.read(statusProvider.notifier).run(() async {
-    await ref
+    final connection = await ref
         .read(connectionProvider.notifier)
         .save(
           AppSettings(listener: _listener.text, engineUrl: _engineUrl.text),
         );
-    return null; // the status line shows the reconnected engine
+    return 'Voice engine: ${connection.core.engineName}';
   });
 
   @override
