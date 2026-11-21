@@ -207,3 +207,23 @@ final class FakeVoiceCore implements VoiceCore {
   @override
   List<Alarm> upcomingAlarms(int limit) => alarms.take(limit).toList();
 }
+
+/// A core that already has people, the first one with a generated voice.
+abstract final class FakeCoreWithPeople {
+  static FakeVoiceCore make() => FakeVoiceCore()
+    ..people.addAll(const [
+      SpeakerSummary(
+        id: 'spk-1',
+        name: 'Vó',
+        language: 'pt-BR',
+        voiceReady: true,
+        gender: Gender.female,
+      ),
+      SpeakerSummary(
+        id: 'spk-2',
+        name: 'Ana',
+        language: 'es',
+        voiceReady: false,
+      ),
+    ]);
+}
