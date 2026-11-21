@@ -1,3 +1,4 @@
+import 'package:friendly_voice/presentation/pages/home_page.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Root widget: light Material 3 theme, like the Kotlin app's light theme.
@@ -10,7 +11,7 @@ class FriendlyVoiceApp extends StatelessWidget {
       title: 'Friendly Voice',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.blue),
-      home: const Scaffold(body: Center(child: Text('Friendly Voice'))),
+      home: const HomePage(),
     );
   }
 }
