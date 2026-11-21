@@ -6,6 +6,7 @@
 import 'api/catalog.dart';
 import 'api/failure.dart';
 import 'api/session.dart';
+import 'api/speakers.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -71,7 +72,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 2058154879;
+  int get rustContentHash => 1959681064;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -85,9 +86,21 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 abstract class RustLibApi extends BaseApi {
   String crateApiSessionSessionEngineName({required Session that});
 
+  List<SpeakerSummary> crateApiSessionSessionListSpeakers({
+    required Session that,
+  });
+
   Session crateApiSessionSessionOpen({
     required String dataDir,
     String? engineUrl,
+  });
+
+  SpeakerSummary crateApiSessionSessionRegisterSpeaker({
+    required Session that,
+    required String name,
+    String? relationship,
+    String? consentBy,
+    String? language,
   });
 
   Catalog crateApiCatalogCatalog();
@@ -136,6 +149,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "Session_engine_name", argNames: ["that"]);
 
   @override
+  List<SpeakerSummary> crateApiSessionSessionListSpeakers({
+    required Session that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_speaker_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionListSpeakersConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionListSpeakersConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_list_speakers",
+        argNames: ["that"],
+      );
+
+  @override
   Session crateApiSessionSessionOpen({
     required String dataDir,
     String? engineUrl,
@@ -146,7 +190,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dataDir, serializer);
           sse_encode_opt_String(engineUrl, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -166,12 +210,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  SpeakerSummary crateApiSessionSessionRegisterSpeaker({
+    required Session that,
+    required String name,
+    String? relationship,
+    String? consentBy,
+    String? language,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(name, serializer);
+          sse_encode_opt_String(relationship, serializer);
+          sse_encode_opt_String(consentBy, serializer);
+          sse_encode_opt_String(language, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_speaker_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionRegisterSpeakerConstMeta,
+        argValues: [that, name, relationship, consentBy, language],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionRegisterSpeakerConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_register_speaker",
+        argNames: ["that", "name", "relationship", "consentBy", "language"],
+      );
+
+  @override
   Catalog crateApiCatalogCatalog() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_catalog,
@@ -196,7 +279,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 6,
             port: port_,
           );
         },
@@ -265,6 +348,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  Gender dco_decode_box_autoadd_gender(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_gender(raw);
+  }
+
+  @protected
   Catalog dco_decode_catalog(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -282,6 +377,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double dco_decode_f_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  Gender dco_decode_gender(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return Gender.values[raw as int];
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -309,6 +416,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<SpeakerSummary> dco_decode_list_speaker_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_speaker_summary).toList();
+  }
+
+  @protected
   List<ThemeOption> dco_decode_list_theme_option(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_theme_option).toList();
@@ -324,6 +437,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  Gender? dco_decode_opt_box_autoadd_gender(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_gender(raw);
+  }
+
+  @protected
+  SpeakerSummary dco_decode_speaker_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return SpeakerSummary(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      relationship: dco_decode_opt_String(arr[2]),
+      language: dco_decode_String(arr[3]),
+      voiceReady: dco_decode_bool(arr[4]),
+      gender: dco_decode_opt_box_autoadd_gender(arr[5]),
+    );
   }
 
   @protected
@@ -419,6 +554,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  Gender sse_decode_box_autoadd_gender(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_gender(deserializer));
+  }
+
+  @protected
   Catalog sse_decode_catalog(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_themes = sse_decode_list_theme_option(deserializer);
@@ -437,6 +584,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_f_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat32();
+  }
+
+  @protected
+  Gender sse_decode_gender(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return Gender.values[inner];
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
   }
 
   @protected
@@ -466,6 +626,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<SpeakerSummary> sse_decode_list_speaker_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SpeakerSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_speaker_summary(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -504,6 +678,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Gender? sse_decode_opt_box_autoadd_gender(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_gender(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  SpeakerSummary sse_decode_speaker_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_relationship = sse_decode_opt_String(deserializer);
+    var var_language = sse_decode_String(deserializer);
+    var var_voiceReady = sse_decode_bool(deserializer);
+    var var_gender = sse_decode_opt_box_autoadd_gender(deserializer);
+    return SpeakerSummary(
+      id: var_id,
+      name: var_name,
+      relationship: var_relationship,
+      language: var_language,
+      voiceReady: var_voiceReady,
+      gender: var_gender,
+    );
+  }
+
+  @protected
   ThemeOption sse_decode_theme_option(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_slug = sse_decode_String(deserializer);
@@ -534,18 +738,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   BigInt sse_decode_usize(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getBigUint64();
-  }
-
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
-  }
-
-  @protected
-  bool sse_decode_bool(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getUint8() != 0;
   }
 
   @protected
@@ -600,6 +792,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_gender(Gender self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_gender(self, serializer);
+  }
+
+  @protected
   void sse_encode_catalog(Catalog self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_theme_option(self.themes, serializer);
@@ -612,6 +816,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_f_32(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat32(self);
+  }
+
+  @protected
+  void sse_encode_gender(Gender self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
   }
 
   @protected
@@ -644,6 +860,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_list_speaker_summary(
+    List<SpeakerSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_speaker_summary(item, serializer);
+    }
   }
 
   @protected
@@ -681,6 +909,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_gender(
+    Gender? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_gender(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_speaker_summary(
+    SpeakerSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_opt_String(self.relationship, serializer);
+    sse_encode_String(self.language, serializer);
+    sse_encode_bool(self.voiceReady, serializer);
+    sse_encode_opt_box_autoadd_gender(self.gender, serializer);
+  }
+
+  @protected
   void sse_encode_theme_option(ThemeOption self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.slug, serializer);
@@ -710,18 +965,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putBigUint64(self);
   }
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
-  }
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putUint8(self ? 1 : 0);
-  }
 }
 
 @sealed
@@ -745,4 +988,22 @@ class SessionImpl extends RustOpaque implements Session {
 
   String get engineName =>
       RustLib.instance.api.crateApiSessionSessionEngineName(that: this);
+
+  List<SpeakerSummary> listSpeakers() =>
+      RustLib.instance.api.crateApiSessionSessionListSpeakers(that: this);
+
+  /// Registers a person; `consent_by` (who authorized the use of the
+  /// voice) is mandatory. Default language: pt-BR.
+  SpeakerSummary registerSpeaker({
+    required String name,
+    String? relationship,
+    String? consentBy,
+    String? language,
+  }) => RustLib.instance.api.crateApiSessionSessionRegisterSpeaker(
+    that: this,
+    name: name,
+    relationship: relationship,
+    consentBy: consentBy,
+    language: language,
+  );
 }

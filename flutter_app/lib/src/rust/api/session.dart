@@ -8,11 +8,15 @@ import 'failure.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+import 'speakers.dart';
+
 // These functions are ignored because they are not marked as `pub`: `non_empty`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Session>>
 abstract class Session implements RustOpaqueInterface {
   String get engineName;
+
+  List<SpeakerSummary> listSpeakers();
 
   /// Opens the app's data folder (e.g. the platform's application support
   /// directory) with the neural engine at `engine_url`, or the local
@@ -21,4 +25,13 @@ abstract class Session implements RustOpaqueInterface {
       .instance
       .api
       .crateApiSessionSessionOpen(dataDir: dataDir, engineUrl: engineUrl);
+
+  /// Registers a person; `consent_by` (who authorized the use of the
+  /// voice) is mandatory. Default language: pt-BR.
+  SpeakerSummary registerSpeaker({
+    required String name,
+    String? relationship,
+    String? consentBy,
+    String? language,
+  });
 }
