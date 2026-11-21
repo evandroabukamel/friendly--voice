@@ -136,9 +136,17 @@ impl FakeTranscriber {
     }
 }
 impl Transcriber for FakeTranscriber {
-    fn transcribe(&self, _: &AudioClip, language: &Language) -> PortResult<String> {
+    fn transcribe(&self, _: &AudioClip, language: &Language) -> PortResult<Option<String>> {
         *self.0.lock().unwrap() = Some(language.clone());
-        Ok("bom dia".into())
+        Ok(Some("bom dia".into()))
+    }
+}
+
+/// A server without speech recognition.
+pub struct NoTranscriber;
+impl Transcriber for NoTranscriber {
+    fn transcribe(&self, _: &AudioClip, _: &Language) -> PortResult<Option<String>> {
+        Ok(None)
     }
 }
 

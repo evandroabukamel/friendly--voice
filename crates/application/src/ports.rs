@@ -74,8 +74,10 @@ pub trait AcousticAnalyzer: Send + Sync {
 }
 
 /// Speech recognition (optional): produces the transcript from the audio.
+/// `None` means this backend cannot transcribe; the sample is then stored
+/// without a transcript.
 pub trait Transcriber: Send + Sync {
-    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<String>;
+    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<Option<String>>;
 }
 
 // ---------- Voice ----------

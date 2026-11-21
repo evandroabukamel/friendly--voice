@@ -234,16 +234,18 @@ struct TranscribeResponse {
 }
 
 impl Transcriber for HttpTranscriber {
-    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<String> {
+    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<Option<String>> {
         let req = AudioRequest {
             language: language.tag(),
             audio_wav_base64: B64.encode(encode_wav(clip)?),
         };
-        match self.client.post_json::<TranscribeResponse>("v1/transcribe", &req) {
-            Ok(res) => Ok(res.text),
-            Err(CallError::NotImplemented) => Err(err(
-                "the server does not transcribe; provide the transcript (--transcript or a .txt file) or leave it out",
-            )),
+        match self
+            .client
+            .post_json::<TranscribeResponse>("v1/transcribe", &req)
+        {
+            Ok(res) => Ok(Some(res.text)),
+            // 501: no transcriber installed on the server (engine-api.md).
+            Err(CallError::NotImplemented) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -308,6 +310,15 @@ mod tests {
             Client::new("http://engine.lan:8020").url("health"),
             "http://engine.lan:8020/health"
         );
+    }
+
+    #[test]
+    fn a_server_without_transcriber_gives_no_transcript() {
+        let (url, _) = serve_once(501, r#"{"detail":"transcription is not installed"}"#);
+        let text = HttpTranscriber::new(url)
+            .transcribe(&clip(), &Language::default())
+            .unwrap();
+        assert_eq!(text, None);
     }
 
     #[test]
