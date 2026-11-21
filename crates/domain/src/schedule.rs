@@ -178,6 +178,21 @@ impl Schedule {
     }
 
     /// Is it time? (If the app was off, it fires only once.)
+    /// Next firings strictly after `after`, at most `limit` and never past the
+    /// look-ahead horizon (used to schedule exact OS notifications).
+    pub fn upcoming(&self, after: NaiveDateTime, limit: usize) -> Vec<NaiveDateTime> {
+        if !self.enabled {
+            return Vec::new();
+        }
+        let horizon = after + Duration::days(HORIZON_DAYS);
+        std::iter::successors(self.next_occurrence_after(after), |t| {
+            self.next_occurrence_after(*t)
+        })
+        .take_while(|t| *t <= horizon)
+        .take(limit)
+        .collect()
+    }
+
     pub fn is_due(&self, now: NaiveDateTime) -> bool {
         self.enabled && self.next_due().is_some_and(|t| t <= now)
     }
@@ -298,5 +313,37 @@ mod tests {
         assert!(make(Recurrence::Once { at: dt(1, 0, 0) }, None).is_err());
         let all_day = TimeWindow::new(t(0, 0), t(23, 59)).unwrap();
         assert!(make(Recurrence::Daily { at: t(8, 0) }, Some(all_day)).is_err());
+    }
+
+    #[test]
+    fn lists_upcoming_occurrences_within_the_horizon() {
+        let s = make(Recurrence::Daily { at: t(8, 0) }, None).unwrap();
+        let next = s.upcoming(dt(2, 10, 0), 3);
+        assert_eq!(next, vec![dt(3, 8, 0), dt(4, 8, 0), dt(5, 8, 0)]);
+        // Never more than the look-ahead horizon (8 days), whatever the limit.
+        let all = s.upcoming(dt(2, 10, 0), 100);
+        assert_eq!(all.len(), 8);
+        assert!(all.iter().all(|o| *o <= dt(10, 10, 0)));
+    }
+
+    #[test]
+    fn upcoming_respects_quiet_hours_once_and_disabled() {
+        let quiet = TimeWindow::new(t(12, 0), t(14, 0)).unwrap();
+        let s = make(
+            Recurrence::Interval {
+                every_minutes: 60,
+                within: Some(TimeWindow::new(t(11, 0), t(15, 0)).unwrap()),
+            },
+            Some(quiet),
+        )
+        .unwrap();
+        assert_eq!(
+            s.upcoming(dt(2, 10, 0), 3),
+            vec![dt(2, 11, 0), dt(2, 14, 0), dt(3, 11, 0)]
+        );
+        let mut once = make(Recurrence::Once { at: dt(2, 11, 0) }, None).unwrap();
+        assert_eq!(once.upcoming(dt(2, 10, 0), 5), vec![dt(2, 11, 0)]);
+        once.mark_fired(dt(2, 11, 0));
+        assert!(once.upcoming(dt(2, 10, 0), 5).is_empty());
     }
 }
