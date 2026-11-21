@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 721112538;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1736623173;
 
 // Section: executor
 
@@ -338,6 +338,69 @@ fn wire__crate__api__session__Session_register_speaker_impl(
         },
     )
 }
+fn wire__crate__api__session__Session_speak_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Session_speak",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Session>,
+            >>::sse_decode(&mut deserializer);
+            let api_speaker_id = <String>::sse_decode(&mut deserializer);
+            let api_theme = <Option<String>>::sse_decode(&mut deserializer);
+            let api_text = <Option<String>>::sse_decode(&mut deserializer);
+            let api_tone_style = <Option<String>>::sse_decode(&mut deserializer);
+            let api_pitch_shift = <f32>::sse_decode(&mut deserializer);
+            let api_listener = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::failure::AppFailure>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::session::Session::speak(
+                        &*api_that_guard,
+                        api_speaker_id,
+                        api_theme,
+                        api_text,
+                        api_tone_style,
+                        api_pitch_shift,
+                        api_listener,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__catalog__catalog_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -630,6 +693,22 @@ impl SseDecode for crate::api::speakers::SpeakerSummary {
     }
 }
 
+impl SseDecode for crate::api::messages::SpokenMessage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_text = <String>::sse_decode(deserializer);
+        let mut var_tone = <String>::sse_decode(deserializer);
+        let mut var_language = <String>::sse_decode(deserializer);
+        let mut var_audioPath = <String>::sse_decode(deserializer);
+        return crate::api::messages::SpokenMessage {
+            text: var_text,
+            tone: var_tone,
+            language: var_language,
+            audio_path: var_audioPath,
+        };
+    }
+}
+
 impl SseDecode for crate::api::catalog::ThemeOption {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -707,7 +786,8 @@ fn pde_ffi_dispatcher_primary_impl(
     match func_id {
         1 => wire__crate__api__session__Session_add_sample_impl(port, ptr, rust_vec_len, data_len),
         2 => wire__crate__api__session__Session_build_voice_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__session__Session_speak_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__init_app_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -724,7 +804,7 @@ fn pde_ffi_dispatcher_sync_impl(
         4 => wire__crate__api__session__Session_list_speakers_impl(ptr, rust_vec_len, data_len),
         5 => wire__crate__api__session__Session_open_impl(ptr, rust_vec_len, data_len),
         6 => wire__crate__api__session__Session_register_speaker_impl(ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__catalog__catalog_impl(ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__catalog__catalog_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -867,6 +947,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::speakers::SpeakerSummary>
     for crate::api::speakers::SpeakerSummary
 {
     fn into_into_dart(self) -> crate::api::speakers::SpeakerSummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::messages::SpokenMessage {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.text.into_into_dart().into_dart(),
+            self.tone.into_into_dart().into_dart(),
+            self.language.into_into_dart().into_dart(),
+            self.audio_path.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::messages::SpokenMessage
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::messages::SpokenMessage>
+    for crate::api::messages::SpokenMessage
+{
+    fn into_into_dart(self) -> crate::api::messages::SpokenMessage {
         self
     }
 }
@@ -1110,6 +1213,16 @@ impl SseEncode for crate::api::speakers::SpeakerSummary {
         <String>::sse_encode(self.language, serializer);
         <bool>::sse_encode(self.voice_ready, serializer);
         <Option<crate::api::speakers::Gender>>::sse_encode(self.gender, serializer);
+    }
+}
+
+impl SseEncode for crate::api::messages::SpokenMessage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.text, serializer);
+        <String>::sse_encode(self.tone, serializer);
+        <String>::sse_encode(self.language, serializer);
+        <String>::sse_encode(self.audio_path, serializer);
     }
 }
 

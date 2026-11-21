@@ -8,6 +8,7 @@
 
 import 'api/catalog.dart';
 import 'api/failure.dart';
+import 'api/messages.dart';
 import 'api/session.dart';
 import 'api/speakers.dart';
 import 'api/voice.dart';
@@ -105,6 +106,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SpeakerSummary dco_decode_speaker_summary(dynamic raw);
+
+  @protected
+  SpokenMessage dco_decode_spoken_message(dynamic raw);
 
   @protected
   ThemeOption dco_decode_theme_option(dynamic raw);
@@ -205,6 +209,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SpeakerSummary sse_decode_speaker_summary(SseDeserializer deserializer);
+
+  @protected
+  SpokenMessage sse_decode_spoken_message(SseDeserializer deserializer);
 
   @protected
   ThemeOption sse_decode_theme_option(SseDeserializer deserializer);
@@ -328,6 +335,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     SpeakerSummary self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_spoken_message(SpokenMessage self, SseSerializer serializer);
 
   @protected
   void sse_encode_theme_option(ThemeOption self, SseSerializer serializer);

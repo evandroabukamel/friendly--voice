@@ -3,6 +3,7 @@
 //! use cases wired by `friendly-voice-bootstrap`.
 pub mod catalog;
 pub mod failure;
+pub mod messages;
 pub mod session;
 pub mod speakers;
 pub mod voice;

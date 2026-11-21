@@ -5,6 +5,7 @@
 
 import 'api/catalog.dart';
 import 'api/failure.dart';
+import 'api/messages.dart';
 import 'api/session.dart';
 import 'api/speakers.dart';
 import 'api/voice.dart';
@@ -73,7 +74,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 721112538;
+  int get rustContentHash => 1736623173;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -114,6 +115,16 @@ abstract class RustLibApi extends BaseApi {
     String? relationship,
     String? consentBy,
     String? language,
+  });
+
+  Future<SpokenMessage> crateApiSessionSessionSpeak({
+    required Session that,
+    required String speakerId,
+    String? theme,
+    String? text,
+    String? toneStyle,
+    required double pitchShift,
+    String? listener,
   });
 
   Catalog crateApiCatalogCatalog();
@@ -342,12 +353,76 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<SpokenMessage> crateApiSessionSessionSpeak({
+    required Session that,
+    required String speakerId,
+    String? theme,
+    String? text,
+    String? toneStyle,
+    required double pitchShift,
+    String? listener,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(speakerId, serializer);
+          sse_encode_opt_String(theme, serializer);
+          sse_encode_opt_String(text, serializer);
+          sse_encode_opt_String(toneStyle, serializer);
+          sse_encode_f_32(pitchShift, serializer);
+          sse_encode_opt_String(listener, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_spoken_message,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionSpeakConstMeta,
+        argValues: [
+          that,
+          speakerId,
+          theme,
+          text,
+          toneStyle,
+          pitchShift,
+          listener,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionSpeakConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_speak",
+        argNames: [
+          "that",
+          "speakerId",
+          "theme",
+          "text",
+          "toneStyle",
+          "pitchShift",
+          "listener",
+        ],
+      );
+
+  @override
   Catalog crateApiCatalogCatalog() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_catalog,
@@ -372,7 +447,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 9,
             port: port_,
           );
         },
@@ -571,6 +646,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       language: dco_decode_String(arr[3]),
       voiceReady: dco_decode_bool(arr[4]),
       gender: dco_decode_opt_box_autoadd_gender(arr[5]),
+    );
+  }
+
+  @protected
+  SpokenMessage dco_decode_spoken_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return SpokenMessage(
+      text: dco_decode_String(arr[0]),
+      tone: dco_decode_String(arr[1]),
+      language: dco_decode_String(arr[2]),
+      audioPath: dco_decode_String(arr[3]),
     );
   }
 
@@ -863,6 +952,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SpokenMessage sse_decode_spoken_message(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_text = sse_decode_String(deserializer);
+    var var_tone = sse_decode_String(deserializer);
+    var var_language = sse_decode_String(deserializer);
+    var var_audioPath = sse_decode_String(deserializer);
+    return SpokenMessage(
+      text: var_text,
+      tone: var_tone,
+      language: var_language,
+      audioPath: var_audioPath,
+    );
+  }
+
+  @protected
   ThemeOption sse_decode_theme_option(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_slug = sse_decode_String(deserializer);
@@ -1133,6 +1237,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_spoken_message(SpokenMessage self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.text, serializer);
+    sse_encode_String(self.tone, serializer);
+    sse_encode_String(self.language, serializer);
+    sse_encode_String(self.audioPath, serializer);
+  }
+
+  @protected
   void sse_encode_theme_option(ThemeOption self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.slug, serializer);
@@ -1236,5 +1349,23 @@ class SessionImpl extends RustOpaque implements Session {
     relationship: relationship,
     consentBy: consentBy,
     language: language,
+  );
+
+  /// Speaks a message now in the person's voice and returns the WAV path.
+  Future<SpokenMessage> speak({
+    required String speakerId,
+    String? theme,
+    String? text,
+    String? toneStyle,
+    required double pitchShift,
+    String? listener,
+  }) => RustLib.instance.api.crateApiSessionSessionSpeak(
+    that: this,
+    speakerId: speakerId,
+    theme: theme,
+    text: text,
+    toneStyle: toneStyle,
+    pitchShift: pitchShift,
+    listener: listener,
   );
 }

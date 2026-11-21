@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import 'failure.dart';
+import 'messages.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -45,5 +46,15 @@ abstract class Session implements RustOpaqueInterface {
     String? relationship,
     String? consentBy,
     String? language,
+  });
+
+  /// Speaks a message now in the person's voice and returns the WAV path.
+  Future<SpokenMessage> speak({
+    required String speakerId,
+    String? theme,
+    String? text,
+    String? toneStyle,
+    required double pitchShift,
+    String? listener,
   });
 }
