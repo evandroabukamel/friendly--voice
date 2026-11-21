@@ -6,7 +6,7 @@ use friendly_voice_application::use_cases::RegisterSpeakerInput;
 use friendly_voice_domain::{speaker::Speaker, voice::VoiceGender};
 
 /// Voice register detected from the recordings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Gender {
     Female,
     Male,

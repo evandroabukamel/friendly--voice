@@ -10,7 +10,7 @@ use friendly_voice_domain::{
     schedule::{Recurrence, Schedule},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ScheduleKind {
     Daily,
     Weekly,
