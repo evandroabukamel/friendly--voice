@@ -9,11 +9,23 @@ import 'failure.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 import 'speakers.dart';
+import 'voice.dart';
 
 // These functions are ignored because they are not marked as `pub`: `non_empty`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Session>>
 abstract class Session implements RustOpaqueInterface {
+  /// Adds a WAV or FLAC recording of the person (format detected from the
+  /// bytes). The transcript is optional.
+  Future<SampleSummary> addSample({
+    required String speakerId,
+    required List<int> audio,
+    String? transcript,
+  });
+
+  /// Generates (or regenerates) the person's voice from all their samples.
+  Future<VoiceSummary> buildVoice({required String speakerId});
+
   String get engineName;
 
   List<SpeakerSummary> listSpeakers();

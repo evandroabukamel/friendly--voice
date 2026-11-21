@@ -633,6 +633,7 @@ dependencies = [
  "friendly-voice-application",
  "friendly-voice-bootstrap",
  "friendly-voice-domain",
+ "hound",
 ]
 
 [[package]]

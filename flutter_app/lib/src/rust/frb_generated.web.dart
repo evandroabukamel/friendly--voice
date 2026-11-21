@@ -10,6 +10,7 @@ import 'api/catalog.dart';
 import 'api/failure.dart';
 import 'api/session.dart';
 import 'api/speakers.dart';
+import 'api/voice.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -79,6 +80,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<LanguageOption> dco_decode_list_language_option(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -97,6 +101,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Gender? dco_decode_opt_box_autoadd_gender(dynamic raw);
 
   @protected
+  SampleSummary dco_decode_sample_summary(dynamic raw);
+
+  @protected
   SpeakerSummary dco_decode_speaker_summary(dynamic raw);
 
   @protected
@@ -106,6 +113,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ToneOption dco_decode_tone_option(dynamic raw);
 
   @protected
+  int dco_decode_u_32(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -113,6 +123,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt dco_decode_usize(dynamic raw);
+
+  @protected
+  VoiceSummary dco_decode_voice_summary(dynamic raw);
 
   @protected
   Session
@@ -165,6 +178,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -185,6 +201,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Gender? sse_decode_opt_box_autoadd_gender(SseDeserializer deserializer);
 
   @protected
+  SampleSummary sse_decode_sample_summary(SseDeserializer deserializer);
+
+  @protected
   SpeakerSummary sse_decode_speaker_summary(SseDeserializer deserializer);
 
   @protected
@@ -194,6 +213,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ToneOption sse_decode_tone_option(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -201,6 +223,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt sse_decode_usize(SseDeserializer deserializer);
+
+  @protected
+  VoiceSummary sse_decode_voice_summary(SseDeserializer deserializer);
 
   @protected
   void
@@ -260,6 +285,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -293,6 +321,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_sample_summary(SampleSummary self, SseSerializer serializer);
+
+  @protected
   void sse_encode_speaker_summary(
     SpeakerSummary self,
     SseSerializer serializer,
@@ -305,6 +336,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_tone_option(ToneOption self, SseSerializer serializer);
 
   @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
@@ -312,6 +346,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voice_summary(VoiceSummary self, SseSerializer serializer);
 }
 
 // Section: wire_class

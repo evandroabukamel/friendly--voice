@@ -7,6 +7,7 @@ import 'api/catalog.dart';
 import 'api/failure.dart';
 import 'api/session.dart';
 import 'api/speakers.dart';
+import 'api/voice.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -72,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1959681064;
+  int get rustContentHash => 721112538;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -84,6 +85,18 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<SampleSummary> crateApiSessionSessionAddSample({
+    required Session that,
+    required String speakerId,
+    required List<int> audio,
+    String? transcript,
+  });
+
+  Future<VoiceSummary> crateApiSessionSessionBuildVoice({
+    required Session that,
+    required String speakerId,
+  });
+
   String crateApiSessionSessionEngineName({required Session that});
 
   List<SpeakerSummary> crateApiSessionSessionListSpeakers({
@@ -123,6 +136,86 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<SampleSummary> crateApiSessionSessionAddSample({
+    required Session that,
+    required String speakerId,
+    required List<int> audio,
+    String? transcript,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(speakerId, serializer);
+          sse_encode_list_prim_u_8_loose(audio, serializer);
+          sse_encode_opt_String(transcript, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_sample_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionAddSampleConstMeta,
+        argValues: [that, speakerId, audio, transcript],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionAddSampleConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_add_sample",
+        argNames: ["that", "speakerId", "audio", "transcript"],
+      );
+
+  @override
+  Future<VoiceSummary> crateApiSessionSessionBuildVoice({
+    required Session that,
+    required String speakerId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(speakerId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_voice_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionBuildVoiceConstMeta,
+        argValues: [that, speakerId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionBuildVoiceConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_build_voice",
+        argNames: ["that", "speakerId"],
+      );
+
+  @override
   String crateApiSessionSessionEngineName({required Session that}) {
     return handler.executeSync(
       SyncTask(
@@ -132,7 +225,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -160,7 +253,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_speaker_summary,
@@ -190,7 +283,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dataDir, serializer);
           sse_encode_opt_String(engineUrl, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -229,7 +322,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_opt_String(relationship, serializer);
           sse_encode_opt_String(consentBy, serializer);
           sse_encode_opt_String(language, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_speaker_summary,
@@ -254,7 +347,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_catalog,
@@ -279,7 +372,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 8,
             port: port_,
           );
         },
@@ -410,6 +503,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
@@ -443,6 +542,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Gender? dco_decode_opt_box_autoadd_gender(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_gender(raw);
+  }
+
+  @protected
+  SampleSummary dco_decode_sample_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return SampleSummary(
+      id: dco_decode_String(arr[0]),
+      durationSecs: dco_decode_f_32(arr[1]),
+      meanPitchHz: dco_decode_f_32(arr[2]),
+      transcript: dco_decode_opt_String(arr[3]),
+    );
   }
 
   @protected
@@ -486,6 +599,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -501,6 +620,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   BigInt dco_decode_usize(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dcoDecodeU64(raw);
+  }
+
+  @protected
+  VoiceSummary dco_decode_voice_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return VoiceSummary(
+      language: dco_decode_String(arr[0]),
+      gender: dco_decode_opt_box_autoadd_gender(arr[1]),
+      sampleCount: dco_decode_u_32(arr[2]),
+      totalAudioSecs: dco_decode_f_32(arr[3]),
+    );
   }
 
   @protected
@@ -622,6 +755,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -689,6 +829,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SampleSummary sse_decode_sample_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_durationSecs = sse_decode_f_32(deserializer);
+    var var_meanPitchHz = sse_decode_f_32(deserializer);
+    var var_transcript = sse_decode_opt_String(deserializer);
+    return SampleSummary(
+      id: var_id,
+      durationSecs: var_durationSecs,
+      meanPitchHz: var_meanPitchHz,
+      transcript: var_transcript,
+    );
+  }
+
+  @protected
   SpeakerSummary sse_decode_speaker_summary(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -724,6 +879,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
@@ -738,6 +899,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   BigInt sse_decode_usize(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  VoiceSummary sse_decode_voice_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_language = sse_decode_String(deserializer);
+    var var_gender = sse_decode_opt_box_autoadd_gender(deserializer);
+    var var_sampleCount = sse_decode_u_32(deserializer);
+    var var_totalAudioSecs = sse_decode_f_32(deserializer);
+    return VoiceSummary(
+      language: var_language,
+      gender: var_gender,
+      sampleCount: var_sampleCount,
+      totalAudioSecs: var_totalAudioSecs,
+    );
   }
 
   @protected
@@ -853,6 +1029,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_prim_u_8_loose(
+    List<int> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(
+      self is Uint8List ? self : Uint8List.fromList(self),
+    );
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -922,6 +1110,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_sample_summary(SampleSummary self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_f_32(self.durationSecs, serializer);
+    sse_encode_f_32(self.meanPitchHz, serializer);
+    sse_encode_opt_String(self.transcript, serializer);
+  }
+
+  @protected
   void sse_encode_speaker_summary(
     SpeakerSummary self,
     SseSerializer serializer,
@@ -950,6 +1147,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self);
@@ -964,6 +1167,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_voice_summary(VoiceSummary self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.language, serializer);
+    sse_encode_opt_box_autoadd_gender(self.gender, serializer);
+    sse_encode_u_32(self.sampleCount, serializer);
+    sse_encode_f_32(self.totalAudioSecs, serializer);
   }
 }
 
@@ -985,6 +1197,25 @@ class SessionImpl extends RustOpaque implements Session {
     rustArcDecrementStrongCountPtr:
         RustLib.instance.api.rust_arc_decrement_strong_count_SessionPtr,
   );
+
+  /// Adds a WAV or FLAC recording of the person (format detected from the
+  /// bytes). The transcript is optional.
+  Future<SampleSummary> addSample({
+    required String speakerId,
+    required List<int> audio,
+    String? transcript,
+  }) => RustLib.instance.api.crateApiSessionSessionAddSample(
+    that: this,
+    speakerId: speakerId,
+    audio: audio,
+    transcript: transcript,
+  );
+
+  /// Generates (or regenerates) the person's voice from all their samples.
+  Future<VoiceSummary> buildVoice({required String speakerId}) => RustLib
+      .instance
+      .api
+      .crateApiSessionSessionBuildVoice(that: this, speakerId: speakerId);
 
   String get engineName =>
       RustLib.instance.api.crateApiSessionSessionEngineName(that: this);

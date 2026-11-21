@@ -5,6 +5,7 @@ pub mod catalog;
 pub mod failure;
 pub mod session;
 pub mod speakers;
+pub mod voice;
 
 #[flutter_rust_bridge::frb(init)]
 pub fn init_app() {
