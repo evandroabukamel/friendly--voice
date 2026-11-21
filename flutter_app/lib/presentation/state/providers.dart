@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/domain/app_settings.dart';
 import 'package:friendly_voice/domain/audio_files.dart';
+import 'package:friendly_voice/domain/audio_player.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
 import 'package:friendly_voice/infrastructure/file_picker_audio_picker.dart';
 import 'package:friendly_voice/infrastructure/preferences_settings_store.dart';
 import 'package:friendly_voice/infrastructure/rust_voice_core.dart';
+import 'package:friendly_voice/infrastructure/soloud_audio_player.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Composition root of the app: the only place that names the concrete
@@ -20,6 +22,8 @@ final voiceCoreFactoryProvider = Provider<VoiceCoreFactory>(
 final audioPickerProvider = Provider<AudioFilePicker>(
   (ref) => FilePickerAudioPicker(),
 );
+
+final audioPlayerProvider = Provider<AudioPlayer>((ref) => SoloudAudioPlayer());
 
 /// The core opened with the current settings.
 final class Connection {

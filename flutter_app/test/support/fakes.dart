@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:friendly_voice/domain/app_settings.dart';
 import 'package:friendly_voice/domain/audio_files.dart';
+import 'package:friendly_voice/domain/audio_player.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
 
 /// In-memory [SettingsStore].
@@ -163,8 +164,9 @@ final class FakeVoiceCore implements VoiceCore {
       pitchShift: pitchShift,
       listener: listener,
     ));
+    final blank = text == null || text.trim().isEmpty; // like the core
     return SpokenMessage(
-      text: text ?? 'Bom dia, ${listener ?? 'querido'}!',
+      text: blank ? 'Bom dia, ${listener ?? 'querido'}!' : text,
       tone: tone ?? 'calm',
       language: 'pt-BR',
       audioPath: '/outbox/${spoken.length}.wav',
@@ -237,4 +239,12 @@ final class FakeAudioPicker implements AudioFilePicker {
 
   @override
   Future<PickedAudio?> pick() async => queue.isEmpty ? null : queue.removeAt(0);
+}
+
+/// Records what was played.
+final class FakeAudioPlayer implements AudioPlayer {
+  final List<String> played = [];
+
+  @override
+  Future<void> play(String path) async => played.add(path);
 }
