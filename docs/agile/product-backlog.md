@@ -143,8 +143,24 @@ Scenario: cloning with FLAC references
   Then the references are converted to WAV before being sent (the API contract is unchanged)
 
 Scenario: unsupported format
-  When I add an OGG file
-  Then I am told that WAV (PCM/float) and FLAC are supported
+  When I add a file in a format the app cannot read (e.g. AIFF)
+  Then I am told to use a WAV, FLAC, MP3, M4A or OGG file
+```
+
+US-16 extends this story to compressed recordings (delivered in the core,
+so the CLI and the Flutter app both get it):
+
+```gherkin
+Scenario: MP3, M4A and OGG samples
+  Given a recording in MP3, M4A (AAC) or OGG (Vorbis), whatever its file name
+  When I add the sample
+  Then it is decoded, checked against the same limits (2 s – 3 min) and stored with its extension
+  And the references are sent to the engine as WAV
+
+Scenario: a file I cannot use
+  When I add a file with no audio track, or with an unsupported codec (e.g. Opus)
+  Then I am told "This file has no audio. Use a WAV, FLAC, MP3, M4A or OGG file."
+  Or "This audio format is not supported. Convert the file to WAV."
 ```
 
 ### US-25 · CLI commands in English — *Should* · 2 pts · ✅ Sprint 6
@@ -394,7 +410,7 @@ Scenario: built and released by CI
 |----|-------|----------|-----|
 | US-14 | ~~Mobile app with notifications using the use cases~~ → delivered on Android (US-19/US-20) | — | — |
 | US-15 | ~~Revoking consent deletes the person's samples and voice (app and engine)~~ → delivered (Sprint 8) | — | — |
-| US-16 | ~~FLAC support on import~~ → delivered (US-24); MP3/OGG/M4A 🚧 in progress: decoded to WAV on Android before reaching the core; CLI still pending | Should | 2 |
+| US-16 | ~~FLAC support on import~~ → delivered (US-24); ~~MP3/OGG/M4A~~ → delivered in the core (symphonia: MP3, AAC in M4A, Ogg Vorbis; scenarios under US-24), so the CLI and the Flutter app's core read them | Should | 2 |
 | US-17 | Avoid repeating the same message in a row (history) | Could | 2 |
 | US-22 | ~~Inaudible watermark on cloned audio~~ → every Chatterbox output carries the Perth watermark (Sprint 7) | — | — |
 | US-23 | ~~Base voice closest to the person~~ → no base voice since zero-shot cloning (ADR 0007) | — | — |

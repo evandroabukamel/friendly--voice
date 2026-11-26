@@ -9,7 +9,7 @@
 | Clipping | ≤ 1 % of samples at full scale | same |
 | Loudness | RMS ≥ 0.005 (not silent) | same |
 | Voice material | ≥ 1 sample and ≥ 10 s in total | `domain/src/voice.rs` `EnrollmentPolicy` |
-| Input formats | WAV (PCM/float), FLAC (any bit depth, mixed to mono) | `infrastructure/src/audio/` |
+| Input formats | WAV (PCM/float), FLAC (any bit depth), MP3, M4A (AAC-LC), OGG (Vorbis); detected by magic bytes, mixed to mono, sent to the engine as WAV | `infrastructure/src/audio/` |
 | Message text | ≤ 600 chars; engine chunks ≤ 220 chars | `domain/src/message.rs`, `engine/.../text.py` |
 | Pitch shift | ±6 semitones | `domain/src/tone.rs` |
 | Tones | natural, warm, cheerful, calm, firm, whisper | `domain/src/tone.rs` |
@@ -30,7 +30,7 @@
 
 ## Data folder
 
-`speakers.json`, `samples.json`, `audio/<speaker-id>/<sample-id>.{wav,flac}`,
+`speakers.json`, `samples.json`, `audio/<speaker-id>/<sample-id>.{wav,flac,mp3,m4a,ogg}`,
 `voices.json`, `schedules.json`, `outbox/` (WAV + note with text, language
 and tone), speech cache. A sample can carry `<file>.txt` (transcript) next
 to it.

@@ -5,7 +5,7 @@ Used when the app is built with `--features http-engine` and run with
 implementation is [`engine/`](../engine) (Chatterbox Multilingual, zero-shot
 cloning), but any server implementing these endpoints can be plugged in. All
 audio travels as base64-encoded WAV (the app converts other input formats,
-such as FLAC, to WAV before sending).
+such as FLAC, MP3, M4A or OGG, to WAV before sending).
 
 Languages are BCP 47 tags (`pt-BR`, `en`, `es-MX`); the server uses the
 primary subtag and answers **422** for a language it cannot speak.
