@@ -72,6 +72,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record the voice of someone you love, with their permission, to create their voice.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Friendly Voice connects to your voice server on the local network to generate messages in the cloned voice.</string>
 </dict>

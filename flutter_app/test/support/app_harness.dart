@@ -17,6 +17,7 @@ List<Override> fakeAdapters({
   FakeAudioPicker? picker,
   FakeAudioPlayer? player,
   FakeAlarmScheduler? scheduler,
+  FakeVoiceRecorder? recorder,
   String? engineUrl,
   DateTime? now,
 }) => [
@@ -25,6 +26,7 @@ List<Override> fakeAdapters({
   voiceCoreFactoryProvider.overrideWithValue(factory ?? FakeVoiceCoreFactory()),
   audioPickerProvider.overrideWithValue(picker ?? FakeAudioPicker()),
   audioPlayerProvider.overrideWithValue(player ?? FakeAudioPlayer()),
+  voiceRecorderProvider.overrideWithValue(recorder ?? FakeVoiceRecorder()),
   alarmSchedulerProvider.overrideWithValue(scheduler ?? FakeAlarmScheduler()),
   deliveryIntervalProvider.overrideWithValue(null),
   daylightTickProvider.overrideWithValue(null),
@@ -41,6 +43,7 @@ Future<FakeVoiceCore> pumpApp(
   FakeAudioPicker? picker,
   FakeAudioPlayer? player,
   FakeAlarmScheduler? scheduler,
+  FakeVoiceRecorder? recorder,
   String? engineUrl,
   DateTime? now,
 }) async {
@@ -57,6 +60,7 @@ Future<FakeVoiceCore> pumpApp(
         picker: picker,
         player: player,
         scheduler: scheduler,
+        recorder: recorder,
         engineUrl: engineUrl,
         now: now,
       ),

@@ -9,6 +9,7 @@ import 'package:friendly_voice/domain/voice_core.dart';
 import 'package:friendly_voice/infrastructure/file_picker_audio_picker.dart';
 import 'package:friendly_voice/infrastructure/local_notifications_alarm_scheduler.dart';
 import 'package:friendly_voice/infrastructure/preferences_settings_store.dart';
+import 'package:friendly_voice/infrastructure/record_voice_recorder.dart';
 import 'package:friendly_voice/infrastructure/rust_voice_core.dart';
 import 'package:friendly_voice/infrastructure/soloud_audio_player.dart';
 import 'package:friendly_voice/l10n/app_localizations.dart';
@@ -40,6 +41,10 @@ final audioPickerProvider = Provider<AudioFilePicker>(
 );
 
 final audioPlayerProvider = Provider<AudioPlayer>((ref) => SoloudAudioPlayer());
+
+final voiceRecorderProvider = Provider<VoiceRecorder>(
+  (ref) => RecordVoiceRecorder(tempDir: getTemporaryDirectory),
+);
 
 final alarmSchedulerProvider = Provider<AlarmScheduler>(
   (ref) => LocalNotificationsAlarmScheduler(),

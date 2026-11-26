@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show NotifierProviderFamily;
 import 'package:friendly_voice/domain/audio_files.dart';
@@ -9,6 +12,9 @@ import 'package:friendly_voice/presentation/state/reminders.dart';
 
 /// Least recorded material to create a voice (the core's EnrollmentPolicy).
 const minVoiceSecs = 10.0;
+
+/// Longest microphone recording: one sample (the core's quality policy).
+const maxRecordingSecs = 180;
 
 /// What the voice screen is busy with.
 enum VoiceWork { idle, adding, creating }
@@ -26,6 +32,7 @@ final class VoiceEditorState {
     this.missingConsent = false,
     this.work = VoiceWork.idle,
     this.nicknameChanged = false,
+    this.recordingSecs,
   });
 
   /// The registered person (`null` while a new voice is being filled in).
@@ -42,8 +49,13 @@ final class VoiceEditorState {
   /// The nickname of a registered voice was edited (and saved) here.
   final bool nicknameChanged;
 
+  /// Seconds recorded so far from the microphone (`null` = not recording).
+  final int? recordingSecs;
+
+  bool get recording => recordingSecs != null;
+
   bool get registered => person != null;
-  bool get busy => work != VoiceWork.idle;
+  bool get busy => work != VoiceWork.idle || recording;
 
   double get recordedSecs => samples.fold(0, (t, s) => t + s.durationSecs);
 
@@ -58,6 +70,7 @@ final class VoiceEditorState {
     bool? missingConsent,
     VoiceWork? work,
     bool? nicknameChanged,
+    int? Function()? recordingSecs,
   }) => VoiceEditorState(
     person: person ?? this.person,
     name: name ?? this.name,
@@ -69,6 +82,7 @@ final class VoiceEditorState {
     missingConsent: missingConsent ?? this.missingConsent,
     work: work ?? this.work,
     nicknameChanged: nicknameChanged ?? this.nicknameChanged,
+    recordingSecs: recordingSecs == null ? this.recordingSecs : recordingSecs(),
   );
 }
 
@@ -88,8 +102,18 @@ class VoiceEditor extends Notifier<VoiceEditorState> {
 
   MessagesNotifier get _messages => ref.read(messagesProvider.notifier);
 
+  Timer? _ticker;
+
   @override
   VoiceEditorState build() {
+    final recorder = ref.read(voiceRecorderProvider);
+    ref.onDispose(() {
+      // Leaving the screen while recording throws the recording away.
+      if (_ticker case final ticker?) {
+        ticker.cancel();
+        unawaited(recorder.cancel());
+      }
+    });
     final person = ref
         .read(peopleProvider)
         .where((p) => p.id == personId)
@@ -179,6 +203,50 @@ class VoiceEditor extends Notifier<VoiceEditorState> {
         await core.addSample(personId: person.id, audio: file.bytes);
       }
       String added(AppLocalizations l) => l.samplesAdded(picked.length);
+      return added;
+    });
+  }
+
+  /// Starts recording from the microphone, or stops and adds the recording.
+  Future<void> toggleRecording() =>
+      state.recording ? _stopRecording() : _startRecording();
+
+  Future<void> _startRecording() async {
+    if (!register()) return;
+    final recorder = ref.read(voiceRecorderProvider);
+    if (!await recorder.requestPermission()) {
+      _messages.show((l) => l.recordPermissionDenied);
+      return;
+    }
+    try {
+      await recorder.start();
+    } on MicrophoneUnavailable {
+      _messages.show((l) => l.errorMicUnavailable, isError: true);
+      return;
+    }
+    if (!ref.mounted) return;
+    state = state.copyWith(recordingSecs: () => 0);
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      final secs = (state.recordingSecs ?? 0) + 1;
+      state = state.copyWith(recordingSecs: () => secs);
+      if (secs >= maxRecordingSecs) unawaited(_stopRecording());
+    });
+  }
+
+  Future<void> _stopRecording() async {
+    _ticker?.cancel();
+    _ticker = null;
+    state = state.copyWith(recordingSecs: () => null);
+    final person = state.person!;
+    await _work(VoiceWork.adding, () async {
+      final Uint8List audio;
+      try {
+        audio = await ref.read(voiceRecorderProvider).stop();
+      } on RecordingFailed {
+        throw Notice((l) => l.errorRecordingFailed);
+      }
+      await requireCore(ref).addSample(personId: person.id, audio: audio);
+      String added(AppLocalizations l) => l.samplesAdded(1);
       return added;
     });
   }

@@ -391,3 +391,33 @@ final class FakeAlarmScheduler implements AlarmScheduler {
   /// The notification words of each [replaceAll].
   final List<NotificationTexts> texts = [];
 }
+
+/// Microphone that "records" [bytes]; can refuse or be unavailable.
+final class FakeVoiceRecorder implements VoiceRecorder {
+  bool allowed = true;
+  bool available = true;
+  bool fails = false;
+  Uint8List bytes = Uint8List.fromList([1, 2, 3]);
+  int started = 0;
+  int stopped = 0;
+  int cancelled = 0;
+
+  @override
+  Future<bool> requestPermission() async => allowed;
+
+  @override
+  Future<void> start() async {
+    if (!available) throw const MicrophoneUnavailable();
+    started++;
+  }
+
+  @override
+  Future<Uint8List> stop() async {
+    stopped++;
+    if (fails) throw const RecordingFailed();
+    return bytes;
+  }
+
+  @override
+  Future<void> cancel() async => cancelled++;
+}

@@ -10,9 +10,6 @@ import 'package:material_ui/material_ui.dart';
 const pending = <String>{
   // The core's audio failures, translated once the bridge reports their kind.
   'errorNoAudioTrack', 'errorAudioFormat', 'errorAudioTooLong',
-  // Microphone recording.
-  'samplesRecord', 'samplesStop', 'recordingStatus', 'clockFormat',
-  'recordPermissionDenied', 'errorMicUnavailable', 'errorRecordingFailed',
 };
 
 Map<String, Object?> arb(String locale) =>

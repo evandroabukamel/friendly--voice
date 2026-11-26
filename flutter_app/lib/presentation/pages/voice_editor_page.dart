@@ -112,6 +112,32 @@ class VoiceEditorPage extends ConsumerWidget {
                 label: Text(l.samplesAddFiles),
               ),
               const SizedBox(height: Space.s),
+              OutlinedButton.icon(
+                onPressed: state.work != VoiceWork.idle
+                    ? null
+                    : () {
+                        if (language != null && state.language == null) {
+                          editor.editLanguage(language);
+                        }
+                        unawaited(editor.toggleRecording());
+                      },
+                icon: Icon(
+                  state.recording ? Icons.stop_rounded : Icons.mic_none,
+                ),
+                label: Text(state.recording ? l.samplesStop : l.samplesRecord),
+              ),
+              if (state.recordingSecs case final secs?)
+                Padding(
+                  padding: const EdgeInsets.only(top: Space.s),
+                  child: Text(
+                    l.recordingStatus(
+                      clock(l, secs),
+                      clock(l, maxRecordingSecs),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              const SizedBox(height: Space.s),
               for (final (i, s) in state.samples.indexed)
                 SampleRow(number: i + 1, sample: s),
               const SizedBox(height: Space.m),
@@ -172,3 +198,7 @@ class VoiceEditorPage extends ConsumerWidget {
     if (await editor.delete() && context.mounted) Navigator.of(context).pop();
   }
 }
+
+/// "1:05" in the language's clock format.
+String clock(AppLocalizations l, int secs) =>
+    l.clockFormat(secs ~/ 60, (secs % 60).toString().padLeft(2, '0'));
