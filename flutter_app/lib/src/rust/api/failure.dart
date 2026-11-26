@@ -8,20 +8,43 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `new`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `eq`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `from`, `from`
 
 class AppFailure implements FrbException {
+  final FailureKind kind;
+
+  /// English text, shown when the app has no words of its own for `kind`.
   final String message;
 
-  const AppFailure({required this.message});
+  const AppFailure({required this.kind, required this.message});
 
   @override
-  int get hashCode => message.hashCode;
+  int get hashCode => kind.hashCode ^ message.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is AppFailure &&
           runtimeType == other.runtimeType &&
+          kind == other.kind &&
           message == other.message;
+}
+
+/// What went wrong, for the failures the app explains in its own words.
+enum FailureKind {
+  /// Anything else: show `message`.
+  other,
+
+  /// The file is not audio the app reads: unknown format, unsupported
+  /// codec, or damaged.
+  audioFormat,
+
+  /// The file holds no audio track.
+  noAudioTrack,
+
+  /// The recording is longer than the maximum.
+  audioTooLong,
+
+  /// The recording is shorter than the minimum.
+  audioTooShort,
 }
