@@ -2,12 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
 import 'package:friendly_voice/presentation/state/providers.dart';
 
-/// The connected core; actions before the connection fail clearly.
-VoiceCore requireCore(Ref ref) =>
-    ref.read(connectionProvider).value?.core ??
-    (throw const AppFailure(message: 'the voice engine is not connected yet'));
+/// Themes, tones, languages and limits from the core (`null` until
+/// connected).
+final catalogProvider = Provider<Catalog?>(
+  (ref) => ref.watch(connectionProvider).value?.core.catalog(),
+);
 
-/// Registered people, reloaded after each change.
+/// The people whose voice may be used, reloaded after each change.
 final peopleProvider = NotifierProvider<PeopleNotifier, List<SpeakerSummary>>(
   PeopleNotifier.new,
 );
@@ -18,53 +19,30 @@ class PeopleNotifier extends Notifier<List<SpeakerSummary>> {
       ref.watch(connectionProvider).value?.core.listPeople() ?? const [];
 
   void refresh() => state = requireCore(ref).listPeople();
-
-  /// Registers a person; returns the status message.
-  String register({
-    required String name,
-    String? relationship,
-    String? consentBy,
-    String? language,
-  }) {
-    final person = requireCore(ref).registerPerson(
-      name: name,
-      relationship: relationship,
-      consentBy: consentBy,
-      language: language,
-    );
-    refresh();
-    ref.read(selectedPersonIdProvider.notifier).selected = person.id;
-    return 'Person registered: ${person.name}';
-  }
 }
 
-/// The person chosen in the dropdown (`null` = the first one).
-final selectedPersonIdProvider = NotifierProvider<SelectedPersonId, String?>(
-  SelectedPersonId.new,
+/// The voices a reminder can use (generated ones).
+final readyVoicesProvider = Provider<List<SpeakerSummary>>(
+  (ref) => [
+    for (final p in ref.watch(peopleProvider))
+      if (p.voiceReady) p,
+  ],
 );
 
-class SelectedPersonId extends Notifier<String?> {
-  @override
-  String? build() => null;
-
-  String? get selected => state;
-  set selected(String? id) => state = id;
+/// Name of a language code in the catalog ("pt-BR" → "Portuguese (Brazil)").
+String languageName(Catalog? catalog, String code) {
+  for (final l in catalog?.languages ?? const <LanguageOption>[]) {
+    if (l.code == code) return l.name;
+  }
+  return code;
 }
 
-/// The selected person, defaulting to the first one like the Kotlin spinner.
-final selectedPersonProvider = Provider<SpeakerSummary?>((ref) {
-  final people = ref.watch(peopleProvider);
-  final id = ref.watch(selectedPersonIdProvider);
-  for (final p in people) {
-    if (p.id == id) return p;
-  }
-  return people.firstOrNull;
-});
-
-/// Dropdown label of a person, as in the Kotlin app.
-String personLabel(SpeakerSummary p) {
-  final voice = p.voiceReady
-      ? 'voice ready · ${p.gender?.name ?? 'gender not detected'}'
-      : 'voice not generated';
-  return '${p.name} · ${p.language} ($voice)';
+/// The catalog language closest to the phone's locale tag: the exact tag,
+/// then the same language, then the first one.
+String? matchLanguage(List<String> codes, String localeTag) {
+  String base(String tag) => tag.split(RegExp('[-_]')).first.toLowerCase();
+  final tag = localeTag.replaceAll('_', '-').toLowerCase();
+  return codes.where((c) => c.toLowerCase() == tag).firstOrNull ??
+      codes.where((c) => base(c) == base(tag)).firstOrNull ??
+      codes.firstOrNull;
 }

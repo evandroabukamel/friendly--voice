@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/domain/alarms.dart';
 import 'package:friendly_voice/domain/app_settings.dart';
@@ -9,6 +11,7 @@ import 'package:friendly_voice/infrastructure/local_notifications_alarm_schedule
 import 'package:friendly_voice/infrastructure/preferences_settings_store.dart';
 import 'package:friendly_voice/infrastructure/rust_voice_core.dart';
 import 'package:friendly_voice/infrastructure/soloud_audio_player.dart';
+import 'package:friendly_voice/presentation/design/daylight.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Composition root of the app: the only place that names the concrete
@@ -44,6 +47,35 @@ final deliveryIntervalProvider = Provider<Duration?>(
   (ref) => const Duration(minutes: 1),
 );
 
+/// The wall clock (tests pin it).
+final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
+/// How often the sky is repainted for the time of day (`null` = never).
+final daylightTickProvider = Provider<Duration?>(
+  (ref) => const Duration(minutes: 1),
+);
+
+/// The part of the day the screens are painted in, following the clock.
+final daylightProvider = NotifierProvider<DaylightNotifier, Daylight>(
+  DaylightNotifier.new,
+);
+
+class DaylightNotifier extends Notifier<Daylight> {
+  @override
+  Daylight build() {
+    final now = ref.watch(clockProvider);
+    final tick = ref.watch(daylightTickProvider);
+    if (tick != null) {
+      final timer = Timer.periodic(
+        tick,
+        (_) => state = Daylight.at(now().hour),
+      );
+      ref.onDispose(timer.cancel);
+    }
+    return Daylight.at(now().hour);
+  }
+}
+
 /// The core (opened on the build's voice server) and the user's settings.
 final class Connection {
   const new({required this.settings, required this.core});
@@ -78,56 +110,66 @@ class ConnectionNotifier extends AsyncNotifier<Connection> {
   }
 }
 
-/// A plain notice for the user (shown without the warning sign), e.g.
-/// "Register and select a person first.".
+/// The connected core; actions before the connection fail clearly.
+VoiceCore requireCore(Ref ref) =>
+    ref.read(connectionProvider).value?.core ??
+    (throw const AppFailure(message: 'the voice engine is not connected yet'));
+
+/// A plain notice for the user (shown without the warning style), e.g.
+/// "Choose a voice first.".
 final class Notice implements Exception {
   const new(this.message);
 
   final String message;
 }
 
-/// Result of the last user action, shown in the status line; `null` shows
-/// the connection state instead.
-final statusProvider = NotifierProvider<StatusNotifier, String?>(
-  StatusNotifier.new,
+/// One message for the user, shown as a snackbar. Every message is a new
+/// object, so the same text twice is shown twice.
+final class UserMessage {
+  new(this.text, {this.isError = false});
+
+  final String text;
+  final bool isError;
+}
+
+/// The last message for the user (`null` = none yet).
+final messagesProvider = NotifierProvider<MessagesNotifier, UserMessage?>(
+  MessagesNotifier.new,
 );
 
-class StatusNotifier extends Notifier<String?> {
+class MessagesNotifier extends Notifier<UserMessage?> {
   @override
-  String? build() => null;
+  UserMessage? build() => null;
 
-  /// Runs a user action the way the Kotlin app did: "Processing…" while it
-  /// runs, then its success message or the failure with a warning sign.
-  /// A `null` result means nothing happened (e.g. a cancelled file choice):
-  /// the previous status is kept.
-  ///
-  /// A [quiet] run (background checks) does not show "Processing…".
-  Future<void> run(
-    Future<String?> Function() action, {
-    bool quiet = false,
-  }) async {
-    final previous = state;
-    if (!quiet) state = 'Processing…';
+  void show(String text, {bool isError = false}) =>
+      state = UserMessage(text, isError: isError);
+
+  /// Runs a user action: shows its result (`null` = nothing to say) or its
+  /// failure, worded by the core. Returns whether it succeeded.
+  Future<bool> run(Future<String?> Function() action) async {
     try {
-      state = await action() ?? previous;
+      if (await action() case final text?) show(text);
+      return true;
     } on Notice catch (n) {
-      state = n.message;
+      show(n.message);
     } on AppFailure catch (f) {
-      state = '⚠️ ${f.message}';
+      show(f.message, isError: true);
     } on Exception catch (e) {
-      state = '⚠️ $e';
+      show('$e', isError: true);
     }
+    return false;
   }
 }
 
-/// The status line: last action, or the engine once connected.
-final statusLineProvider = Provider<String>((ref) {
-  final status = ref.watch(statusProvider);
-  if (status != null) return status;
-  return switch (ref.watch(connectionProvider)) {
-    AsyncData(:final value) => 'Voice engine: ${value.core.engineName}',
-    AsyncError(:final error) =>
-      '⚠️ ${error is AppFailure ? error.message : error}',
-    _ => 'Processing…',
-  };
-});
+enum AppTab { reminders, voices, settings }
+
+/// The tab shown in the navigation bar.
+final tabProvider = NotifierProvider<TabNotifier, AppTab>(TabNotifier.new);
+
+class TabNotifier extends Notifier<AppTab> {
+  @override
+  AppTab build() => AppTab.reminders;
+
+  AppTab get current => state;
+  set current(AppTab tab) => state = tab;
+}
