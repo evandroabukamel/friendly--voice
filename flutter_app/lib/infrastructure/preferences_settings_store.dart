@@ -1,25 +1,21 @@
 import 'package:friendly_voice/domain/app_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// [SettingsStore] on the platform preferences (same keys as the Kotlin app).
+/// [SettingsStore] on the platform preferences (same key as the Kotlin app).
 final class PreferencesSettingsStore implements SettingsStore {
   final SharedPreferencesAsync _prefs = SharedPreferencesAsync();
 
   static const _listener = 'listener';
-  static const _engineUrl = 'engine_url';
 
   @override
-  Future<AppSettings> load() async => AppSettings(
-    listener: await _prefs.getString(_listener),
-    engineUrl: await _prefs.getString(_engineUrl),
-  );
+  Future<AppSettings> load() async =>
+      AppSettings(listener: await _prefs.getString(_listener));
 
   @override
   Future<void> save(AppSettings settings) async {
-    await _write(_listener, settings.listener);
-    await _write(_engineUrl, settings.engineUrl);
+    final name = settings.listener;
+    await (name == null
+        ? _prefs.remove(_listener)
+        : _prefs.setString(_listener, name));
   }
-
-  Future<void> _write(String key, String? value) =>
-      value == null ? _prefs.remove(key) : _prefs.setString(key, value);
 }

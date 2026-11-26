@@ -27,33 +27,33 @@ void main() {
     expect(factory.openedWith, [null]);
   });
 
-  testWidgets('saving the settings stores them and reconnects the engine', (
+  testWidgets('the voice server comes from the build, never from a field', (
     tester,
   ) async {
     final store = FakeSettingsStore();
     final factory = FakeVoiceCoreFactory();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: fakeAdapters(store: store, factory: factory),
+        overrides: fakeAdapters(
+          store: store,
+          factory: factory,
+          engineUrl: 'http://pc:8020',
+        ),
         child: const MaterialApp(home: HomePage()),
       ),
     );
     await tester.pumpAndSettle();
 
+    expect(find.textContaining('URL'), findsNothing);
     await tester.enterText(
       find.widgetWithText(TextField, 'Your name (to personalize the messages)'),
       'Evandro',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Neural voice server URL (optional)'),
-      'http://pc:8020',
     );
     await tester.tap(find.text('Save settings'));
     await tester.pumpAndSettle();
 
     expect(store.saved.listener, 'Evandro');
-    expect(store.saved.engineUrl, 'http://pc:8020');
-    expect(factory.openedWith, [null, 'http://pc:8020']);
+    expect(factory.openedWith, ['http://pc:8020']);
     expect(find.text('Voice engine: neural server (HTTP)'), findsOneWidget);
   });
 }

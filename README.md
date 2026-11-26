@@ -134,8 +134,11 @@ pitch shift, and schedule messages; switch them on and off and
 edit them. Schedules wake the phone with **exact
 notifications** (Android 14+ asks for the exact-alarm permission; without it
 they may be a few minutes late); the app speaks what is due when it opens,
-when an alarm is tapped and every minute while open. Point it at the voice
-engine in its settings to use the cloned voice. Design: ADR 0009.
+when an alarm is tapped and every minute while open. The voice server is
+compiled in, so users never type it: build with
+`--dart-define=FRIENDLY_VOICE_ENGINE_URL=http://host:8020` (CI uses the
+repository variable of the same name). Without it the app uses the local
+sketch engine. Design: ADR 0009.
 
 ```bash
 cd flutter_app

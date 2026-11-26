@@ -4,7 +4,7 @@ import 'package:friendly_voice/presentation/atoms/atoms.dart';
 import 'package:friendly_voice/presentation/state/providers.dart';
 import 'package:material_ui/material_ui.dart';
 
-/// "Settings": the listener's name and the optional neural voice server.
+/// "Settings": the listener's name.
 class SettingsSection extends ConsumerStatefulWidget {
   const new({super.key});
 
@@ -14,22 +14,18 @@ class SettingsSection extends ConsumerStatefulWidget {
 
 class _SettingsSectionState extends ConsumerState<SettingsSection> {
   final _listener = TextEditingController();
-  final _engineUrl = TextEditingController();
   var _filled = false;
 
   @override
   void dispose() {
     _listener.dispose();
-    _engineUrl.dispose();
     super.dispose();
   }
 
   Future<void> _save() => ref.read(statusProvider.notifier).run(() async {
     final connection = await ref
         .read(connectionProvider.notifier)
-        .save(
-          AppSettings(listener: _listener.text, engineUrl: _engineUrl.text),
-        );
+        .save(AppSettings(listener: _listener.text));
     return 'Voice engine: ${connection.core.engineName}';
   });
 
@@ -39,7 +35,6 @@ class _SettingsSectionState extends ConsumerState<SettingsSection> {
     if (connection case AsyncData(:final value) when !_filled) {
       _filled = true;
       _listener.text = value.settings.listener ?? '';
-      _engineUrl.text = value.settings.engineUrl ?? '';
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,11 +43,6 @@ class _SettingsSectionState extends ConsumerState<SettingsSection> {
         HintTextField(
           hint: 'Your name (to personalize the messages)',
           controller: _listener,
-        ),
-        HintTextField(
-          hint: 'Neural voice server URL (optional)',
-          controller: _engineUrl,
-          keyboardType: TextInputType.url,
         ),
         ActionButton(label: 'Save settings', onPressed: _save),
       ],

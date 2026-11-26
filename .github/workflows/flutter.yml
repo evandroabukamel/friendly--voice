@@ -10,6 +10,9 @@ on:
 env:
   FLUTTER_VERSION: "3.50.1"
   FRB_VERSION: "2.13.0"
+  # Voice server compiled into the app (repository variable; empty = the
+  # local sketch engine). Users never type it.
+  FRIENDLY_VOICE_ENGINE_URL: ${{ vars.FRIENDLY_VOICE_ENGINE_URL }}
 
 jobs:
   test:
@@ -103,7 +106,8 @@ jobs:
         working-directory: flutter_app
         run: |
           flutter pub get
-          flutter build apk --release --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER"
+          flutter build apk --release --build-name "$BUILD_NAME" --build-number "$GITHUB_RUN_NUMBER" \
+            --dart-define=FRIENDLY_VOICE_ENGINE_URL="$FRIENDLY_VOICE_ENGINE_URL"
       - uses: actions/upload-artifact@v4
         with:
           name: friendly-voice-flutter-apk
@@ -131,7 +135,8 @@ jobs:
         working-directory: flutter_app
         run: |
           flutter pub get
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign \
+            --dart-define=FRIENDLY_VOICE_ENGINE_URL="$FRIENDLY_VOICE_ENGINE_URL"
           cd build/ios/iphoneos && zip -qr ../../../friendly-voice-ios-unsigned.zip Runner.app
       - uses: actions/upload-artifact@v4
         with:

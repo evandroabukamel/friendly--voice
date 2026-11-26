@@ -18,7 +18,9 @@ List<Override> fakeAdapters({
   FakeAudioPicker? picker,
   FakeAudioPlayer? player,
   FakeAlarmScheduler? scheduler,
+  String? engineUrl,
 }) => [
+  engineUrlProvider.overrideWithValue(engineUrl),
   settingsStoreProvider.overrideWithValue(store ?? FakeSettingsStore(settings)),
   voiceCoreFactoryProvider.overrideWithValue(factory ?? FakeVoiceCoreFactory()),
   audioPickerProvider.overrideWithValue(picker ?? FakeAudioPicker()),

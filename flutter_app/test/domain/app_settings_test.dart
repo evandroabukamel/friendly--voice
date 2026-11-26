@@ -2,15 +2,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:friendly_voice/domain/app_settings.dart';
 
 void main() {
-  test('blank values mean "not set"', () {
-    final s = AppSettings(listener: '  ', engineUrl: '');
-    expect(s.listener, isNull);
-    expect(s.engineUrl, isNull);
+  test('a blank name means "not set"', () {
+    expect(AppSettings(listener: '  ').listener, isNull);
   });
 
-  test('values are trimmed', () {
-    final s = AppSettings(listener: ' Evandro ', engineUrl: ' http://pc:8020 ');
-    expect(s.listener, 'Evandro');
-    expect(s.engineUrl, 'http://pc:8020');
+  test('the name is trimmed', () {
+    expect(AppSettings(listener: ' Evandro ').listener, 'Evandro');
+  });
+
+  test('the voice server comes from the build; blank means none', () {
+    expect(engineUrlFromBuild(''), isNull);
+    expect(engineUrlFromBuild('  '), isNull);
+    expect(engineUrlFromBuild(' http://pc:8020 '), 'http://pc:8020');
   });
 }

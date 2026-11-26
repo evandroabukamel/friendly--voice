@@ -17,6 +17,13 @@ final settingsStoreProvider = Provider<SettingsStore>(
   (ref) => PreferencesSettingsStore(),
 );
 
+/// The voice server compiled into this build (`null` = local sketch engine).
+final engineUrlProvider = Provider<String?>(
+  (ref) => engineUrlFromBuild(
+    const String.fromEnvironment('FRIENDLY_VOICE_ENGINE_URL'),
+  ),
+);
+
 final voiceCoreFactoryProvider = Provider<VoiceCoreFactory>(
   (ref) => RustVoiceCoreFactory(dataDir: getApplicationSupportDirectory),
 );
@@ -37,7 +44,7 @@ final deliveryIntervalProvider = Provider<Duration?>(
   (ref) => const Duration(minutes: 1),
 );
 
-/// The core opened with the current settings.
+/// The core (opened on the build's voice server) and the user's settings.
 final class Connection {
   const new({required this.settings, required this.core});
 
@@ -52,22 +59,20 @@ final connectionProvider =
 
 class ConnectionNotifier extends AsyncNotifier<Connection> {
   @override
-  Future<Connection> build() async {
-    final settings = await ref.read(settingsStoreProvider).load();
-    return await _open(settings);
-  }
-
-  Future<Connection> _open(AppSettings settings) async => Connection(
-    settings: settings,
+  Future<Connection> build() async => Connection(
+    settings: await ref.read(settingsStoreProvider).load(),
     core: await ref
         .read(voiceCoreFactoryProvider)
-        .open(engineUrl: settings.engineUrl),
+        .open(engineUrl: ref.read(engineUrlProvider)),
   );
 
-  /// Saves the settings and reopens the core with them.
+  /// Saves the settings; the core stays open.
   Future<Connection> save(AppSettings settings) async {
     await ref.read(settingsStoreProvider).save(settings);
-    final connection = await _open(settings);
+    final connection = Connection(
+      settings: settings,
+      core: (await future).core,
+    );
     state = AsyncData(connection);
     return connection;
   }

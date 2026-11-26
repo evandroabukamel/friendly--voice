@@ -11,20 +11,15 @@ void main() {
   });
 
   test('starts empty', () async {
-    final settings = await PreferencesSettingsStore().load();
-    expect((settings.listener, settings.engineUrl), (null, null));
+    expect((await PreferencesSettingsStore().load()).listener, isNull);
   });
 
-  test('saved settings are loaded back, and cleared when blank', () async {
+  test('the saved name is loaded back, and cleared when blank', () async {
     final store = PreferencesSettingsStore();
-    await store.save(
-      AppSettings(listener: 'Evandro', engineUrl: 'http://pc:8020'),
-    );
-    var loaded = await PreferencesSettingsStore().load();
-    expect((loaded.listener, loaded.engineUrl), ('Evandro', 'http://pc:8020'));
+    await store.save(AppSettings(listener: 'Evandro'));
+    expect((await PreferencesSettingsStore().load()).listener, 'Evandro');
 
     await store.save(AppSettings(listener: ''));
-    loaded = await store.load();
-    expect((loaded.listener, loaded.engineUrl), (null, null));
+    expect((await store.load()).listener, isNull);
   });
 }
