@@ -100,6 +100,7 @@ impl AddVoiceSample {
 mod tests {
     use super::*;
     use crate::fakes::{Fakes, NoTranscriber};
+    use friendly_voice_domain::{audio::SampleProblem, DomainError};
 
     fn uc(f: &Fakes) -> AddVoiceSample {
         AddVoiceSample::new(
@@ -171,6 +172,28 @@ mod tests {
             })
             .unwrap();
         assert_eq!(s.transcript, None);
+    }
+
+    #[test]
+    fn a_file_that_is_not_audio_is_a_rejected_sample_not_an_outage() {
+        let f = Fakes::new();
+        let spk = f.speaker();
+        let err = uc(&f)
+            .execute(AddVoiceSampleInput {
+                speaker_id: spk.id,
+                audio: b"no".to_vec(),
+                ..Default::default()
+            })
+            .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                AppError::Domain(DomainError::SampleRejected(
+                    SampleProblem::UnsupportedFormat
+                ))
+            ),
+            "{err:?}"
+        );
     }
 
     #[test]

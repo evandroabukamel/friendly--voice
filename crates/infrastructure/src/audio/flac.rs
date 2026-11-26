@@ -1,7 +1,7 @@
 //! FLAC decoding with `claxon` (pure Rust).
 use super::format::flac_stream;
-use friendly_voice_application::ports::{AudioDecoder, PortError, PortResult};
-use friendly_voice_domain::audio::AudioClip;
+use friendly_voice_application::ports::{AudioDecoder, DecodeError};
+use friendly_voice_domain::audio::{AudioClip, SampleProblem};
 use std::io::Cursor;
 
 /// Decodes FLAC (any bit depth and channel count), mixing down to mono.
@@ -9,17 +9,16 @@ use std::io::Cursor;
 pub struct FlacDecoder;
 
 impl AudioDecoder for FlacDecoder {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
-        let stream = flac_stream(bytes).ok_or_else(|| PortError::new("invalid FLAC"))?;
-        let mut reader = claxon::FlacReader::new(Cursor::new(stream))
-            .map_err(|e| PortError::new(format!("invalid FLAC: {e}")))?;
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError> {
+        let stream = flac_stream(bytes).ok_or(SampleProblem::Unreadable)?;
+        let mut reader = claxon::FlacReader::new(Cursor::new(stream)).map_err(problem)?;
         let info = reader.streaminfo();
         let channels = info.channels.max(1) as usize;
         let scale = (1i64 << (info.bits_per_sample - 1)) as f32;
         let mut mono = Vec::with_capacity(info.samples.unwrap_or(0) as usize / channels);
         let (mut acc, mut n) = (0.0f32, 0usize);
         for sample in reader.samples() {
-            let sample = sample.map_err(|e| PortError::new(format!("corrupted FLAC: {e}")))?;
+            let sample = sample.map_err(problem)?;
             acc += sample as f32 / scale;
             n += 1;
             if n == channels {
@@ -28,7 +27,15 @@ impl AudioDecoder for FlacDecoder {
                 n = 0;
             }
         }
-        AudioClip::new(info.sample_rate, mono).map_err(PortError::new)
+        AudioClip::new(info.sample_rate, mono).map_err(|_| SampleProblem::Unreadable.into())
+    }
+}
+
+/// The bytes are in memory, so every reading error is the file's.
+fn problem(e: claxon::Error) -> SampleProblem {
+    match e {
+        claxon::Error::Unsupported(_) => SampleProblem::UnsupportedCodec,
+        _ => SampleProblem::Unreadable,
     }
 }
 

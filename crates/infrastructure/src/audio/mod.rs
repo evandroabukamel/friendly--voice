@@ -10,19 +10,8 @@ pub use flac::FlacDecoder;
 pub use format::AudioFormat;
 pub use wav::{encode_wav, WavDecoder};
 
-use friendly_voice_application::ports::{AudioDecoder, PortError, PortResult};
-use friendly_voice_domain::audio::AudioClip;
-
-/// The file's bytes match none of the supported formats.
-pub const UNSUPPORTED_FORMAT: &str =
-    "This audio format is not supported. Use a WAV, FLAC, MP3, M4A or OGG file.";
-/// The container holds no audio track (e.g. only video or subtitles).
-pub const NO_AUDIO_TRACK: &str = "This file has no audio. Use a WAV, FLAC, MP3, M4A or OGG file.";
-/// The container is supported but its codec is not (e.g. Opus, ALAC).
-pub const UNSUPPORTED_CODEC: &str = "This audio format is not supported. Convert the file to WAV.";
-/// The container is supported but its content is damaged or cut short.
-pub const UNREADABLE: &str =
-    "This audio file could not be read; it may be damaged. Convert the file to WAV.";
+use friendly_voice_application::ports::{AudioDecoder, DecodeError, PortResult};
+use friendly_voice_domain::audio::{AudioClip, SampleProblem};
 
 /// Decodes any supported format, picking the decoder by magic bytes.
 /// New formats are added here without touching the use cases (OCP).
@@ -30,14 +19,14 @@ pub const UNREADABLE: &str =
 pub struct AudioFileDecoder;
 
 impl AudioDecoder for AudioFileDecoder {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError> {
         match AudioFormat::detect(bytes) {
             Some(AudioFormat::Wav) => WavDecoder.decode(bytes),
             Some(AudioFormat::Flac) => FlacDecoder.decode(bytes),
             Some(AudioFormat::Mp3 | AudioFormat::M4a | AudioFormat::Ogg) => {
                 CompressedAudioDecoder.decode(bytes)
             }
-            None => Err(PortError::new(UNSUPPORTED_FORMAT)),
+            None => Err(SampleProblem::UnsupportedFormat.into()),
         }
     }
 }
@@ -53,6 +42,8 @@ pub fn to_wav(bytes: &[u8]) -> PortResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use friendly_voice_application::ports::DecodeError;
+    use friendly_voice_domain::audio::SampleProblem;
 
     fn tone() -> Vec<i32> {
         (0..8_000)
@@ -67,8 +58,14 @@ mod tests {
         let wav = encode_wav(&from_flac).unwrap();
         let from_wav = AudioFileDecoder.decode(&wav).unwrap();
         assert_eq!(from_flac.samples().len(), from_wav.samples().len());
-        let err = AudioFileDecoder.decode(b"not audio at all...").unwrap_err();
-        assert_eq!(err.0, UNSUPPORTED_FORMAT);
+        assert_eq!(
+            AudioFileDecoder.decode(b"not audio at all...").unwrap_err(),
+            rejected(SampleProblem::UnsupportedFormat)
+        );
+    }
+
+    fn rejected(problem: SampleProblem) -> DecodeError {
+        DecodeError::Rejected(problem)
     }
 
     // Real files (≈3 s of voiced tone with pauses) made with ffmpeg:
@@ -114,17 +111,28 @@ mod tests {
     #[test]
     fn explains_files_it_cannot_use() {
         assert_eq!(
-            AudioFileDecoder.decode(NO_AUDIO).unwrap_err().0,
-            NO_AUDIO_TRACK
+            AudioFileDecoder.decode(NO_AUDIO).unwrap_err(),
+            rejected(SampleProblem::NoAudioTrack)
         );
         assert_eq!(
-            AudioFileDecoder.decode(OPUS).unwrap_err().0,
-            UNSUPPORTED_CODEC
+            AudioFileDecoder.decode(OPUS).unwrap_err(),
+            rejected(SampleProblem::UnsupportedCodec)
         );
         // A recognised container whose content is cut short.
         assert_eq!(
-            AudioFileDecoder.decode(&M4A[..200]).unwrap_err().0,
-            UNREADABLE
+            AudioFileDecoder.decode(&M4A[..200]).unwrap_err(),
+            rejected(SampleProblem::Unreadable)
+        );
+        // Damaged WAV and FLAC files are unreadable samples too.
+        assert_eq!(
+            AudioFileDecoder
+                .decode(b"RIFF\0\0\0\0WAVEjunk")
+                .unwrap_err(),
+            rejected(SampleProblem::Unreadable)
+        );
+        assert_eq!(
+            AudioFileDecoder.decode(b"fLaC not really").unwrap_err(),
+            rejected(SampleProblem::Unreadable)
         );
     }
 

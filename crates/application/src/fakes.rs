@@ -7,7 +7,7 @@ use crate::use_cases::{
 };
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 use friendly_voice_domain::{
-    audio::{AcousticFeatures, AudioClip},
+    audio::{AcousticFeatures, AudioClip, SampleProblem},
     ids::{SampleId, ScheduleId, SpeakerId},
     language::Language,
     message::{MessageCategory, MotivationalMessage},
@@ -135,14 +135,19 @@ impl MemAudio {
     }
 }
 
-/// "Decodes" bytes holding only the duration (f32 LE) into a 16 kHz tone.
+/// "Decodes" bytes holding only the duration (f32 LE) into a 16 kHz tone;
+/// anything shorter is not audio.
 pub struct FakeDecoder;
 impl AudioDecoder for FakeDecoder {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
-        let secs = f32::from_le_bytes(bytes[..4].try_into().map_err(PortError::new)?);
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError> {
+        let secs = bytes
+            .get(..4)
+            .and_then(|b| b.try_into().ok())
+            .map(f32::from_le_bytes)
+            .ok_or(SampleProblem::UnsupportedFormat)?;
         let n = (secs * 16_000.0) as usize;
         let s = (0..n).map(|i| 0.3 * (i as f32 * 0.08).sin()).collect();
-        AudioClip::new(16_000, s).map_err(PortError::new)
+        AudioClip::new(16_000, s).map_err(|e| PortError::new(e).into())
     }
 }
 

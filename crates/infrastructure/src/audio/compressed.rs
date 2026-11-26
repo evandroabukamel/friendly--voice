@@ -1,7 +1,7 @@
 //! MP3, M4A (AAC) and Ogg Vorbis decoding with `symphonia` (pure Rust).
-use super::{NO_AUDIO_TRACK, UNREADABLE, UNSUPPORTED_CODEC};
-use friendly_voice_application::ports::{AudioDecoder, PortError, PortResult};
+use friendly_voice_application::ports::{AudioDecoder, DecodeError};
 use friendly_voice_domain::audio::AudioClip;
+use friendly_voice_domain::audio::SampleProblem::{NoAudioTrack, Unreadable, UnsupportedCodec};
 use std::io::Cursor;
 use symphonia::core::codecs::audio::AudioDecoderOptions;
 use symphonia::core::codecs::CodecParameters;
@@ -17,7 +17,7 @@ use symphonia::core::meta::MetadataOptions;
 pub struct CompressedAudioDecoder;
 
 impl AudioDecoder for CompressedAudioDecoder {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError> {
         let source = MediaSourceStream::new(
             Box::new(Cursor::new(bytes.to_vec())),
             MediaSourceStreamOptions::default(),
@@ -29,17 +29,15 @@ impl AudioDecoder for CompressedAudioDecoder {
                 FormatOptions::default(),
                 MetadataOptions::default(),
             )
-            .map_err(|_| PortError::new(UNREADABLE))?;
-        let track = reader
-            .first_track(TrackType::Audio)
-            .ok_or_else(|| PortError::new(NO_AUDIO_TRACK))?;
+            .map_err(|_| Unreadable)?;
+        let track = reader.first_track(TrackType::Audio).ok_or(NoAudioTrack)?;
         let Some(CodecParameters::Audio(params)) = &track.codec_params else {
-            return Err(PortError::new(UNSUPPORTED_CODEC));
+            return Err(UnsupportedCodec.into());
         };
         let track_id = track.id;
         let mut decoder = symphonia::default::get_codecs()
             .make_audio_decoder(params, &AudioDecoderOptions::default())
-            .map_err(|_| PortError::new(UNSUPPORTED_CODEC))?;
+            .map_err(|_| UnsupportedCodec)?;
 
         let mut sample_rate = params.sample_rate;
         let mut mono = Vec::new();
@@ -50,7 +48,7 @@ impl AudioDecoder for CompressedAudioDecoder {
                 Ok(None) => break,
                 // A file cut short at the end still plays up to the cut.
                 Err(Error::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
-                Err(_) => return Err(PortError::new(UNREADABLE)),
+                Err(_) => return Err(Unreadable.into()),
             };
             if packet.track_id != track_id {
                 continue;
@@ -59,7 +57,7 @@ impl AudioDecoder for CompressedAudioDecoder {
                 Ok(buffer) => buffer,
                 // A corrupted frame is skipped, as players do.
                 Err(Error::DecodeError(_)) => continue,
-                Err(_) => return Err(PortError::new(UNREADABLE)),
+                Err(_) => return Err(Unreadable.into()),
             };
             sample_rate = Some(buffer.spec().rate());
             let channels = buffer.spec().channels().count().max(1);
@@ -71,8 +69,10 @@ impl AudioDecoder for CompressedAudioDecoder {
             );
         }
         match sample_rate {
-            Some(rate) if !mono.is_empty() => AudioClip::new(rate, mono).map_err(PortError::new),
-            _ => Err(PortError::new(UNREADABLE)),
+            Some(rate) if !mono.is_empty() => {
+                AudioClip::new(rate, mono).map_err(|_| Unreadable.into())
+            }
+            _ => Err(Unreadable.into()),
         }
     }
 }

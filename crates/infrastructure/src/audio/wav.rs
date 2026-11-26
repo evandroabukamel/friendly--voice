@@ -1,5 +1,5 @@
-use friendly_voice_application::ports::{AudioDecoder, PortError, PortResult};
-use friendly_voice_domain::audio::AudioClip;
+use friendly_voice_application::ports::{AudioDecoder, DecodeError, PortError, PortResult};
+use friendly_voice_domain::audio::{AudioClip, SampleProblem};
 use std::io::Cursor;
 
 /// Decodes PCM WAV (8/16/24/32-bit or float), mixing down to mono.
@@ -7,30 +7,37 @@ use std::io::Cursor;
 pub struct WavDecoder;
 
 impl AudioDecoder for WavDecoder {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
-        let mut reader = hound::WavReader::new(Cursor::new(bytes))
-            .map_err(|e| PortError::new(format!("invalid WAV: {e}")))?;
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError> {
+        let mut reader = hound::WavReader::new(Cursor::new(bytes)).map_err(problem)?;
         let spec = reader.spec();
         let channels = spec.channels.max(1) as usize;
         let interleaved: Vec<f32> = match spec.sample_format {
             hound::SampleFormat::Float => reader
                 .samples::<f32>()
                 .collect::<Result<_, _>>()
-                .map_err(PortError::new)?,
+                .map_err(problem)?,
             hound::SampleFormat::Int => {
                 let scale = (1i64 << (spec.bits_per_sample - 1)) as f32;
                 reader
                     .samples::<i32>()
                     .map(|s| s.map(|v| v as f32 / scale))
                     .collect::<Result<_, _>>()
-                    .map_err(PortError::new)?
+                    .map_err(problem)?
             }
         };
         let mono = interleaved
             .chunks(channels)
             .map(|frame| frame.iter().sum::<f32>() / channels as f32)
             .collect();
-        AudioClip::new(spec.sample_rate, mono).map_err(PortError::new)
+        AudioClip::new(spec.sample_rate, mono).map_err(|_| SampleProblem::Unreadable.into())
+    }
+}
+
+/// The bytes are in memory, so every reading error is the file's.
+fn problem(e: hound::Error) -> SampleProblem {
+    match e {
+        hound::Error::Unsupported => SampleProblem::UnsupportedCodec,
+        _ => SampleProblem::Unreadable,
     }
 }
 
