@@ -13,6 +13,19 @@ Presentation only: every business rule lives in the Rust core (ADR 0009).
 - The voice server URL comes from the build
   (`--dart-define=FRIENDLY_VOICE_ENGINE_URL=…`). Users never type it.
 
+## Languages
+
+- The 21 languages of the Kotlin app (Settings → App language; default:
+  the phone's). Texts live in `lib/l10n/app_*.arb`, keyed by the Android
+  string names in camelCase ("alarm" → "reminder"); `app_en.arb` is the
+  template. `flutter gen-l10n` (also run by `flutter pub get`) writes the
+  Dart classes there.
+- `test/l10n/strings_test.dart` fails when a language lacks a text or a
+  text is unused: an unused Android text means a missing feature.
+- Delegates: `AppLocalizations.delegate` + material_ui's
+  `GlobalMaterialLocalizations.delegates` (flutter_localizations' Material
+  delegates do not serve material_ui widgets).
+
 ## Layers
 
 - `lib/domain` (ports; data types are the FRB-generated ones),

@@ -6,16 +6,20 @@ final class PreferencesSettingsStore implements SettingsStore {
   final SharedPreferencesAsync _prefs = SharedPreferencesAsync();
 
   static const _listener = 'listener';
+  static const _language = 'app_language';
 
   @override
-  Future<AppSettings> load() async =>
-      AppSettings(listener: await _prefs.getString(_listener));
+  Future<AppSettings> load() async => AppSettings(
+    listener: await _prefs.getString(_listener),
+    language: await _prefs.getString(_language),
+  );
 
   @override
   Future<void> save(AppSettings settings) async {
-    final name = settings.listener;
-    await (name == null
-        ? _prefs.remove(_listener)
-        : _prefs.setString(_listener, name));
+    await _put(_listener, settings.listener);
+    await _put(_language, settings.language);
   }
+
+  Future<void> _put(String key, String? value) =>
+      value == null ? _prefs.remove(key) : _prefs.setString(key, value);
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/atoms/atoms.dart';
 import 'package:friendly_voice/presentation/design/tokens.dart';
 import 'package:friendly_voice/presentation/molecules/molecules.dart';
@@ -21,70 +22,63 @@ class VoiceEditorPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final provider = voiceEditorProvider(id);
     final state = ref.watch(provider);
     final editor = ref.read(provider.notifier);
     final catalog = ref.watch(catalogProvider);
-    final codes = [
-      for (final l in catalog?.languages ?? const <LanguageOption>[]) l.code,
-    ];
+    final languages = catalog?.languages ?? const <LanguageOption>[];
     final language =
         state.language ??
-        matchLanguage(
-          codes,
-          View.of(context).platformDispatcher.locale.toLanguageTag(),
-        );
+        matchLanguage([
+          for (final lang in languages) lang.code,
+        ], View.of(context).platformDispatcher.locale.toLanguageTag());
     final person = state.person;
+    final registered = person != null;
     final enough = state.recordedSecs >= minVoiceSecs;
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) editor.leave();
       },
       child: SkyScreen(
-        header: ScreenHeader(person == null ? 'New voice' : person.name),
+        header: ScreenHeader(
+          registered ? l.importVoiceTitleEdit : l.importVoiceTitleNew,
+        ),
         children: [
           SoftCard(
             children: [
-              if (person == null) ...[
-                LiveField(
-                  label: 'Name (e.g. Grandma Lucia)',
-                  initial: state.name,
-                  error: state.nameError,
-                  capitalization: TextCapitalization.words,
-                  onChanged: editor.editName,
-                ),
-                LiveField(
-                  label: 'Who authorized the use of this voice',
-                  helper:
-                      "Required: only use a voice with the person's "
-                      'permission.',
-                  initial: state.consentBy,
-                  error: state.consentError,
-                  capitalization: TextCapitalization.words,
-                  onChanged: editor.editConsent,
-                ),
-                LabeledDropdown<String>(
-                  label: 'Language',
-                  value: language,
-                  options: [
-                    for (final l
-                        in catalog?.languages ?? const <LanguageOption>[])
-                      (l.code, l.name),
-                  ],
-                  onChanged: (code) {
-                    if (code != null) editor.editLanguage(code);
-                  },
-                ),
-              ] else ...[
-                MutedText(languageName(catalog, person.language)),
-                MutedText('Authorized by ${person.consentBy}'),
-                const SizedBox(height: Space.m),
-              ],
+              // Who the voice is and who allowed it are fixed once the
+              // voice is registered (consent is recorded with it).
               LiveField(
-                label: 'How this voice calls you',
-                helper:
-                    'Optional, e.g. a nickname. Empty: your name from '
-                    'Settings.',
+                label: l.voiceNameHint,
+                initial: state.name,
+                enabled: !registered,
+                error: state.missingName ? l.voiceNameRequired : null,
+                capitalization: TextCapitalization.words,
+                onChanged: editor.editName,
+              ),
+              LiveField(
+                label: l.voiceConsentHint,
+                helper: l.voiceConsentHelp,
+                initial: state.consentBy,
+                enabled: !registered,
+                error: state.missingConsent ? l.voiceConsentRequired : null,
+                capitalization: TextCapitalization.words,
+                onChanged: editor.editConsent,
+              ),
+              LabeledDropdown<String>(
+                label: l.voiceLanguageHint,
+                value: language,
+                options: [for (final lang in languages) (lang.code, lang.name)],
+                onChanged: registered
+                    ? null
+                    : (code) {
+                        if (code != null) editor.editLanguage(code);
+                      },
+              ),
+              LiveField(
+                label: l.voiceListenerHint,
+                helper: l.voiceListenerHelp,
                 initial: state.listenerName,
                 capitalization: TextCapitalization.words,
                 onChanged: editor.editListenerName,
@@ -93,13 +87,16 @@ class VoiceEditorPage extends ConsumerWidget {
           ),
           SoftCard(
             children: [
-              const CardTitle('Recordings'),
+              CardTitle(l.samplesTitle),
               const SizedBox(height: Space.s),
               MutedText(
-                person == null
-                    ? 'Fill in the name and who authorized it, then add '
-                          'recordings.'
-                    : recordingsLabel(state.samples.length, state.recordedSecs),
+                registered
+                    ? recordingsLabel(
+                        l,
+                        state.samples.length,
+                        state.recordedSecs,
+                      )
+                    : l.samplesFillFirst,
               ),
               const SizedBox(height: Space.m),
               OutlinedButton.icon(
@@ -109,10 +106,10 @@ class VoiceEditorPage extends ConsumerWidget {
                         if (language != null && state.language == null) {
                           editor.editLanguage(language);
                         }
-                        unawaited(editor.addRecording());
+                        unawaited(editor.addRecordings());
                       },
                 icon: const Icon(Icons.audio_file_outlined),
-                label: const Text('Add audio files'),
+                label: Text(l.samplesAddFiles),
               ),
               const SizedBox(height: Space.s),
               for (final (i, s) in state.samples.indexed)
@@ -120,15 +117,17 @@ class VoiceEditorPage extends ConsumerWidget {
               const SizedBox(height: Space.m),
               MutedText(
                 person?.voiceReady ?? false
-                    ? 'The voice is ready. Added more recordings? Create it '
-                          'again to improve it.'
-                    : 'Add at least 10 seconds of recordings (WAV or FLAC, '
-                          '2 s to 3 min each), then create the voice.',
+                    ? l.createVoiceHintReady
+                    : l.createVoiceHint,
               ),
               const SizedBox(height: Space.m),
               FilledButton(
                 onPressed: state.busy || !enough ? null : editor.createVoice,
-                child: Text(state.busy ? 'Working on it…' : 'Create voice'),
+                child: Text(
+                  state.work == VoiceWork.creating
+                      ? l.createVoiceRunning
+                      : l.createVoice,
+                ),
               ),
               if (state.busy)
                 const Padding(
@@ -137,11 +136,11 @@ class VoiceEditorPage extends ConsumerWidget {
                 ),
             ],
           ),
-          if (person != null)
+          if (registered)
             OutlinedButton.icon(
               onPressed: () => _confirmDelete(context, editor),
               icon: const Icon(Icons.delete_outline),
-              label: const Text('Delete voice'),
+              label: Text(l.deleteVoice),
             ),
         ],
       ),
@@ -151,24 +150,23 @@ class VoiceEditorPage extends ConsumerWidget {
   Future<void> _confirmDelete(BuildContext context, VoiceEditor editor) async {
     final yes = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete this voice?'),
-        content: const Text(
-          'Its recordings and the created voice are deleted from this phone '
-          'and the voice server. Reminders that use it are turned off and '
-          'kept, so you can choose another voice.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(l.deleteVoiceTitle),
+          content: Text(l.deleteVoiceMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l.actionCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l.deleteVoiceConfirm),
+            ),
+          ],
+        );
+      },
     );
     if (!(yes ?? false)) return;
     if (await editor.delete() && context.mounted) Navigator.of(context).pop();

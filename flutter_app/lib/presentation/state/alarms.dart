@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/application/deliver_due_messages.dart';
+import 'package:friendly_voice/domain/alarms.dart';
+import 'package:friendly_voice/domain/voice_core.dart';
+import 'package:friendly_voice/presentation/state/labels.dart';
 import 'package:friendly_voice/presentation/state/providers.dart';
 
 /// Keeps the OS alarms in sync and delivers due messages: once the core is
@@ -23,6 +26,13 @@ class AlarmsNotifier extends Notifier<void> {
       core: connection.core,
       player: ref.read(audioPlayerProvider),
       alarms: scheduler,
+      texts: () {
+        final l = ref.read(l10nProvider);
+        return NotificationTexts(
+          channelName: l.channelName,
+          title: l.notificationTitle,
+        );
+      },
     );
     final taps = scheduler.taps.listen((_) => deliver());
     final interval = ref.read(deliveryIntervalProvider);
@@ -48,9 +58,22 @@ class AlarmsNotifier extends Notifier<void> {
     final listener = ref.read(connectionProvider).value?.settings.listener;
     await ref
         .read(messagesProvider.notifier)
-        .run(() => deliver(listener: listener));
+        .run(() async => deliveryPhrase(await deliver(listener: listener)));
   }
 
   /// Called after the reminders change.
   Future<void> reschedule() async => await _deliver?.reschedule();
+}
+
+/// What the user is told after a delivery: the last message spoken and
+/// every failure in the core's words (`null` = nothing was due).
+Phrase? deliveryPhrase(List<DueMessage> due) {
+  if (due.isEmpty) return null;
+  return (l) => [
+    if (due.lastWhere((m) => m.audioPath != null, orElse: () => due.first)
+        case DueMessage(:final text?, :final tone?, audioPath: _?))
+      '💬 ${l.notificationBody(text, humanize(tone))}',
+    for (final m in due)
+      if (m.error case final error?) '⚠️ $error',
+  ].join('\n');
 }

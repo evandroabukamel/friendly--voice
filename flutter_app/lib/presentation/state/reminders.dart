@@ -39,6 +39,6 @@ class RemindersNotifier extends Notifier<List<ScheduleSummary>> {
       ref.read(messagesProvider.notifier).run(() async {
         requireCore(ref).removeSchedule(id);
         changed();
-        return 'Reminder deleted.';
+        return null;
       });
 }

@@ -1,90 +1,105 @@
 import 'package:friendly_voice/domain/voice_core.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/state/reminder_form.dart';
 
-/// "good-morning" → "Good morning".
+/// "good-morning" → "Good morning" (themes and tones come from the core as
+/// slugs, as in the Kotlin app).
 String humanize(String slug) {
   final words = slug.replaceAll(RegExp('[-_]'), ' ');
   return words.isEmpty ? words : words[0].toUpperCase() + words.substring(1);
 }
 
-const Map<Weekday, String> _dayNames = {
-  Weekday.mon: 'Mon',
-  Weekday.tue: 'Tue',
-  Weekday.wed: 'Wed',
-  Weekday.thu: 'Thu',
-  Weekday.fri: 'Fri',
-  Weekday.sat: 'Sat',
-  Weekday.sun: 'Sun',
-};
-
 /// Short label for how a reminder repeats ("Weekdays", "Mon, Fri"…).
-String repeatLabel(ScheduleRequest r) => switch (r.kind) {
-  ScheduleKind.daily => 'Daily',
-  ScheduleKind.weekly => _weekly(Weekday.parseList(r.days)),
-  ScheduleKind.interval => [
-    'Every ${r.everyMinutes ?? '?'} min',
-    if (TimeRange.parse(r.within) case final w?) '${w.from}–${w.to}',
-  ].join(' · '),
-  ScheduleKind.once => 'Once · ${_dayMonth(r.at ?? '')}',
+String repeatLabel(AppLocalizations l, ScheduleRequest r) => switch (r.kind) {
+  ScheduleKind.daily => l.repeatLabelDaily,
+  ScheduleKind.weekly => _weekly(l, Weekday.parseList(r.days)),
+  ScheduleKind.interval => switch (TimeRange.parse(r.within)) {
+    final w? => l.repeatLabelWithin(
+      l.repeatLabelEvery(r.everyMinutes ?? 0),
+      '${w.from}',
+      '${w.to}',
+    ),
+    null => l.repeatLabelEvery(r.everyMinutes ?? 0),
+  },
+  ScheduleKind.once => l.repeatLabelOnce(dayMonth(l, r.at ?? '')),
 };
 
-String _weekly(List<Weekday> days) {
+String _weekly(AppLocalizations l, List<Weekday> days) {
   final set = days.toSet();
-  if (set.length == Weekday.values.length) return 'Daily';
-  if (_same(set, Weekday.workdays)) return 'Weekdays';
-  if (_same(set, Weekday.weekend)) return 'Weekends';
-  return days.map((d) => _dayNames[d]).join(', ');
+  if (set.length == Weekday.values.length) return l.repeatLabelDaily;
+  if (_same(set, Weekday.workdays)) return l.repeatLabelWeekdays;
+  if (_same(set, Weekday.weekend)) return l.repeatLabelWeekends;
+  return days.map((d) => weekdayAbbr(l, d)).join(', ');
 }
 
 bool _same(Set<Weekday> a, Set<Weekday> b) =>
     a.length == b.length && a.containsAll(b);
 
-/// "2026-12-24 09:00" → "24/12" (the style of the core's next firing).
-String _dayMonth(String at) {
+/// "2026-12-24 09:00" → "24/12" in the language's day-month order.
+String dayMonth(AppLocalizations l, String at) {
   final parts = at.split(' ').first.split('-');
-  return parts.length == 3 ? '${parts[2]}/${parts[1]}' : at;
+  return parts.length == 3 ? l.repeatDateValue(parts[2], parts[1]) : at;
 }
 
-/// What the reminder says: its theme (or "Your own text") and tone.
-String messageLabel(ScheduleRequest r) => [
-  if (r.text case final t? when t.trim().isNotEmpty)
-    'Your own text'
-  else
-    humanize(r.theme ?? ''),
-  if (r.tone case final tone?) humanize(tone),
-].join(' · ');
+/// What the reminder says and how: theme (or own text) · tone.
+String messageLabel(AppLocalizations l, ScheduleRequest r, Catalog? catalog) {
+  final own = r.text?.trim().isNotEmpty ?? false;
+  final theme = own ? l.reminderOwnText : humanize(r.theme ?? '');
+  return l.reminderThemeLine(theme, switch (r.tone) {
+    final tone? => humanize(tone),
+    null => suggestedTone(l, own ? null : r.theme, catalog),
+  });
+}
 
-/// "3 recordings · 42 s".
-String recordingsLabel(int count, double secs) => count == 0
-    ? 'No recordings yet'
-    : '$count recording${count == 1 ? '' : 's'} · ${secs.round()} s';
+/// "Suggested by the theme (Cheerful)" or, without a theme, the plain one.
+String suggestedTone(AppLocalizations l, String? theme, Catalog? catalog) {
+  for (final t in catalog?.themes ?? const <ThemeOption>[]) {
+    if (t.slug == theme) return l.toneSuggestedWith(humanize(t.defaultTone));
+  }
+  return l.toneSuggested;
+}
+
+/// "3 recordings · 42 seconds".
+String recordingsLabel(AppLocalizations l, int count, double secs) {
+  final whole = secs.round();
+  return l.samplesCountAndSecs(l.samplesCount(count), l.seconds(whole));
+}
 
 /// Words for each reason the reminder form cannot be saved yet.
-String formErrorText(FormError e) => switch (e) {
-  FormError.noVoice => 'Choose a voice first.',
-  FormError.noTheme => 'Choose a theme.',
-  FormError.noDays => 'Choose at least one day.',
-  FormError.badInterval =>
-    'Enter how many minutes between messages (1 or more).',
-  FormError.noDate => 'Pick the date.',
+String formErrorText(AppLocalizations l, FormError e) => switch (e) {
+  FormError.noVoice => l.formErrorNoVoice,
+  FormError.noTheme => l.formErrorNoTheme,
+  FormError.noDays => l.formErrorNoDays,
+  FormError.badInterval => l.formErrorInterval,
+  FormError.noDate => l.formErrorNoDate,
 };
 
-const Map<Weekday, String> weekdayInitials = {
-  Weekday.mon: 'M',
-  Weekday.tue: 'T',
-  Weekday.wed: 'W',
-  Weekday.thu: 'T',
-  Weekday.fri: 'F',
-  Weekday.sat: 'S',
-  Weekday.sun: 'S',
+String weekdayInitial(AppLocalizations l, Weekday d) => switch (d) {
+  Weekday.mon => l.dayMonShort,
+  Weekday.tue => l.dayTueShort,
+  Weekday.wed => l.dayWedShort,
+  Weekday.thu => l.dayThuShort,
+  Weekday.fri => l.dayFriShort,
+  Weekday.sat => l.daySatShort,
+  Weekday.sun => l.daySunShort,
 };
 
-const Map<Weekday, String> weekdayNames = {
-  Weekday.mon: 'Monday',
-  Weekday.tue: 'Tuesday',
-  Weekday.wed: 'Wednesday',
-  Weekday.thu: 'Thursday',
-  Weekday.fri: 'Friday',
-  Weekday.sat: 'Saturday',
-  Weekday.sun: 'Sunday',
+String weekdayAbbr(AppLocalizations l, Weekday d) => switch (d) {
+  Weekday.mon => l.dayMonAbbr,
+  Weekday.tue => l.dayTueAbbr,
+  Weekday.wed => l.dayWedAbbr,
+  Weekday.thu => l.dayThuAbbr,
+  Weekday.fri => l.dayFriAbbr,
+  Weekday.sat => l.daySatAbbr,
+  Weekday.sun => l.daySunAbbr,
+};
+
+String weekdayName(AppLocalizations l, Weekday d) => switch (d) {
+  Weekday.mon => l.dayMon,
+  Weekday.tue => l.dayTue,
+  Weekday.wed => l.dayWed,
+  Weekday.thu => l.dayThu,
+  Weekday.fri => l.dayFri,
+  Weekday.sat => l.daySat,
+  Weekday.sun => l.daySun,
 };

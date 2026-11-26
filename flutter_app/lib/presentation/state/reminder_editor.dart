@@ -109,8 +109,7 @@ class ReminderEditor extends Notifier<ReminderEditorState> {
     final form = state.form;
     state = state.copyWith(playing: true);
     await ref.read(messagesProvider.notifier).run(() async {
-      final voice =
-          form.speakerId ?? (throw const Notice('Choose a voice first.'));
+      final voice = form.speakerId ?? (throw Notice((l) => l.formErrorNoVoice));
       final listener = ref.read(connectionProvider).value?.settings.listener;
       final m = await requireCore(ref).speak(
         personId: voice,
@@ -120,8 +119,12 @@ class ReminderEditor extends Notifier<ReminderEditorState> {
         pitchShift: form.pitch,
         listener: listener,
       );
-      await ref.read(audioPlayerProvider).play(m.audioPath);
-      return '💬 ${m.text}';
+      try {
+        await ref.read(audioPlayerProvider).play(m.audioPath);
+      } on Exception {
+        throw Notice((l) => l.errorPlayback);
+      }
+      return (_) => '💬 ${m.text}';
     });
     if (ref.mounted) state = state.copyWith(playing: false);
   }

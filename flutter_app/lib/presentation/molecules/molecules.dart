@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/atoms/atoms.dart';
 import 'package:friendly_voice/presentation/design/daylight.dart';
 import 'package:friendly_voice/presentation/design/tokens.dart';
@@ -21,7 +22,7 @@ class ScreenHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => Row(
     children: [
       IconButton(
-        tooltip: 'Back',
+        tooltip: AppLocalizations.of(context).actionBack,
         iconSize: Space.icon,
         color: ref.watch(daylightProvider).onGradient,
         icon: const BackButtonIcon(),
@@ -85,18 +86,19 @@ class TimeRangePicker extends StatelessWidget {
     children: [
       Expanded(
         child: ClockButton(
-          label: 'From',
           time: range.from,
           onChanged: (t) => onChanged(TimeRange(t, range.to)),
         ),
       ),
-      const Padding(
-        padding: EdgeInsets.symmetric(horizontal: Space.s),
-        child: Text('–', style: TextStyle(fontSize: TypeScale.picker)),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Space.s),
+        child: Text(
+          AppLocalizations.of(context).rangeSeparator,
+          style: const TextStyle(fontSize: TypeScale.picker),
+        ),
       ),
       Expanded(
         child: ClockButton(
-          label: 'To',
           time: range.to,
           onChanged: (t) => onChanged(TimeRange(range.from, t)),
         ),
@@ -120,7 +122,9 @@ class LabeledDropdown<T> extends StatelessWidget {
   /// `(value, label)` pairs, in display order.
   final List<(T, String)> options;
   final T? value;
-  final ValueChanged<T?> onChanged;
+
+  /// `null` shows the choice without letting it change.
+  final ValueChanged<T?>? onChanged;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -149,23 +153,30 @@ class LabeledDropdown<T> extends StatelessWidget {
 class ReminderCard extends StatelessWidget {
   const new({
     required this.reminder,
+    required this.catalog,
     required this.onTap,
     required this.onToggle,
     super.key,
   });
 
   final ScheduleSummary reminder;
+  final Catalog? catalog;
   final VoidCallback onTap;
   final ValueChanged<bool> onToggle;
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final r = reminder;
     final request = r.request;
     final when =
         r.time ?? TimeRange.parse(request.within)?.from.toString() ?? '09:00';
-    final big = r.time ?? '${request.everyMinutes ?? '?'} min';
-    final muted = r.enabled ? 1.0 : 0.55;
+    final big = request.kind == ScheduleKind.interval
+        ? l.reminderTimeInterval(request.everyMinutes ?? 0)
+        : r.time ?? '';
+    // A deleted voice: the switch stays off and locked; tapping the card
+    // opens the reminder to choose another voice (as in the Kotlin app).
+    final on = r.enabled && r.voiceAvailable;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -182,7 +193,7 @@ class ReminderCard extends StatelessWidget {
               ),
               Expanded(
                 child: Opacity(
-                  opacity: muted,
+                  opacity: on ? 1 : 0.7,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                       Space.l,
@@ -196,18 +207,22 @@ class ReminderCard extends StatelessWidget {
                         Row(
                           children: [
                             Expanded(child: TimeText(big)),
-                            Switch(value: r.enabled, onChanged: onToggle),
+                            Semantics(
+                              label: l.reminderSwitchDescription,
+                              child: Switch(
+                                value: on,
+                                onChanged: r.voiceAvailable ? onToggle : null,
+                              ),
+                            ),
                           ],
                         ),
-                        Text(messageLabel(request)),
+                        Text(messageLabel(l, request, catalog)),
                         const SizedBox(height: Space.xs),
-                        MutedText(
-                          [repeatLabel(request), ?r.speakerName].join(' · '),
-                        ),
-                        if (!r.voiceAvailable)
-                          const ProblemText(
-                            'Voice unavailable — tap to choose another',
-                          ),
+                        MutedText(repeatLabel(l, request)),
+                        if (r.voiceAvailable)
+                          MutedText(r.speakerName ?? '')
+                        else
+                          ProblemText(l.reminderVoiceUnavailable),
                       ],
                     ),
                   ),
@@ -257,10 +272,16 @@ class VoiceCard extends StatelessWidget {
                   CardTitle(person.name),
                   MutedText(languageName),
                   Text(
-                    person.voiceReady ? 'Voice ready' : 'Voice not created yet',
+                    person.voiceReady
+                        ? AppLocalizations.of(context).voiceStatusReady
+                        : AppLocalizations.of(context).voiceStatusNotCreated,
                   ),
                   MutedText(
-                    recordingsLabel(person.sampleCount, person.totalSampleSecs),
+                    recordingsLabel(
+                      AppLocalizations.of(context),
+                      person.sampleCount,
+                      person.totalSampleSecs,
+                    ),
                   ),
                 ],
               ),
@@ -286,8 +307,11 @@ class SampleRow extends StatelessWidget {
       children: [
         const Icon(Icons.graphic_eq, size: Space.icon, color: Palette.cocoa),
         const SizedBox(width: Space.m),
-        Expanded(child: Text('Recording $number')),
-        MutedText('${sample.durationSecs.toStringAsFixed(1)} s'),
+        Expanded(child: Text(AppLocalizations.of(context).sampleTitle(number))),
+        MutedText(
+          AppLocalizations.of(context)
+              .sampleDuration(sample.durationSecs.toStringAsFixed(1)),
+        ),
       ],
     ),
   );

@@ -349,14 +349,15 @@ abstract final class FakeCoreWithPeople {
     ]);
 }
 
-/// Picker that returns the queued files, in order (`null` = cancelled).
+/// Picker that returns the queued choices, in order (empty = cancelled).
 final class FakeAudioPicker implements AudioFilePicker {
-  new([List<PickedAudio?>? queue]) : queue = queue ?? [];
+  new([List<List<PickedAudio>>? queue]) : queue = queue ?? [];
 
-  final List<PickedAudio?> queue;
+  final List<List<PickedAudio>> queue;
 
   @override
-  Future<PickedAudio?> pick() async => queue.isEmpty ? null : queue.removeAt(0);
+  Future<List<PickedAudio>> pick() async =>
+      queue.isEmpty ? const [] : queue.removeAt(0);
 }
 
 /// Records what was played.
@@ -382,5 +383,11 @@ final class FakeAlarmScheduler implements AlarmScheduler {
   Future<void> requestPermissions() async => permissionsRequested++;
 
   @override
-  Future<void> replaceAll(List<Alarm> alarms) async => replaced.add(alarms);
+  Future<void> replaceAll(List<Alarm> alarms, NotificationTexts texts) async {
+    replaced.add(alarms);
+    this.texts.add(texts);
+  }
+
+  /// The notification words of each [replaceAll].
+  final List<NotificationTexts> texts = [];
 }

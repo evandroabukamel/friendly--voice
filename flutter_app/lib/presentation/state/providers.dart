@@ -11,7 +11,11 @@ import 'package:friendly_voice/infrastructure/local_notifications_alarm_schedule
 import 'package:friendly_voice/infrastructure/preferences_settings_store.dart';
 import 'package:friendly_voice/infrastructure/rust_voice_core.dart';
 import 'package:friendly_voice/infrastructure/soloud_audio_player.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/design/daylight.dart';
+import 'package:friendly_voice/presentation/state/app_language.dart';
+import 'package:material_ui/material_ui.dart'
+    show Locale, WidgetsBinding, basicLocaleListResolution;
 import 'package:path_provider/path_provider.dart';
 
 /// Composition root of the app: the only place that names the concrete
@@ -115,12 +119,36 @@ VoiceCore requireCore(Ref ref) =>
     ref.read(connectionProvider).value?.core ??
     (throw const AppFailure(message: 'the voice engine is not connected yet'));
 
+/// Words for the user, written in the app language when shown.
+typedef Phrase = String Function(AppLocalizations l);
+
+/// The phone's languages, most preferred first (tests pin them).
+final phoneLocalesProvider = Provider<List<Locale>>(
+  (ref) => WidgetsBinding.instance.platformDispatcher.locales,
+);
+
+/// The language the app speaks: the one chosen in Settings, otherwise the
+/// phone's, among the translated ones.
+final appLocaleProvider = Provider<Locale>((ref) {
+  final chosen = ref.watch(connectionProvider).value?.settings.language;
+  return basicLocaleListResolution([
+    if (chosen != null) localeOf(chosen),
+    ...ref.watch(phoneLocalesProvider),
+  ], AppLocalizations.supportedLocales);
+});
+
+/// The texts in the app language, for words made outside the screens
+/// (notifications).
+final l10nProvider = Provider<AppLocalizations>(
+  (ref) => lookupAppLocalizations(ref.watch(appLocaleProvider)),
+);
+
 /// A plain notice for the user (shown without the warning style), e.g.
 /// "Choose a voice first.".
 final class Notice implements Exception {
-  const new(this.message);
+  const new(this.text);
 
-  final String message;
+  final Phrase text;
 }
 
 /// One message for the user, shown as a snackbar. Every message is a new
@@ -128,7 +156,7 @@ final class Notice implements Exception {
 final class UserMessage {
   new(this.text, {this.isError = false});
 
-  final String text;
+  final Phrase text;
   final bool isError;
 }
 
@@ -141,21 +169,22 @@ class MessagesNotifier extends Notifier<UserMessage?> {
   @override
   UserMessage? build() => null;
 
-  void show(String text, {bool isError = false}) =>
+  void show(Phrase text, {bool isError = false}) =>
       state = UserMessage(text, isError: isError);
 
   /// Runs a user action: shows its result (`null` = nothing to say) or its
-  /// failure, worded by the core. Returns whether it succeeded.
-  Future<bool> run(Future<String?> Function() action) async {
+  /// failure: the core's own words, otherwise a generic apology. Returns
+  /// whether it succeeded.
+  Future<bool> run(Future<Phrase?> Function() action) async {
     try {
       if (await action() case final text?) show(text);
       return true;
     } on Notice catch (n) {
-      show(n.message);
+      show(n.text);
     } on AppFailure catch (f) {
-      show(f.message, isError: true);
-    } on Exception catch (e) {
-      show('$e', isError: true);
+      show((_) => f.message, isError: true);
+    } on Exception {
+      show((l) => l.errorGeneric, isError: true);
     }
     return false;
   }

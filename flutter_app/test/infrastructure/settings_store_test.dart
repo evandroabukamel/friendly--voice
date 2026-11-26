@@ -22,4 +22,17 @@ void main() {
     await store.save(AppSettings(listener: ''));
     expect((await store.load()).listener, isNull);
   });
+  test(
+    'the app language is kept apart from the name; blank = system',
+    () async {
+      final store = PreferencesSettingsStore();
+      await store.save(AppSettings(listener: 'Evandro', language: 'pt-BR'));
+      final loaded = await PreferencesSettingsStore().load();
+      expect((loaded.listener, loaded.language), ('Evandro', 'pt-BR'));
+
+      await store.save(loaded.copyWith(language: () => null));
+      expect((await store.load()).language, isNull);
+      expect((await store.load()).listener, 'Evandro');
+    },
+  );
 }

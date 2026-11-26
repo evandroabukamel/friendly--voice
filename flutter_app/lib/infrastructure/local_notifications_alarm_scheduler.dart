@@ -13,14 +13,15 @@ final class LocalNotificationsAlarmScheduler implements AlarmScheduler {
   final _taps = StreamController<void>.broadcast();
   Future<void>? _initialized;
 
-  static const _details = NotificationDetails(
-    android: AndroidNotificationDetails(
-      'scheduled_messages',
-      'Scheduled messages',
-      importance: Importance.high,
-    ),
-    iOS: DarwinNotificationDetails(),
-  );
+  static NotificationDetails _details(NotificationTexts texts) =>
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'scheduled_messages',
+          texts.channelName,
+          importance: Importance.high,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      );
 
   Future<void> _init() => _initialized ??= _plugin
       .initialize(
@@ -57,7 +58,7 @@ final class LocalNotificationsAlarmScheduler implements AlarmScheduler {
   }
 
   @override
-  Future<void> replaceAll(List<Alarm> alarms) async {
+  Future<void> replaceAll(List<Alarm> alarms, NotificationTexts texts) async {
     await _init();
     await _plugin.cancelAll();
     final exact = await _android?.canScheduleExactNotifications() ?? true;
@@ -68,12 +69,11 @@ final class LocalNotificationsAlarmScheduler implements AlarmScheduler {
           tz.UTC,
           alarm.atEpochMs,
         ),
-        notificationDetails: _details,
+        notificationDetails: _details(texts),
         androidScheduleMode: exact
             ? AndroidScheduleMode.exactAllowWhileIdle
             : AndroidScheduleMode.inexactAllowWhileIdle,
-        title: 'A message for you 💛',
-        body: 'Tap to hear it.',
+        title: texts.title,
         payload: alarm.scheduleId,
       );
     }

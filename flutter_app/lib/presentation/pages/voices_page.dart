@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/atoms/atoms.dart';
 import 'package:friendly_voice/presentation/design/tokens.dart';
 import 'package:friendly_voice/presentation/molecules/molecules.dart';
@@ -13,18 +14,16 @@ class VoicesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final people = ref.watch(peopleProvider);
     final catalog = ref.watch(catalogProvider);
     return SkyPage(
-      header: const ScreenTitle('Voices'),
+      header: ScreenTitle(l.voicesTitle),
       children: [
         if (people.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: Space.xl),
-            child: SkyText(
-              'No voices yet.\nTap + to add the voice of someone you love.',
-              textAlign: TextAlign.center,
-            ),
+          Padding(
+            padding: const EdgeInsets.only(top: Space.xl),
+            child: SkyText(l.voicesEmpty, textAlign: TextAlign.center),
           ),
         for (final p in people)
           VoiceCard(

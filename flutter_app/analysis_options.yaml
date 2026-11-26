@@ -4,6 +4,7 @@ analyzer:
   exclude:
     - build/**
     - lib/src/rust/**
+    - lib/l10n/*.dart
     - rust_builder/**
     - android/**
     - ios/**

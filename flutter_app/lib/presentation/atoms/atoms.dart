@@ -113,9 +113,11 @@ class LiveField extends StatefulWidget {
     required this.onChanged,
     this.helper,
     this.error,
+    this.suffix,
     this.keyboardType,
     this.capitalization = TextCapitalization.none,
     this.maxLines = 1,
+    this.enabled = true,
     super.key,
   });
 
@@ -124,9 +126,13 @@ class LiveField extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final String? helper;
   final String? error;
+
+  /// Unit after the value ("minutes").
+  final String? suffix;
   final TextInputType? keyboardType;
   final TextCapitalization capitalization;
   final int maxLines;
+  final bool enabled;
 
   @override
   State<LiveField> createState() => _LiveFieldState();
@@ -150,11 +156,13 @@ class _LiveFieldState extends State<LiveField> {
       keyboardType: widget.keyboardType,
       textCapitalization: widget.capitalization,
       maxLines: widget.maxLines,
+      enabled: widget.enabled,
       style: const TextStyle(fontSize: TypeScale.body),
       decoration: InputDecoration(
         labelText: widget.label,
         helperText: widget.helper,
         errorText: widget.error,
+        suffixText: widget.suffix,
       ),
     ),
   );

@@ -83,15 +83,21 @@ Future<void> type(WidgetTester tester, String label, String text) async {
   await tester.pumpAndSettle();
 }
 
-/// Scrolls the screen on top until [finder] is built and visible (the
-/// screens are lazy lists).
+/// Scrolls the list on top (the open screen, or an open dropdown menu)
+/// until [finder] is built and visible: lists build lazily.
 Future<void> reveal(WidgetTester tester, Finder finder) async {
-  if (finder.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      finder,
-      200,
-      scrollable: find.byType(Scrollable).last,
-    );
+  final list = find
+      .descendant(
+        of: find.byType(ListView).last,
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  // Down first; a menu opens on its selected item, so the target may be up.
+  for (final dy in const [-200.0, 200.0]) {
+    for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+      await tester.drag(list, Offset(0, dy));
+      await tester.pumpAndSettle();
+    }
   }
   await tester.ensureVisible(finder.last);
   await tester.pumpAndSettle();
@@ -113,6 +119,7 @@ Future<void> choose(WidgetTester tester, String label, String option) async {
   await reveal(tester, find.text(label));
   await tester.tap(dropdown.first);
   await tester.pumpAndSettle();
+  await reveal(tester, find.text(option));
   await tester.tap(find.text(option).last);
   await tester.pumpAndSettle();
 }

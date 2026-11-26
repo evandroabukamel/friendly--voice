@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/pages/reminders_page.dart';
 import 'package:friendly_voice/presentation/pages/settings_page.dart';
 import 'package:friendly_voice/presentation/pages/voices_page.dart';
@@ -14,6 +15,7 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     ref.watch(alarmsProvider); // keeps the alarms and deliveries running
     final tab = ref.watch(tabProvider);
     final connected = ref.watch(connectionProvider).hasValue;
@@ -28,12 +30,12 @@ class AppShell extends ConsumerWidget {
       floatingActionButton: switch (tab) {
         _ when !connected => null,
         AppTab.reminders => FloatingActionButton(
-          tooltip: 'Add reminder',
+          tooltip: l.remindersAdd,
           onPressed: () => openReminder(context, null),
           child: const Icon(Icons.add),
         ),
         AppTab.voices => FloatingActionButton(
-          tooltip: 'Add voice',
+          tooltip: l.voicesAdd,
           onPressed: () => openVoice(context, null),
           child: const Icon(Icons.add),
         ),
@@ -43,21 +45,21 @@ class AppShell extends ConsumerWidget {
         selectedIndex: tab.index,
         onDestinationSelected: (i) =>
             ref.read(tabProvider.notifier).current = AppTab.values[i],
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.alarm_outlined),
-            selectedIcon: Icon(Icons.alarm),
-            label: 'Reminders',
+            icon: const Icon(Icons.alarm_outlined),
+            selectedIcon: const Icon(Icons.alarm),
+            label: l.tabReminders,
           ),
           NavigationDestination(
-            icon: Icon(Icons.mic_none),
-            selectedIcon: Icon(Icons.mic),
-            label: 'Voices',
+            icon: const Icon(Icons.mic_none),
+            selectedIcon: const Icon(Icons.mic),
+            label: l.tabVoices,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: l.tabSettings,
           ),
         ],
       ),

@@ -105,7 +105,7 @@ void main() {
 
     expect(scheduler.permissionsRequested, 1);
     expect(player.played, ['/1.wav']);
-    expect(find.text('💬 Bom dia!\nTone: warm'), findsOneWidget);
+    expect(find.text('💬 Bom dia!\n(tone: Warm)'), findsOneWidget);
     expect(scheduler.replaced.last.single.atEpochMs, 42);
 
     core.due = const [

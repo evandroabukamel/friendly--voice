@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:friendly_voice/domain/app_settings.dart';
 import 'package:friendly_voice/domain/audio_files.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
 import 'package:material_ui/material_ui.dart';
@@ -35,10 +34,10 @@ void main() {
     expect(find.text('Vó'), findsOneWidget);
     expect(find.text('Portuguese (Brazil)'), findsOneWidget);
     expect(find.text('Voice ready'), findsOneWidget);
-    expect(find.text('2 recordings · 12 s'), findsOneWidget);
+    expect(find.text('2 recordings · 12 seconds'), findsOneWidget);
     expect(find.text('Ana'), findsOneWidget);
     expect(find.text('Voice not created yet'), findsOneWidget);
-    expect(find.text('No recordings yet'), findsOneWidget);
+    expect(find.text('0 recordings · 0 seconds'), findsOneWidget);
   });
 
   testWidgets('adding recordings first asks for the name and the consent', (
@@ -59,7 +58,10 @@ void main() {
   testWidgets('a new voice: register with consent, add recordings, create', (
     tester,
   ) async {
-    final picker = FakeAudioPicker([wav('a.wav'), wav('b.wav')]);
+    final picker = FakeAudioPicker([
+      [wav('a.wav')],
+      [wav('b.wav')],
+    ]);
     final core = await pumpApp(tester, picker: picker);
     await openNewVoice(tester);
 
@@ -78,7 +80,7 @@ void main() {
     );
 
     await tapText(tester, 'Add audio files');
-    expect(find.text('2 recordings · 12 s'), findsOneWidget);
+    expect(find.text('2 recordings · 12 seconds'), findsOneWidget);
     await tapText(tester, 'Create voice');
     expect(core.people.single.voiceReady, isTrue);
     expect(
@@ -98,6 +100,7 @@ void main() {
     await back(tester);
 
     expect(core.people.single.name, 'Lucia');
+    expect(find.text('Voice saved. Now add recordings.'), findsOneWidget);
     expect(find.text('Lucia'), findsOneWidget);
   });
 
@@ -108,6 +111,24 @@ void main() {
     expect(core.people, isEmpty);
   });
 
+  testWidgets('several files chosen at once are all added', (tester) async {
+    final picker = FakeAudioPicker([
+      [wav('a.wav'), wav('b.wav')],
+    ]);
+    final core = await pumpApp(
+      tester,
+      core: FakeCoreWithPeople.make(),
+      picker: picker,
+    );
+    await openVoices(tester);
+    await tapText(tester, 'Ana');
+
+    await tapText(tester, 'Add audio files');
+    expect(core.samples.where((s) => s.personId == 'spk-2'), hasLength(2));
+    expect(find.text('Recordings added: 2'), findsOneWidget);
+    expect(find.text('Recording 2'), findsOneWidget);
+  });
+
   testWidgets('how the voice calls you saves as it is typed', (tester) async {
     final core = await pumpApp(tester, core: FakeCoreWithPeople.make());
     await openVoices(tester);
@@ -115,6 +136,8 @@ void main() {
 
     await type(tester, 'How this voice calls you', 'Netinho');
     expect(core.people.first.listenerName, 'Netinho');
+    await back(tester);
+    expect(find.text('Saved.'), findsOneWidget);
   });
 
   testWidgets('deleting a voice asks first and keeps its reminders off', (
@@ -145,18 +168,5 @@ void main() {
     expect(core.schedules.single.enabled, isFalse);
     expect(find.text('Voice deleted.'), findsOneWidget);
     expect(find.text('Vó'), findsNothing);
-  });
-
-  testWidgets('Settings: your name saves itself; no server field', (
-    tester,
-  ) async {
-    final store = FakeSettingsStore(AppSettings(listener: 'Evan'));
-    await pumpApp(tester, store: store, engineUrl: 'http://10.0.0.2:8000');
-    await openTab(tester, 'Settings');
-
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('neural server (HTTP)'), findsOneWidget);
-    await type(tester, 'Your name', 'Evandro');
-    expect(store.saved.listener, 'Evandro');
   });
 }

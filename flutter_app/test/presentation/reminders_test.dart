@@ -32,7 +32,8 @@ void main() {
 
     expect(find.text('07:30'), findsOneWidget);
     expect(find.textContaining('Motivation'), findsOneWidget);
-    expect(find.text('Daily · Vó'), findsOneWidget);
+    expect(find.text('Daily'), findsOneWidget);
+    expect(find.text('Vó'), findsOneWidget);
     expect(find.textContaining('No reminders yet'), findsNothing);
   });
 
@@ -60,6 +61,9 @@ void main() {
       find.text('Voice unavailable — tap to choose another'),
       findsOneWidget,
     );
+    final locked = tester.widget<Switch>(find.byType(Switch));
+    expect(locked.value, isFalse);
+    expect(locked.onChanged, isNull);
   });
 
   testWidgets('swiping a reminder deletes it', (tester) async {
@@ -69,7 +73,6 @@ void main() {
     await tester.drag(find.text('07:30'), const Offset(-600, 0));
     await tester.pumpAndSettle();
     expect(core.schedules, isEmpty);
-    expect(find.text('Reminder deleted.'), findsOneWidget);
   });
 
   testWidgets('a new reminder saves itself on the first change and then '
@@ -94,7 +97,7 @@ void main() {
 
     await back(tester);
     expect(find.text('08:00'), findsOneWidget);
-    expect(find.text('Daily · Vó'), findsOneWidget);
+    expect(find.text('Daily'), findsOneWidget);
   });
 
   testWidgets('leaving a new reminder untouched creates nothing', (
@@ -145,7 +148,7 @@ void main() {
     await openNewReminder(tester);
 
     await choose(tester, 'Theme', 'Your own text');
-    await type(tester, 'What should the voice say?', 'Drink water!');
+    await type(tester, 'Your own text', 'Drink water!');
     expect(core.schedules.single.request.text, 'Drink water!');
     expect(core.schedules.single.request.theme, isNull);
   });
@@ -170,7 +173,7 @@ void main() {
     await openNewReminder(tester);
 
     expect(
-      find.text('No voice is ready yet. Create one in Voices first.'),
+      find.text('No voice is ready yet. Create one in the Voices tab first.'),
       findsOneWidget,
     );
     await tapText(tester, 'Go to Voices');

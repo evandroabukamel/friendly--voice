@@ -1,8 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:friendly_voice/application/deliver_due_messages.dart';
+import 'package:friendly_voice/domain/alarms.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
 
 import '../support/fakes.dart';
+
+const texts = NotificationTexts(channelName: 'Mensagens', title: 'Para você');
 
 void main() {
   late FakeVoiceCore core;
@@ -14,7 +17,12 @@ void main() {
     core = FakeVoiceCore();
     player = FakeAudioPlayer();
     alarms = FakeAlarmScheduler();
-    deliver = DeliverDueMessages(core: core, player: player, alarms: alarms);
+    deliver = DeliverDueMessages(
+      core: core,
+      player: player,
+      alarms: alarms,
+      texts: () => texts,
+    );
   });
 
   test('plays every due message in order and reschedules the alarms', () async {
@@ -39,18 +47,16 @@ void main() {
         Alarm(scheduleId: 'c', atEpochMs: 2),
       ];
 
-    final status = await deliver(listener: 'Evandro');
+    final delivered = await deliver(listener: 'Evandro');
 
     expect(player.played, ['/1.wav', '/2.wav']);
     expect(alarms.replaced.single.map((a) => a.atEpochMs), [1, 2]);
-    expect(
-      status,
-      '💬 Respira fundo.\nTone: calm\n⚠️ the voice server is unreachable',
-    );
+    expect(alarms.texts.single, texts);
+    expect(delivered.map((m) => m.scheduleId), ['a', 'b', 'c']);
   });
 
-  test('with nothing due it only reschedules and keeps the status', () async {
-    expect(await deliver(), isNull);
+  test('with nothing due it only reschedules', () async {
+    expect(await deliver(), isEmpty);
     expect(player.played, isEmpty);
     expect(alarms.replaced, hasLength(1));
   });

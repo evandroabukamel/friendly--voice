@@ -11,7 +11,15 @@ final class PickedAudio {
   int get kilobytes => bytes.length ~/ 1024;
 }
 
-/// Lets the user choose an audio file; `null` when cancelled.
+/// Lets the user choose one or more audio files; empty when cancelled.
+/// Throws [UnreadableAudio] when a chosen file cannot be read.
 abstract interface class AudioFilePicker {
-  Future<PickedAudio?> pick();
+  Future<List<PickedAudio>> pick();
+}
+
+/// A chosen file could not be opened.
+final class UnreadableAudio implements Exception {
+  const new(this.name);
+
+  final String name;
 }

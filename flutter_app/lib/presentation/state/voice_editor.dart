@@ -1,12 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show NotifierProviderFamily;
+import 'package:friendly_voice/domain/audio_files.dart';
 import 'package:friendly_voice/domain/voice_core.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/state/people.dart';
 import 'package:friendly_voice/presentation/state/providers.dart';
 import 'package:friendly_voice/presentation/state/reminders.dart';
 
 /// Least recorded material to create a voice (the core's EnrollmentPolicy).
 const minVoiceSecs = 10.0;
+
+/// What the voice screen is busy with.
+enum VoiceWork { idle, adding, creating }
 
 /// What the voice screen shows.
 final class VoiceEditorState {
@@ -17,9 +22,10 @@ final class VoiceEditorState {
     this.language,
     this.listenerName = '',
     this.samples = const [],
-    this.nameError,
-    this.consentError,
-    this.busy = false,
+    this.missingName = false,
+    this.missingConsent = false,
+    this.work = VoiceWork.idle,
+    this.nicknameChanged = false,
   });
 
   /// The registered person (`null` while a new voice is being filled in).
@@ -29,13 +35,15 @@ final class VoiceEditorState {
   final String? language;
   final String listenerName;
   final List<SampleSummary> samples;
-  final String? nameError;
-  final String? consentError;
+  final bool missingName;
+  final bool missingConsent;
+  final VoiceWork work;
 
-  /// A recording is being added or the voice created.
-  final bool busy;
+  /// The nickname of a registered voice was edited (and saved) here.
+  final bool nicknameChanged;
 
   bool get registered => person != null;
+  bool get busy => work != VoiceWork.idle;
 
   double get recordedSecs => samples.fold(0, (t, s) => t + s.durationSecs);
 
@@ -46,9 +54,10 @@ final class VoiceEditorState {
     String? language,
     String? listenerName,
     List<SampleSummary>? samples,
-    String? Function()? nameError,
-    String? Function()? consentError,
-    bool? busy,
+    bool? missingName,
+    bool? missingConsent,
+    VoiceWork? work,
+    bool? nicknameChanged,
   }) => VoiceEditorState(
     person: person ?? this.person,
     name: name ?? this.name,
@@ -56,9 +65,10 @@ final class VoiceEditorState {
     language: language ?? this.language,
     listenerName: listenerName ?? this.listenerName,
     samples: samples ?? this.samples,
-    nameError: nameError == null ? this.nameError : nameError(),
-    consentError: consentError == null ? this.consentError : consentError(),
-    busy: busy ?? this.busy,
+    missingName: missingName ?? this.missingName,
+    missingConsent: missingConsent ?? this.missingConsent,
+    work: work ?? this.work,
+    nicknameChanged: nicknameChanged ?? this.nicknameChanged,
   );
 }
 
@@ -75,6 +85,8 @@ class VoiceEditor extends Notifier<VoiceEditorState> {
   new(this.personId);
 
   final String? personId;
+
+  MessagesNotifier get _messages => ref.read(messagesProvider.notifier);
 
   @override
   VoiceEditorState build() {
@@ -94,10 +106,10 @@ class VoiceEditor extends Notifier<VoiceEditorState> {
   }
 
   void editName(String v) =>
-      state = state.copyWith(name: v, nameError: () => null);
+      state = state.copyWith(name: v, missingName: false);
 
   void editConsent(String v) =>
-      state = state.copyWith(consentBy: v, consentError: () => null);
+      state = state.copyWith(consentBy: v, missingConsent: false);
 
   void editLanguage(String code) => state = state.copyWith(language: code);
 
@@ -107,21 +119,19 @@ class VoiceEditor extends Notifier<VoiceEditorState> {
     final person = state.person;
     if (person == null) return;
     final saved = requireCore(ref).setListenerName(person.id, v);
-    state = state.copyWith(person: saved);
+    state = state.copyWith(person: saved, nicknameChanged: true);
     ref.read(peopleProvider.notifier).refresh();
   }
 
-  /// Registers a new voice; tells what is missing instead.
+  /// Registers a new voice; marks what is missing instead.
   bool register() {
     if (state.registered) return true;
-    final nameError = state.name.trim().isEmpty ? 'Enter the name.' : null;
-    final consentError = state.consentBy.trim().isEmpty
-        ? 'Enter who authorized the use of this voice.'
-        : null;
-    if (nameError != null || consentError != null) {
+    final missingName = state.name.trim().isEmpty;
+    final missingConsent = state.consentBy.trim().isEmpty;
+    if (missingName || missingConsent) {
       state = state.copyWith(
-        nameError: () => nameError,
-        consentError: () => consentError,
+        missingName: missingName,
+        missingConsent: missingConsent,
       );
       return false;
     }
@@ -136,36 +146,48 @@ class VoiceEditor extends Notifier<VoiceEditorState> {
       ref.read(peopleProvider.notifier).refresh();
       return true;
     } on AppFailure catch (f) {
-      ref.read(messagesProvider.notifier).show(f.message, isError: true);
+      _messages.show((_) => f.message, isError: true);
       return false;
     }
   }
 
-  /// Leaving the screen keeps a new voice whose name and consent are filled.
+  /// Leaving the screen keeps a new voice whose name and consent are
+  /// filled in, and confirms what was saved.
   void leave() {
+    if (state.registered) {
+      if (state.nicknameChanged) _messages.show((l) => l.voiceSaved);
+      return;
+    }
     final blank = state.name.trim().isEmpty && state.consentBy.trim().isEmpty;
-    if (!state.registered && !blank) register();
+    if (!blank && register()) _messages.show((l) => l.voiceRegistered);
   }
 
-  /// Lets the user choose an audio file and adds it as a recording.
-  Future<void> addRecording() async {
+  /// Lets the user choose audio files and adds each as a recording.
+  Future<void> addRecordings() async {
     if (!register()) return;
     final person = state.person!;
-    final picked = await ref.read(audioPickerProvider).pick();
-    if (picked == null || !ref.mounted) return;
-    await _busy(() async {
-      await requireCore(ref)
-          .addSample(personId: person.id, audio: picked.bytes);
-      return 'Recording added.';
+    await _work(VoiceWork.adding, () async {
+      final List<PickedAudio> picked;
+      try {
+        picked = await ref.read(audioPickerProvider).pick();
+      } on UnreadableAudio {
+        throw Notice((l) => l.errorFileOpen);
+      }
+      if (picked.isEmpty) return null;
+      final core = requireCore(ref);
+      for (final file in picked) {
+        await core.addSample(personId: person.id, audio: file.bytes);
+      }
+      String added(AppLocalizations l) => l.samplesAdded(picked.length);
+      return added;
     });
   }
 
   /// Creates (or improves) the voice from every recording.
-  Future<void> createVoice() => _busy(() async {
-    final person =
-        state.person ?? (throw const Notice('Save the voice first.'));
-    await requireCore(ref).buildVoice(person.id);
-    return 'Voice created! It is ready for your reminders.';
+  Future<void> createVoice() => _work(VoiceWork.creating, () async {
+    await requireCore(ref).buildVoice(state.person!.id);
+    String created(AppLocalizations l) => l.voiceCreated;
+    return created;
   });
 
   /// Deletes the person, their recordings and voice; their reminders are
@@ -173,22 +195,23 @@ class VoiceEditor extends Notifier<VoiceEditorState> {
   Future<bool> delete() async {
     final person = state.person;
     if (person == null) return true;
-    return await ref.read(messagesProvider.notifier).run(() async {
+    return await _messages.run(() async {
       await requireCore(ref).deletePerson(person.id);
       ref.read(peopleProvider.notifier).refresh();
       ref.read(remindersProvider.notifier).changed();
-      return 'Voice deleted.';
+      String deleted(AppLocalizations l) => l.voiceDeleted;
+      return deleted;
     });
   }
 
-  Future<void> _busy(Future<String> Function() action) async {
-    state = state.copyWith(busy: true);
-    await ref.read(messagesProvider.notifier).run(action);
+  Future<void> _work(VoiceWork work, Future<Phrase?> Function() action) async {
+    state = state.copyWith(work: work);
+    await _messages.run(action);
     if (!ref.mounted) return;
     final person = state.person!;
     ref.read(peopleProvider.notifier).refresh();
     state = state.copyWith(
-      busy: false,
+      work: VoiceWork.idle,
       person: ref
           .read(peopleProvider)
           .where((p) => p.id == person.id)

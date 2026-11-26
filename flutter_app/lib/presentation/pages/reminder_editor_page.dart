@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/atoms/atoms.dart';
 import 'package:friendly_voice/presentation/design/tokens.dart';
 import 'package:friendly_voice/presentation/molecules/molecules.dart';
@@ -20,15 +21,20 @@ class ReminderEditorPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
     final provider = reminderEditorProvider(id);
     final state = ref.watch(provider);
     final editor = ref.read(provider.notifier);
     final catalog = ref.watch(catalogProvider);
     final form = state.form;
-    final problem = state.failure ?? state.error.map(formErrorText);
+    final error = state.error;
+    final problem =
+        state.failure ?? (error == null ? null : formErrorText(l, error));
     return SkyScreen(
       header: ScreenHeader(
-        state.savedId == null ? 'New reminder' : 'Edit reminder',
+        state.savedId == null
+            ? l.editReminderTitleNew
+            : l.editReminderTitleEdit,
       ),
       children: [
         MessageCard(
@@ -53,7 +59,7 @@ class ReminderEditorPage extends ConsumerWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.play_arrow_rounded),
-          label: Text(state.playing ? 'Preparing the message…' : 'Play now'),
+          label: Text(state.playing ? l.reminderPlaying : l.reminderPlayNow),
         ),
         if (state.savedId != null) ...[
           const SizedBox(height: Space.m),
@@ -63,17 +69,10 @@ class ReminderEditorPage extends ConsumerWidget {
               if (context.mounted) Navigator.of(context).pop();
             },
             icon: const Icon(Icons.delete_outline),
-            label: const Text('Delete reminder'),
+            label: Text(l.deleteReminder),
           ),
         ],
       ],
     );
-  }
-}
-
-extension<T extends Object> on T? {
-  R? map<R>(R Function(T) f) {
-    final self = this;
-    return self == null ? null : f(self);
   }
 }

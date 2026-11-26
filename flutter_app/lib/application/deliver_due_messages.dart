@@ -5,7 +5,12 @@ import 'package:friendly_voice/domain/voice_core.dart';
 /// Speaks the schedules that are due (the core fires each one once), plays
 /// them in order and keeps the OS alarms in sync with the next firings.
 final class DeliverDueMessages {
-  const new({required this.core, required this.player, required this.alarms});
+  const new({
+    required this.core,
+    required this.player,
+    required this.alarms,
+    required this.texts,
+  });
 
   /// iOS keeps at most 64 pending notifications; leave room for the OS.
   static const maxPending = 60;
@@ -14,24 +19,19 @@ final class DeliverDueMessages {
   final AudioPlayer player;
   final AlarmScheduler alarms;
 
-  /// Returns the status to show, or `null` when nothing was due.
-  Future<String?> call({String? listener}) async {
+  /// The notification words in the current app language.
+  final NotificationTexts Function() texts;
+
+  /// Returns what was due (spoken or failed), in order; the screens word it.
+  Future<List<DueMessage>> call({String? listener}) async {
     final due = await core.runDueSchedules(listener: listener);
-    String? spoken;
-    final errors = <String>[];
     for (final m in due) {
-      if (m.audioPath case final path?) {
-        await player.play(path);
-        spoken = '💬 ${m.text}\nTone: ${m.tone}';
-      } else {
-        errors.add('⚠️ ${m.error}');
-      }
+      if (m.audioPath case final path?) await player.play(path);
     }
     await reschedule();
-    final lines = [?spoken, ...errors];
-    return lines.isEmpty ? null : lines.join('\n');
+    return due;
   }
 
   Future<void> reschedule() =>
-      alarms.replaceAll(core.upcomingAlarms(maxPending));
+      alarms.replaceAll(core.upcomingAlarms(maxPending), texts());
 }

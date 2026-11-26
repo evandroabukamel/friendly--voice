@@ -4,6 +4,7 @@
 library;
 
 import 'package:friendly_voice/domain/voice_core.dart';
+import 'package:friendly_voice/l10n/app_localizations.dart';
 import 'package:friendly_voice/presentation/atoms/atoms.dart';
 import 'package:friendly_voice/presentation/design/tokens.dart';
 import 'package:friendly_voice/presentation/molecules/molecules.dart';
@@ -35,32 +36,33 @@ class MessageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final own = form.text != null;
     return SoftCard(
       children: [
         if (voices.isEmpty) ...[
-          const Text('No voice is ready yet. Create one in Voices first.'),
+          Text(l.reminderNoVoices),
           const SizedBox(height: Space.m),
           OutlinedButton.icon(
             onPressed: onGoToVoices,
             icon: const Icon(Icons.mic_none),
-            label: const Text('Go to Voices'),
+            label: Text(l.reminderGoToVoices),
           ),
           const SizedBox(height: Space.m),
         ] else
           LabeledDropdown<String>(
-            label: 'Voice',
+            label: l.reminderVoiceHint,
             value: form.speakerId,
             options: [for (final v in voices) (v.id, v.name)],
             onChanged: (id) => onEdit((f) => f.copyWith(speakerId: () => id)),
           ),
         LabeledDropdown<String>(
-          label: 'Theme',
+          label: l.reminderThemeHint,
           value: own ? ownText : form.theme,
           options: [
             for (final t in catalog?.themes ?? const <ThemeOption>[])
               (t.slug, humanize(t.slug)),
-            (ownText, 'Your own text'),
+            (ownText, l.reminderOwnText),
           ],
           onChanged: (slug) => onEdit(
             (f) => slug == ownText
@@ -70,7 +72,7 @@ class MessageCard extends StatelessWidget {
         ),
         if (own)
           LiveField(
-            label: 'What should the voice say?',
+            label: l.reminderOwnText,
             initial: form.text ?? '',
             maxLines: 3,
             capitalization: TextCapitalization.sentences,
@@ -94,45 +96,41 @@ class TonePitchCard extends StatelessWidget {
   final Catalog? catalog;
   final FormEdit onEdit;
 
-  String _suggested() {
-    for (final t in catalog?.themes ?? const <ThemeOption>[]) {
-      if (t.slug == form.theme && form.text == null) {
-        return 'Suggested by the theme (${humanize(t.defaultTone)})';
-      }
-    }
-    return 'Suggested by the theme';
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final max = (catalog?.maxPitchShift ?? 6).round();
     final pitch = form.pitch.clamp(-max, max);
     return SoftCard(
       children: [
         LabeledDropdown<String?>(
-          label: 'Tone of voice',
+          label: l.reminderToneHint,
           value: form.tone,
           options: [
-            (null, _suggested()),
+            (
+              null,
+              suggestedTone(l, form.text == null ? form.theme : null, catalog),
+            ),
             for (final t in catalog?.tones ?? const <ToneOption>[])
-              (t.slug, '${humanize(t.slug)} — ${t.description}'),
+              (t.slug, l.toneOption(humanize(t.slug), t.description)),
           ],
           onChanged: (tone) => onEdit((f) => f.copyWith(tone: () => tone)),
         ),
         Text(switch (pitch) {
-          0 => 'Pitch: natural',
-          > 0 => 'Pitch: $pitch semitone${pitch == 1 ? '' : 's'} higher',
-          _ => 'Pitch: ${-pitch} semitone${pitch == -1 ? '' : 's'} lower',
+          0 => l.pitchNatural,
+          > 0 => l.pitchHigher(pitch),
+          _ => l.pitchLower(-pitch),
         }),
-        Slider(
-          value: pitch.toDouble(),
-          min: -max.toDouble(),
-          max: max.toDouble(),
-          divisions: max * 2,
-          label: pitch == 0 ? 'natural' : '${pitch > 0 ? '+' : ''}$pitch',
-          semanticFormatterCallback: (v) =>
-              'Pitch shift ${v.round()} semitones',
-          onChanged: (v) => onEdit((f) => f.copyWith(pitch: v.round())),
+        Semantics(
+          label: l.pitchDescription,
+          child: Slider(
+            value: pitch.toDouble(),
+            min: -max.toDouble(),
+            max: max.toDouble(),
+            divisions: max * 2,
+            label: '${pitch > 0 ? '+' : ''}$pitch',
+            onChanged: (v) => onEdit((f) => f.copyWith(pitch: v.round())),
+          ),
         ),
       ],
     );
@@ -145,13 +143,6 @@ class RepeatCard extends StatelessWidget {
 
   final ReminderForm form;
   final FormEdit onEdit;
-
-  static const List<(ScheduleKind, String)> _kinds = [
-    (ScheduleKind.daily, 'Daily'),
-    (ScheduleKind.weekly, 'Chosen days'),
-    (ScheduleKind.interval, 'Every N minutes'),
-    (ScheduleKind.once, 'Once'),
-  ];
 
   Future<void> _pickDate(BuildContext context) async {
     final today = DateUtils.dateOnly(DateTime.now());
@@ -166,17 +157,24 @@ class RepeatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final kind = form.kind;
     final date = form.date;
+    final kinds = [
+      (ScheduleKind.daily, l.repeatKindDaily),
+      (ScheduleKind.weekly, l.repeatKindWeekly),
+      (ScheduleKind.interval, l.repeatKindInterval),
+      (ScheduleKind.once, l.repeatKindOnce),
+    ];
     return SoftCard(
       children: [
-        const CardTitle('Repeat'),
+        CardTitle(l.repeatTitle),
         const SizedBox(height: Space.m),
         Wrap(
           spacing: Space.s,
           runSpacing: Space.s,
           children: [
-            for (final (k, label) in _kinds)
+            for (final (k, label) in kinds)
               ChoiceChip(
                 label: Text(label),
                 selected: k == kind,
@@ -192,8 +190,8 @@ class RepeatCard extends StatelessWidget {
             children: [
               for (final d in Weekday.values)
                 FilterChip(
-                  tooltip: weekdayNames[d],
-                  label: Text(weekdayInitials[d]!),
+                  tooltip: weekdayName(l, d),
+                  label: Text(weekdayInitial(l, d)),
                   selected: form.days.contains(d),
                   onSelected: (on) => onEdit(
                     (f) => f.copyWith(
@@ -205,14 +203,16 @@ class RepeatCard extends StatelessWidget {
           ),
         ],
         if (kind == ScheduleKind.once) ...[
-          const CardLabel('On'),
+          CardLabel(l.repeatDateLabel),
           OutlinedButton(
             onPressed: () => _pickDate(context),
             child: Text(
               date == null
-                  ? 'Pick a date'
-                  : '${date.day.toString().padLeft(2, '0')}/'
-                        '${date.month.toString().padLeft(2, '0')}/${date.year}',
+                  ? l.repeatPickDate
+                  : l.repeatDateValue(
+                      date.day.toString().padLeft(2, '0'),
+                      date.month.toString().padLeft(2, '0'),
+                    ),
               style: const TextStyle(
                 fontSize: TypeScale.picker,
                 fontWeight: FontWeight.w300,
@@ -221,23 +221,24 @@ class RepeatCard extends StatelessWidget {
           ),
         ],
         if (kind != ScheduleKind.interval) ...[
-          const CardLabel('At'),
+          CardLabel(l.repeatTimeLabel),
           ClockButton(
-            label: 'At',
+            label: l.repeatTimeLabel,
             time: form.time,
             onChanged: (t) => onEdit((f) => f.copyWith(time: t)),
           ),
         ] else ...[
           const SizedBox(height: Space.m),
           LiveField(
-            label: 'Every … minutes',
+            label: l.repeatEveryHint,
+            suffix: l.repeatEverySuffix,
             initial: '${form.everyMinutes ?? ''}',
             keyboardType: TextInputType.number,
             onChanged: (v) => onEdit(
               (f) => f.copyWith(everyMinutes: int.tryParse(v.trim()) ?? 0),
             ),
           ),
-          const CardLabel('Between'),
+          CardLabel(l.repeatWindowLabel),
           TimeRangePicker(
             range: form.window,
             onChanged: (w) => onEdit((f) => f.copyWith(window: w)),
@@ -256,25 +257,28 @@ class QuietHoursCard extends StatelessWidget {
   final FormEdit onEdit;
 
   @override
-  Widget build(BuildContext context) => SoftCard(
-    children: [
-      Row(
-        children: [
-          const Expanded(child: CardTitle('Quiet hours')),
-          Switch(
-            value: form.quietEnabled,
-            onChanged: (on) => onEdit((f) => f.copyWith(quietEnabled: on)),
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return SoftCard(
+      children: [
+        Row(
+          children: [
+            Expanded(child: CardTitle(l.quietTitle)),
+            Switch(
+              value: form.quietEnabled,
+              onChanged: (on) => onEdit((f) => f.copyWith(quietEnabled: on)),
+            ),
+          ],
+        ),
+        MutedText(l.quietHelp),
+        if (form.quietEnabled) ...[
+          const SizedBox(height: Space.m),
+          TimeRangePicker(
+            range: form.quiet,
+            onChanged: (q) => onEdit((f) => f.copyWith(quiet: q)),
           ),
         ],
-      ),
-      const MutedText('No messages between these times.'),
-      if (form.quietEnabled) ...[
-        const SizedBox(height: Space.m),
-        TimeRangePicker(
-          range: form.quiet,
-          onChanged: (q) => onEdit((f) => f.copyWith(quiet: q)),
-        ),
       ],
-    ],
-  );
+    );
+  }
 }
