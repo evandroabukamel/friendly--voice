@@ -30,10 +30,19 @@ abstract class Session implements RustOpaqueInterface {
 
   ScheduleSummary createSchedule({required ScheduleRequest request});
 
+  /// Deletes a person and everything made from their voice (also on the
+  /// voice server); their schedules are switched off and kept.
+  /// Idempotent: an unknown id is fine.
+  Future<void> deleteSpeaker({required String speakerId});
+
   String get engineName;
+
+  /// The person's recordings, oldest first.
+  List<SampleSummary> listSamples({required String speakerId});
 
   List<ScheduleSummary> listSchedules();
 
+  /// People whose consent stands, with their sample totals and voice.
   List<SpeakerSummary> listSpeakers();
 
   /// Opens the app's data folder (e.g. the platform's application support
@@ -45,18 +54,32 @@ abstract class Session implements RustOpaqueInterface {
       .crateApiSessionSessionOpen(dataDir: dataDir, engineUrl: engineUrl);
 
   /// Registers a person; `consent_by` (who authorized the use of the
-  /// voice) is mandatory. Default language: pt-BR.
+  /// voice) is mandatory. Default language: pt-BR. `listener_name` is how
+  /// this person calls the listener (optional).
   SpeakerSummary registerSpeaker({
     required String name,
     String? relationship,
     String? consentBy,
     String? language,
+    String? listenerName,
   });
 
   void removeSchedule({required String id});
 
   /// Speaks every schedule that is due (each one exactly once).
   Future<List<DueMessage>> runDueSchedules({String? listener});
+
+  /// Sets how this person calls the listener; blank clears it.
+  SpeakerSummary setListenerName({
+    required String speakerId,
+    String? listenerName,
+  });
+
+  /// The on/off switch. Switching on only fires future occurrences.
+  ScheduleSummary setScheduleEnabled({
+    required String id,
+    required bool enabled,
+  });
 
   /// Speaks a message now in the person's voice and returns the WAV path.
   Future<SpokenMessage> speak({
@@ -71,4 +94,11 @@ abstract class Session implements RustOpaqueInterface {
   /// The next `limit` firings of all schedules, soonest first, within the
   /// look-ahead horizon (iOS keeps at most 64 pending notifications).
   List<Alarm> upcomingAlarms({required int limit});
+
+  /// Replaces the rule of a schedule, keeping its id and on/off state.
+  /// Sending the same request again changes nothing.
+  ScheduleSummary updateSchedule({
+    required String id,
+    required ScheduleRequest request,
+  });
 }

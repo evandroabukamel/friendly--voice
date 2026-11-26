@@ -2,12 +2,13 @@
 use super::failure::AppFailure;
 use super::messages::{content, tone};
 use super::session::{non_empty, Session};
-use chrono::{Local, NaiveDateTime, TimeZone};
+use chrono::{Local, NaiveDateTime, NaiveTime, TimeZone};
 use friendly_voice_application::use_cases::CreateScheduleInput;
 use friendly_voice_bootstrap::parse;
 use friendly_voice_domain::{
     ids::{ScheduleId, SpeakerId},
-    schedule::{Recurrence, Schedule},
+    message::MessageContent,
+    schedule::{Recurrence, Schedule, TimeWindow},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -44,9 +45,20 @@ pub struct ScheduleRequest {
 pub struct ScheduleSummary {
     pub id: String,
     pub speaker_id: String,
+    /// The person's name; `None` once the person was deleted.
+    pub speaker_name: Option<String>,
+    /// False when the person was deleted or revoked: choose another voice.
+    pub voice_available: bool,
+    pub enabled: bool,
+    /// Clock time `HH:MM` of daily, weekly and one-time rules (`None` for
+    /// intervals).
+    pub time: Option<String>,
     pub tone_label: String,
-    /// Next firing as `dd/mm HH:MM`, if any.
+    /// Next firing as `dd/mm HH:MM`, if any (`None` when switched off).
     pub next_due: Option<String>,
+    /// The request that creates this schedule: sending it back to
+    /// `update_schedule` yields the same schedule.
+    pub request: ScheduleRequest,
 }
 
 /// One schedule fired by `run_due_schedules`.
@@ -95,18 +107,91 @@ fn recurrence(r: &ScheduleRequest) -> Result<Recurrence, AppFailure> {
     parsed.map_err(AppFailure::new)
 }
 
-fn summary(s: &Schedule) -> ScheduleSummary {
-    ScheduleSummary {
-        id: s.id.to_string(),
+fn input(r: &ScheduleRequest) -> Result<CreateScheduleInput, AppFailure> {
+    Ok(CreateScheduleInput {
+        speaker_id: SpeakerId::new(r.speaker_id.clone()),
+        recurrence: recurrence(r)?,
+        content: content(r.theme.clone(), r.text.clone())?,
+        tone: tone(r.tone.clone(), r.pitch_shift)?,
+        quiet_hours: non_empty(r.quiet.clone())
+            .as_deref()
+            .map(parse::window)
+            .transpose()
+            .map_err(AppFailure::new)?,
+    })
+}
+
+fn hhmm(t: NaiveTime) -> String {
+    t.format("%H:%M").to_string()
+}
+
+fn window_text(w: TimeWindow) -> String {
+    format!("{}-{}", hhmm(w.start), hhmm(w.end))
+}
+
+/// The schedule written back as the request that creates it.
+fn request_of(s: &Schedule) -> ScheduleRequest {
+    let blank = ScheduleRequest {
         speaker_id: s.speaker_id.to_string(),
-        tone_label: s
-            .tone
-            .map(|t| t.to_string())
-            .unwrap_or_else(|| "suggested by the theme".into()),
-        next_due: s
-            .next_due()
-            .filter(|_| s.enabled)
-            .map(|d| d.format("%d/%m %H:%M").to_string()),
+        kind: ScheduleKind::Daily,
+        at: None,
+        days: None,
+        every_minutes: None,
+        within: None,
+        quiet: s.quiet_hours.map(window_text),
+        theme: None,
+        text: None,
+        tone: s.tone.map(|t| t.style.slug().to_string()),
+        pitch_shift: s.tone.map_or(0.0, |t| t.pitch_shift_semitones),
+    };
+    let rule = match &s.recurrence {
+        Recurrence::Daily { at } => ScheduleRequest {
+            at: Some(hhmm(*at)),
+            ..blank
+        },
+        Recurrence::Weekly { days, at } => ScheduleRequest {
+            kind: ScheduleKind::Weekly,
+            at: Some(hhmm(*at)),
+            days: Some(
+                days.iter()
+                    .map(|d| parse::weekday_short(*d))
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ),
+            ..blank
+        },
+        Recurrence::Interval {
+            every_minutes,
+            within,
+        } => ScheduleRequest {
+            kind: ScheduleKind::Interval,
+            every_minutes: Some(*every_minutes),
+            within: within.map(window_text),
+            ..blank
+        },
+        Recurrence::Once { at } => ScheduleRequest {
+            kind: ScheduleKind::Once,
+            at: Some(at.format("%Y-%m-%d %H:%M").to_string()),
+            ..blank
+        },
+    };
+    match &s.content {
+        MessageContent::Category(c) => ScheduleRequest {
+            theme: Some(c.slug().to_string()),
+            ..rule
+        },
+        MessageContent::FixedText(t) => ScheduleRequest {
+            text: Some(t.clone()),
+            ..rule
+        },
+    }
+}
+
+fn clock_time(r: &Recurrence) -> Option<String> {
+    match r {
+        Recurrence::Daily { at } | Recurrence::Weekly { at, .. } => Some(hhmm(*at)),
+        Recurrence::Once { at } => Some(hhmm(at.time())),
+        Recurrence::Interval { .. } => None,
     }
 }
 
@@ -118,24 +203,70 @@ fn epoch_ms(local: NaiveDateTime) -> Option<i64> {
 }
 
 impl Session {
+    fn schedule_summary(&self, s: &Schedule) -> Result<ScheduleSummary, AppFailure> {
+        let speaker = self
+            .container
+            .speakers
+            .find(&s.speaker_id)
+            .map_err(AppFailure::new)?;
+        Ok(ScheduleSummary {
+            id: s.id.to_string(),
+            speaker_id: s.speaker_id.to_string(),
+            voice_available: speaker.as_ref().is_some_and(|p| !p.is_revoked()),
+            speaker_name: speaker.map(|p| p.name),
+            enabled: s.enabled,
+            time: clock_time(&s.recurrence),
+            tone_label: s
+                .tone
+                .map(|t| t.to_string())
+                .unwrap_or_else(|| "suggested by the theme".into()),
+            next_due: s
+                .next_due()
+                .filter(|_| s.enabled)
+                .map(|d| d.format("%d/%m %H:%M").to_string()),
+            request: request_of(s),
+        })
+    }
+
     #[flutter_rust_bridge::frb(sync)]
     pub fn create_schedule(&self, request: ScheduleRequest) -> Result<ScheduleSummary, AppFailure> {
         let schedule = self
             .container
             .create_schedule()
-            .execute(CreateScheduleInput {
-                speaker_id: SpeakerId::new(request.speaker_id.clone()),
-                recurrence: recurrence(&request)?,
-                content: content(request.theme.clone(), request.text.clone())?,
-                tone: tone(request.tone.clone(), request.pitch_shift)?,
-                quiet_hours: non_empty(request.quiet.clone())
-                    .as_deref()
-                    .map(parse::window)
-                    .transpose()
-                    .map_err(AppFailure::new)?,
-            })
+            .execute(input(&request)?)
             .map_err(AppFailure::new)?;
-        Ok(summary(&schedule))
+        self.schedule_summary(&schedule)
+    }
+
+    /// Replaces the rule of a schedule, keeping its id and on/off state.
+    /// Sending the same request again changes nothing.
+    #[flutter_rust_bridge::frb(sync)]
+    pub fn update_schedule(
+        &self,
+        id: String,
+        request: ScheduleRequest,
+    ) -> Result<ScheduleSummary, AppFailure> {
+        let schedule = self
+            .container
+            .update_schedule()
+            .execute(&ScheduleId::new(id), input(&request)?)
+            .map_err(AppFailure::new)?;
+        self.schedule_summary(&schedule)
+    }
+
+    /// The on/off switch. Switching on only fires future occurrences.
+    #[flutter_rust_bridge::frb(sync)]
+    pub fn set_schedule_enabled(
+        &self,
+        id: String,
+        enabled: bool,
+    ) -> Result<ScheduleSummary, AppFailure> {
+        let schedule = self
+            .container
+            .set_schedule_enabled()
+            .execute(&ScheduleId::new(id), enabled)
+            .map_err(AppFailure::new)?;
+        self.schedule_summary(&schedule)
     }
 
     #[flutter_rust_bridge::frb(sync)]
@@ -145,7 +276,7 @@ impl Session {
             .list_schedules()
             .execute()
             .map_err(AppFailure::new)?;
-        Ok(all.iter().map(summary).collect())
+        all.iter().map(|s| self.schedule_summary(s)).collect()
     }
 
     #[flutter_rust_bridge::frb(sync)]
@@ -237,7 +368,7 @@ mod tests {
     fn creates_lists_and_removes_schedules() {
         let s = local_session("schedules");
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         let daily = s
             .create_schedule(ScheduleRequest {
@@ -273,7 +404,7 @@ mod tests {
     fn invalid_rules_are_refused_with_a_clear_message() {
         let s = local_session("bad-schedules");
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         let no_time = s
             .create_schedule(request(&p.id, ScheduleKind::Daily))
@@ -297,7 +428,7 @@ mod tests {
     fn upcoming_alarms_are_sorted_epoch_times_and_capped() {
         let s = local_session("alarms");
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         for at in ["08:00", "20:00"] {
             s.create_schedule(ScheduleRequest {
@@ -323,10 +454,106 @@ mod tests {
     }
 
     #[test]
+    fn a_listed_schedule_describes_itself_and_its_request_round_trips() {
+        let s = local_session("round-trip");
+        let p = s
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
+            .unwrap();
+        let sent = ScheduleRequest {
+            at: Some("07:30".into()),
+            days: Some("mon,fri".into()),
+            quiet: Some("22:00-07:00".into()),
+            tone: Some("warm".into()),
+            pitch_shift: 1.0,
+            ..request(&p.id, ScheduleKind::Weekly)
+        };
+        let created = s.create_schedule(sent.clone()).unwrap();
+        assert!(created.enabled);
+        assert_eq!(created.speaker_name.as_deref(), Some("Vó"));
+        assert!(created.voice_available);
+        assert_eq!(created.time.as_deref(), Some("07:30"));
+        assert_eq!(created.request, sent);
+        let again = s
+            .update_schedule(created.id.clone(), created.request.clone())
+            .unwrap();
+        assert_eq!(again, created);
+    }
+
+    #[test]
+    fn an_edit_keeps_the_id_and_the_switch() {
+        let s = local_session("edit");
+        let p = s
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
+            .unwrap();
+        let daily = s
+            .create_schedule(ScheduleRequest {
+                at: Some("08:00".into()),
+                ..request(&p.id, ScheduleKind::Daily)
+            })
+            .unwrap();
+        let off = s.set_schedule_enabled(daily.id.clone(), false).unwrap();
+        assert!(!off.enabled);
+        assert_eq!(off.next_due, None);
+        assert!(s.upcoming_alarms(10).unwrap().is_empty());
+        let edited = s
+            .update_schedule(
+                daily.id.clone(),
+                ScheduleRequest {
+                    at: Some("09:15".into()),
+                    ..daily.request.clone()
+                },
+            )
+            .unwrap();
+        assert_eq!(edited.id, daily.id);
+        assert!(!edited.enabled);
+        assert_eq!(edited.time.as_deref(), Some("09:15"));
+        assert!(s.set_schedule_enabled(daily.id, true).unwrap().enabled);
+    }
+
+    #[test]
+    fn an_interval_has_no_clock_time() {
+        let s = local_session("interval");
+        let p = s
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
+            .unwrap();
+        let every = s
+            .create_schedule(ScheduleRequest {
+                every_minutes: Some(90),
+                within: Some("09:00-18:00".into()),
+                text: Some("Respira fundo".into()),
+                theme: None,
+                ..request(&p.id, ScheduleKind::Interval)
+            })
+            .unwrap();
+        assert_eq!(every.time, None);
+        assert_eq!(every.request.every_minutes, Some(90));
+        assert_eq!(every.request.within.as_deref(), Some("09:00-18:00"));
+        assert_eq!(every.request.text.as_deref(), Some("Respira fundo"));
+    }
+
+    #[test]
+    fn a_schedule_whose_person_was_deleted_reports_its_voice_unavailable() {
+        let s = local_session("unavailable");
+        let p = s
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
+            .unwrap();
+        s.create_schedule(ScheduleRequest {
+            at: Some("08:00".into()),
+            ..request(&p.id, ScheduleKind::Daily)
+        })
+        .unwrap();
+        s.delete_speaker(p.id).unwrap();
+        let listed = &s.list_schedules().unwrap()[0];
+        assert!(!listed.voice_available);
+        assert_eq!(listed.speaker_name, None);
+        assert!(!listed.enabled);
+    }
+
+    #[test]
     fn nothing_is_due_right_after_creation() {
         let s = local_session("due");
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         s.create_schedule(ScheduleRequest {
             at: Some("08:00".into()),

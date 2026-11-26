@@ -23,18 +23,29 @@ abstract interface class VoiceCore {
 
   List<SpeakerSummary> listPeople();
 
+  /// [listenerName]: how this person calls the listener (optional).
   SpeakerSummary registerPerson({
     required String name,
     String? relationship,
     String? consentBy,
     String? language,
+    String? listenerName,
   });
+
+  /// Sets how the person calls the listener; blank clears it.
+  SpeakerSummary setListenerName(String personId, String? listenerName);
+
+  /// Deletes the person and everything made from their voice (also on the
+  /// voice server); their reminders are switched off and kept. Idempotent.
+  Future<void> deletePerson(String personId);
 
   Future<SampleSummary> addSample({
     required String personId,
     required Uint8List audio,
     String? transcript,
   });
+
+  List<SampleSummary> listSamples(String personId);
 
   Future<VoiceSummary> buildVoice(String personId);
 
@@ -48,6 +59,13 @@ abstract interface class VoiceCore {
   });
 
   ScheduleSummary createSchedule(ScheduleRequest request);
+
+  /// Replaces the rule, keeping the id and the on/off state. Sending the
+  /// same request again changes nothing.
+  ScheduleSummary updateSchedule(String id, ScheduleRequest request);
+
+  /// The on/off switch; switching on only fires future occurrences.
+  ScheduleSummary setScheduleEnabled(String id, bool enabled);
 
   List<ScheduleSummary> listSchedules();
 

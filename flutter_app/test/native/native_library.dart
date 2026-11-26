@@ -7,10 +7,11 @@ export '../support/wav.dart';
 
 /// Host build of the Rust bridge (`cargo build -p friendly_voice_bridge`),
 /// used to test the real Rust core from Dart without a device.
-final File hostLibrary = File(
-  '../target/debug/libfriendly_voice_bridge'
-  '${Platform.isMacOS ? '.dylib' : '.so'}',
-);
+final File hostLibrary = File(switch (Platform.operatingSystem) {
+  'windows' => '../target/debug/friendly_voice_bridge.dll',
+  'macos' => '../target/debug/libfriendly_voice_bridge.dylib',
+  _ => '../target/debug/libfriendly_voice_bridge.so',
+});
 
 /// Reason to skip native tests, or `null` when the library was built.
 String? get skipNative => hostLibrary.existsSync()

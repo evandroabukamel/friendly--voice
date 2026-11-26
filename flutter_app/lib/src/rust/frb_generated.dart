@@ -75,7 +75,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1911674618;
+  int get rustContentHash => -2052749284;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -104,7 +104,17 @@ abstract class RustLibApi extends BaseApi {
     required ScheduleRequest request,
   });
 
+  Future<void> crateApiSessionSessionDeleteSpeaker({
+    required Session that,
+    required String speakerId,
+  });
+
   String crateApiSessionSessionEngineName({required Session that});
+
+  List<SampleSummary> crateApiSessionSessionListSamples({
+    required Session that,
+    required String speakerId,
+  });
 
   List<ScheduleSummary> crateApiSessionSessionListSchedules({
     required Session that,
@@ -125,6 +135,7 @@ abstract class RustLibApi extends BaseApi {
     String? relationship,
     String? consentBy,
     String? language,
+    String? listenerName,
   });
 
   void crateApiSessionSessionRemoveSchedule({
@@ -135,6 +146,18 @@ abstract class RustLibApi extends BaseApi {
   Future<List<DueMessage>> crateApiSessionSessionRunDueSchedules({
     required Session that,
     String? listener,
+  });
+
+  SpeakerSummary crateApiSessionSessionSetListenerName({
+    required Session that,
+    required String speakerId,
+    String? listenerName,
+  });
+
+  ScheduleSummary crateApiSessionSessionSetScheduleEnabled({
+    required Session that,
+    required String id,
+    required bool enabled,
   });
 
   Future<SpokenMessage> crateApiSessionSessionSpeak({
@@ -150,6 +173,12 @@ abstract class RustLibApi extends BaseApi {
   List<Alarm> crateApiSessionSessionUpcomingAlarms({
     required Session that,
     required int limit,
+  });
+
+  ScheduleSummary crateApiSessionSessionUpdateSchedule({
+    required Session that,
+    required String id,
+    required ScheduleRequest request,
   });
 
   Catalog crateApiCatalogCatalog();
@@ -285,6 +314,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiSessionSessionDeleteSpeaker({
+    required Session that,
+    required String speakerId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(speakerId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionDeleteSpeakerConstMeta,
+        argValues: [that, speakerId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionDeleteSpeakerConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_delete_speaker",
+        argNames: ["that", "speakerId"],
+      );
+
+  @override
   String crateApiSessionSessionEngineName({required Session that}) {
     return handler.executeSync(
       SyncTask(
@@ -294,7 +361,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -311,6 +378,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "Session_engine_name", argNames: ["that"]);
 
   @override
+  List<SampleSummary> crateApiSessionSessionListSamples({
+    required Session that,
+    required String speakerId,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(speakerId, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_sample_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionListSamplesConstMeta,
+        argValues: [that, speakerId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionListSamplesConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_list_samples",
+        argNames: ["that", "speakerId"],
+      );
+
+  @override
   List<ScheduleSummary> crateApiSessionSessionListSchedules({
     required Session that,
   }) {
@@ -322,7 +422,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_schedule_summary,
@@ -353,7 +453,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_speaker_summary,
@@ -383,7 +483,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(dataDir, serializer);
           sse_encode_opt_String(engineUrl, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -409,6 +509,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     String? relationship,
     String? consentBy,
     String? language,
+    String? listenerName,
   }) {
     return handler.executeSync(
       SyncTask(
@@ -422,14 +523,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_opt_String(relationship, serializer);
           sse_encode_opt_String(consentBy, serializer);
           sse_encode_opt_String(language, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          sse_encode_opt_String(listenerName, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_speaker_summary,
           decodeErrorData: sse_decode_app_failure,
         ),
         constMeta: kCrateApiSessionSessionRegisterSpeakerConstMeta,
-        argValues: [that, name, relationship, consentBy, language],
+        argValues: [
+          that,
+          name,
+          relationship,
+          consentBy,
+          language,
+          listenerName,
+        ],
         apiImpl: this,
       ),
     );
@@ -438,7 +547,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSessionSessionRegisterSpeakerConstMeta =>
       const TaskConstMeta(
         debugName: "Session_register_speaker",
-        argNames: ["that", "name", "relationship", "consentBy", "language"],
+        argNames: [
+          "that",
+          "name",
+          "relationship",
+          "consentBy",
+          "language",
+          "listenerName",
+        ],
       );
 
   @override
@@ -455,7 +571,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_String(id, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -491,7 +607,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 12,
             port: port_,
           );
         },
@@ -510,6 +626,76 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "Session_run_due_schedules",
         argNames: ["that", "listener"],
+      );
+
+  @override
+  SpeakerSummary crateApiSessionSessionSetListenerName({
+    required Session that,
+    required String speakerId,
+    String? listenerName,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(speakerId, serializer);
+          sse_encode_opt_String(listenerName, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_speaker_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionSetListenerNameConstMeta,
+        argValues: [that, speakerId, listenerName],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionSetListenerNameConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_set_listener_name",
+        argNames: ["that", "speakerId", "listenerName"],
+      );
+
+  @override
+  ScheduleSummary crateApiSessionSessionSetScheduleEnabled({
+    required Session that,
+    required String id,
+    required bool enabled,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(id, serializer);
+          sse_encode_bool(enabled, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_schedule_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionSetScheduleEnabledConstMeta,
+        argValues: [that, id, enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionSetScheduleEnabledConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_set_schedule_enabled",
+        argNames: ["that", "id", "enabled"],
       );
 
   @override
@@ -539,7 +725,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 15,
             port: port_,
           );
         },
@@ -590,7 +776,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             serializer,
           );
           sse_encode_u_32(limit, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_alarm,
@@ -610,12 +796,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  ScheduleSummary crateApiSessionSessionUpdateSchedule({
+    required Session that,
+    required String id,
+    required ScheduleRequest request,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(id, serializer);
+          sse_encode_box_autoadd_schedule_request(request, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_schedule_summary,
+          decodeErrorData: sse_decode_app_failure,
+        ),
+        constMeta: kCrateApiSessionSessionUpdateScheduleConstMeta,
+        argValues: [that, id, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSessionSessionUpdateScheduleConstMeta =>
+      const TaskConstMeta(
+        debugName: "Session_update_schedule",
+        argNames: ["that", "id", "request"],
+      );
+
+  @override
   Catalog crateApiCatalogCatalog() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_catalog,
@@ -640,7 +861,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 19,
             port: port_,
           );
         },
@@ -840,6 +1061,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<SampleSummary> dco_decode_list_sample_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_sample_summary).toList();
+  }
+
+  @protected
   List<ScheduleSummary> dco_decode_list_schedule_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_schedule_summary).toList();
@@ -926,13 +1153,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ScheduleSummary dco_decode_schedule_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return ScheduleSummary(
       id: dco_decode_String(arr[0]),
       speakerId: dco_decode_String(arr[1]),
-      toneLabel: dco_decode_String(arr[2]),
-      nextDue: dco_decode_opt_String(arr[3]),
+      speakerName: dco_decode_opt_String(arr[2]),
+      voiceAvailable: dco_decode_bool(arr[3]),
+      enabled: dco_decode_bool(arr[4]),
+      time: dco_decode_opt_String(arr[5]),
+      toneLabel: dco_decode_String(arr[6]),
+      nextDue: dco_decode_opt_String(arr[7]),
+      request: dco_decode_schedule_request(arr[8]),
     );
   }
 
@@ -940,8 +1172,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SpeakerSummary dco_decode_speaker_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return SpeakerSummary(
       id: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -949,6 +1181,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       language: dco_decode_String(arr[3]),
       voiceReady: dco_decode_bool(arr[4]),
       gender: dco_decode_opt_box_autoadd_gender(arr[5]),
+      consentBy: dco_decode_String(arr[6]),
+      listenerName: dco_decode_opt_String(arr[7]),
+      sampleCount: dco_decode_u_32(arr[8]),
+      totalSampleSecs: dco_decode_f_32(arr[9]),
     );
   }
 
@@ -1230,6 +1466,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<SampleSummary> sse_decode_list_sample_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SampleSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_sample_summary(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ScheduleSummary> sse_decode_list_schedule_summary(
     SseDeserializer deserializer,
   ) {
@@ -1370,13 +1620,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
     var var_speakerId = sse_decode_String(deserializer);
+    var var_speakerName = sse_decode_opt_String(deserializer);
+    var var_voiceAvailable = sse_decode_bool(deserializer);
+    var var_enabled = sse_decode_bool(deserializer);
+    var var_time = sse_decode_opt_String(deserializer);
     var var_toneLabel = sse_decode_String(deserializer);
     var var_nextDue = sse_decode_opt_String(deserializer);
+    var var_request = sse_decode_schedule_request(deserializer);
     return ScheduleSummary(
       id: var_id,
       speakerId: var_speakerId,
+      speakerName: var_speakerName,
+      voiceAvailable: var_voiceAvailable,
+      enabled: var_enabled,
+      time: var_time,
       toneLabel: var_toneLabel,
       nextDue: var_nextDue,
+      request: var_request,
     );
   }
 
@@ -1389,6 +1649,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_language = sse_decode_String(deserializer);
     var var_voiceReady = sse_decode_bool(deserializer);
     var var_gender = sse_decode_opt_box_autoadd_gender(deserializer);
+    var var_consentBy = sse_decode_String(deserializer);
+    var var_listenerName = sse_decode_opt_String(deserializer);
+    var var_sampleCount = sse_decode_u_32(deserializer);
+    var var_totalSampleSecs = sse_decode_f_32(deserializer);
     return SpeakerSummary(
       id: var_id,
       name: var_name,
@@ -1396,6 +1660,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       language: var_language,
       voiceReady: var_voiceReady,
       gender: var_gender,
+      consentBy: var_consentBy,
+      listenerName: var_listenerName,
+      sampleCount: var_sampleCount,
+      totalSampleSecs: var_totalSampleSecs,
     );
   }
 
@@ -1662,6 +1930,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_sample_summary(
+    List<SampleSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_sample_summary(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_schedule_summary(
     List<ScheduleSummary> self,
     SseSerializer serializer,
@@ -1784,8 +2064,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.id, serializer);
     sse_encode_String(self.speakerId, serializer);
+    sse_encode_opt_String(self.speakerName, serializer);
+    sse_encode_bool(self.voiceAvailable, serializer);
+    sse_encode_bool(self.enabled, serializer);
+    sse_encode_opt_String(self.time, serializer);
     sse_encode_String(self.toneLabel, serializer);
     sse_encode_opt_String(self.nextDue, serializer);
+    sse_encode_schedule_request(self.request, serializer);
   }
 
   @protected
@@ -1800,6 +2085,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.language, serializer);
     sse_encode_bool(self.voiceReady, serializer);
     sse_encode_opt_box_autoadd_gender(self.gender, serializer);
+    sse_encode_String(self.consentBy, serializer);
+    sse_encode_opt_String(self.listenerName, serializer);
+    sse_encode_u_32(self.sampleCount, serializer);
+    sse_encode_f_32(self.totalSampleSecs, serializer);
   }
 
   @protected
@@ -1901,28 +2190,46 @@ class SessionImpl extends RustOpaque implements Session {
       .api
       .crateApiSessionSessionCreateSchedule(that: this, request: request);
 
+  /// Deletes a person and everything made from their voice (also on the
+  /// voice server); their schedules are switched off and kept.
+  /// Idempotent: an unknown id is fine.
+  Future<void> deleteSpeaker({required String speakerId}) => RustLib
+      .instance
+      .api
+      .crateApiSessionSessionDeleteSpeaker(that: this, speakerId: speakerId);
+
   String get engineName =>
       RustLib.instance.api.crateApiSessionSessionEngineName(that: this);
+
+  /// The person's recordings, oldest first.
+  List<SampleSummary> listSamples({required String speakerId}) => RustLib
+      .instance
+      .api
+      .crateApiSessionSessionListSamples(that: this, speakerId: speakerId);
 
   List<ScheduleSummary> listSchedules() =>
       RustLib.instance.api.crateApiSessionSessionListSchedules(that: this);
 
+  /// People whose consent stands, with their sample totals and voice.
   List<SpeakerSummary> listSpeakers() =>
       RustLib.instance.api.crateApiSessionSessionListSpeakers(that: this);
 
   /// Registers a person; `consent_by` (who authorized the use of the
-  /// voice) is mandatory. Default language: pt-BR.
+  /// voice) is mandatory. Default language: pt-BR. `listener_name` is how
+  /// this person calls the listener (optional).
   SpeakerSummary registerSpeaker({
     required String name,
     String? relationship,
     String? consentBy,
     String? language,
+    String? listenerName,
   }) => RustLib.instance.api.crateApiSessionSessionRegisterSpeaker(
     that: this,
     name: name,
     relationship: relationship,
     consentBy: consentBy,
     language: language,
+    listenerName: listenerName,
   );
 
   void removeSchedule({required String id}) => RustLib.instance.api
@@ -1933,6 +2240,26 @@ class SessionImpl extends RustOpaque implements Session {
       .instance
       .api
       .crateApiSessionSessionRunDueSchedules(that: this, listener: listener);
+
+  /// Sets how this person calls the listener; blank clears it.
+  SpeakerSummary setListenerName({
+    required String speakerId,
+    String? listenerName,
+  }) => RustLib.instance.api.crateApiSessionSessionSetListenerName(
+    that: this,
+    speakerId: speakerId,
+    listenerName: listenerName,
+  );
+
+  /// The on/off switch. Switching on only fires future occurrences.
+  ScheduleSummary setScheduleEnabled({
+    required String id,
+    required bool enabled,
+  }) => RustLib.instance.api.crateApiSessionSessionSetScheduleEnabled(
+    that: this,
+    id: id,
+    enabled: enabled,
+  );
 
   /// Speaks a message now in the person's voice and returns the WAV path.
   Future<SpokenMessage> speak({
@@ -1956,4 +2283,15 @@ class SessionImpl extends RustOpaque implements Session {
   /// look-ahead horizon (iOS keeps at most 64 pending notifications).
   List<Alarm> upcomingAlarms({required int limit}) => RustLib.instance.api
       .crateApiSessionSessionUpcomingAlarms(that: this, limit: limit);
+
+  /// Replaces the rule of a schedule, keeping its id and on/off state.
+  /// Sending the same request again changes nothing.
+  ScheduleSummary updateSchedule({
+    required String id,
+    required ScheduleRequest request,
+  }) => RustLib.instance.api.crateApiSessionSessionUpdateSchedule(
+    that: this,
+    id: id,
+    request: request,
+  );
 }

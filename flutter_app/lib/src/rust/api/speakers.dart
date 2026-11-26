@@ -8,7 +8,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `summary`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `from`, `from`
 
 /// Voice register detected from the recordings.
 enum Gender { female, male }
@@ -23,6 +23,14 @@ class SpeakerSummary {
   final bool voiceReady;
   final Gender? gender;
 
+  /// Who authorized the use of the voice.
+  final String consentBy;
+
+  /// How this person calls the listener; wins over the app's name.
+  final String? listenerName;
+  final int sampleCount;
+  final double totalSampleSecs;
+
   const SpeakerSummary({
     required this.id,
     required this.name,
@@ -30,6 +38,10 @@ class SpeakerSummary {
     required this.language,
     required this.voiceReady,
     this.gender,
+    required this.consentBy,
+    this.listenerName,
+    required this.sampleCount,
+    required this.totalSampleSecs,
   });
 
   @override
@@ -39,7 +51,11 @@ class SpeakerSummary {
       relationship.hashCode ^
       language.hashCode ^
       voiceReady.hashCode ^
-      gender.hashCode;
+      gender.hashCode ^
+      consentBy.hashCode ^
+      listenerName.hashCode ^
+      sampleCount.hashCode ^
+      totalSampleSecs.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -51,5 +67,9 @@ class SpeakerSummary {
           relationship == other.relationship &&
           language == other.language &&
           voiceReady == other.voiceReady &&
-          gender == other.gender;
+          gender == other.gender &&
+          consentBy == other.consentBy &&
+          listenerName == other.listenerName &&
+          sampleCount == other.sampleCount &&
+          totalSampleSecs == other.totalSampleSecs;
 }

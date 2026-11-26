@@ -26,12 +26,26 @@ final class RustVoiceCore implements VoiceCore {
     String? relationship,
     String? consentBy,
     String? language,
+    String? listenerName,
   }) => _session.registerSpeaker(
     name: name,
     relationship: relationship,
     consentBy: consentBy,
     language: language,
+    listenerName: listenerName,
   );
+
+  @override
+  SpeakerSummary setListenerName(String personId, String? listenerName) =>
+      _session.setListenerName(speakerId: personId, listenerName: listenerName);
+
+  @override
+  Future<void> deletePerson(String personId) =>
+      _session.deleteSpeaker(speakerId: personId);
+
+  @override
+  List<SampleSummary> listSamples(String personId) =>
+      _session.listSamples(speakerId: personId);
 
   @override
   Future<SampleSummary> addSample({
@@ -68,6 +82,14 @@ final class RustVoiceCore implements VoiceCore {
   @override
   ScheduleSummary createSchedule(ScheduleRequest request) =>
       _session.createSchedule(request: request);
+
+  @override
+  ScheduleSummary updateSchedule(String id, ScheduleRequest request) =>
+      _session.updateSchedule(id: id, request: request);
+
+  @override
+  ScheduleSummary setScheduleEnabled(String id, bool enabled) =>
+      _session.setScheduleEnabled(id: id, enabled: enabled);
 
   @override
   List<ScheduleSummary> listSchedules() => _session.listSchedules();

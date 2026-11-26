@@ -38,13 +38,16 @@ final class FakeVoiceCoreFactory implements VoiceCoreFactory {
 }
 
 /// In-memory [VoiceCore] with the same observable rules as the Rust core
-/// for the cases the UI needs (consent required, voice required to speak).
+/// for the cases the UI needs (consent required, enough material for a
+/// voice, reminders that round-trip and keep their id and switch). The
+/// shared contract in `test/contract` keeps it honest.
 final class FakeVoiceCore implements VoiceCore {
   @override
   String engineName = 'local (prosody sketch)';
 
   final List<SpeakerSummary> people = [];
-  final List<ScheduleSummary> schedules = [];
+
+  /// Every request sent to [createSchedule], in order.
   final List<ScheduleRequest> scheduleRequests = [];
   final List<({String personId, int bytes, String? transcript})> samples = [];
   final List<
@@ -61,6 +64,18 @@ final class FakeVoiceCore implements VoiceCore {
   List<DueMessage> due = [];
   List<Alarm> alarms = [];
 
+  final Map<String, ({ScheduleRequest request, bool enabled})> _schedules = {};
+  int _nextSchedule = 0;
+
+  List<ScheduleSummary> get schedules => [
+    for (final id in _schedules.keys) _summary(id),
+  ];
+
+  static String? _clean(String? v) {
+    final t = v?.trim();
+    return (t == null || t.isEmpty) ? null : t;
+  }
+
   @override
   Catalog catalog() => const Catalog(
     themes: [
@@ -75,7 +90,10 @@ final class FakeVoiceCore implements VoiceCore {
       ToneOption(slug: 'warm', description: 'soft and caring'),
       ToneOption(slug: 'calm', description: 'slow, lower and steady'),
     ],
-    languages: [LanguageOption(code: 'pt', name: 'Portuguese')],
+    languages: [
+      LanguageOption(code: 'pt-BR', name: 'Portuguese (Brazil)'),
+      LanguageOption(code: 'es', name: 'Spanish'),
+    ],
     maxPitchShift: 6,
   );
 
@@ -88,8 +106,10 @@ final class FakeVoiceCore implements VoiceCore {
     String? relationship,
     String? consentBy,
     String? language,
+    String? listenerName,
   }) {
-    if (consentBy == null || consentBy.trim().isEmpty) {
+    final consent = _clean(consentBy);
+    if (consent == null) {
       throw AppFailure(
         message:
             "the consent of '$name' must be recorded before cloning the voice",
@@ -98,12 +118,63 @@ final class FakeVoiceCore implements VoiceCore {
     final person = SpeakerSummary(
       id: 'spk-${people.length + 1}',
       name: name,
-      relationship: relationship,
-      language: (language == null || language.isEmpty) ? 'pt-BR' : language,
+      relationship: _clean(relationship),
+      language: _clean(language) ?? 'pt-BR',
       voiceReady: false,
+      consentBy: consent,
+      listenerName: _clean(listenerName),
+      sampleCount: 0,
+      totalSampleSecs: 0,
     );
     people.add(person);
     return person;
+  }
+
+  SpeakerSummary _replace(
+    String personId,
+    SpeakerSummary Function(SpeakerSummary) change,
+  ) {
+    final i = people.indexWhere((p) => p.id == personId);
+    if (i < 0) throw AppFailure(message: "person '$personId' not found");
+    return people[i] = change(people[i]);
+  }
+
+  static SpeakerSummary _copy(
+    SpeakerSummary p, {
+    bool? voiceReady,
+    Gender? gender,
+    String? Function()? listenerName,
+    int? sampleCount,
+    double? totalSampleSecs,
+  }) => SpeakerSummary(
+    id: p.id,
+    name: p.name,
+    relationship: p.relationship,
+    language: p.language,
+    voiceReady: voiceReady ?? p.voiceReady,
+    gender: gender ?? p.gender,
+    consentBy: p.consentBy,
+    listenerName: listenerName == null ? p.listenerName : listenerName(),
+    sampleCount: sampleCount ?? p.sampleCount,
+    totalSampleSecs: totalSampleSecs ?? p.totalSampleSecs,
+  );
+
+  @override
+  SpeakerSummary setListenerName(String personId, String? listenerName) =>
+      _replace(
+        personId,
+        (p) => _copy(p, listenerName: () => _clean(listenerName)),
+      );
+
+  @override
+  Future<void> deletePerson(String personId) async {
+    people.removeWhere((p) => p.id == personId);
+    samples.removeWhere((s) => s.personId == personId);
+    for (final MapEntry(:key, :value) in _schedules.entries.toList()) {
+      if (value.request.speakerId == personId) {
+        _schedules[key] = (request: value.request, enabled: false);
+      }
+    }
   }
 
   @override
@@ -117,29 +188,34 @@ final class FakeVoiceCore implements VoiceCore {
       bytes: audio.length,
       transcript: transcript,
     ));
-    return SampleSummary(
-      id: 'smp-${samples.length}',
-      durationSecs: 6,
-      meanPitchHz: 210,
-      transcript: transcript,
+    final count = listSamples(personId).length;
+    _replace(
+      personId,
+      (p) => _copy(p, sampleCount: count, totalSampleSecs: count * 6),
     );
+    return listSamples(personId).last;
   }
 
   @override
+  List<SampleSummary> listSamples(String personId) => [
+    for (final (i, s) in samples.where((s) => s.personId == personId).indexed)
+      SampleSummary(
+        id: 'smp-$personId-${i + 1}',
+        durationSecs: 6,
+        meanPitchHz: 210,
+        transcript: s.transcript,
+      ),
+  ];
+
+  @override
   Future<VoiceSummary> buildVoice(String personId) async {
-    final i = people.indexWhere((p) => p.id == personId);
-    final count = samples.where((s) => s.personId == personId).length;
+    final count = listSamples(personId).length;
     if (count < 2) {
       throw AppFailure(message: 'not enough voice material: $count sample(s)');
     }
-    final p = people[i];
-    people[i] = SpeakerSummary(
-      id: p.id,
-      name: p.name,
-      relationship: p.relationship,
-      language: p.language,
-      voiceReady: true,
-      gender: Gender.female,
+    final p = _replace(
+      personId,
+      (p) => _copy(p, voiceReady: true, gender: Gender.female),
     );
     return VoiceSummary(
       language: p.language,
@@ -175,32 +251,65 @@ final class FakeVoiceCore implements VoiceCore {
     );
   }
 
-  @override
-  ScheduleSummary createSchedule(ScheduleRequest request) {
-    final noTime = request.at == null || request.at!.trim().isEmpty;
-    if (noTime && request.kind != ScheduleKind.interval) {
+  static void _validate(ScheduleRequest r) {
+    if (_clean(r.at) == null && r.kind != ScheduleKind.interval) {
       throw const AppFailure(message: 'provide the time (HH:MM)');
     }
-    scheduleRequests.add(request);
-    final s = ScheduleSummary(
-      id: 'sch-${scheduleRequests.length}',
+  }
+
+  ScheduleSummary _summary(String id) {
+    final (:request, :enabled) = _schedules[id]!;
+    final person = people.where((p) => p.id == request.speakerId).firstOrNull;
+    final at = request.at;
+    return ScheduleSummary(
+      id: id,
       speakerId: request.speakerId,
+      speakerName: person?.name,
+      voiceAvailable: person != null,
+      enabled: enabled,
+      time: (request.kind == ScheduleKind.interval || at == null)
+          ? null
+          : at.substring(at.length - 5),
       toneLabel: request.tone ?? 'suggested by the theme',
-      nextDue: '21/11 ${request.at ?? '09:00'}',
+      nextDue: enabled ? '21/11 ${request.at ?? '09:00'}' : null,
+      request: request,
     );
-    schedules.add(s);
-    return s;
+  }
+
+  ({ScheduleRequest request, bool enabled}) _schedule(String id) =>
+      _schedules[id] ?? (throw AppFailure(message: "schedule '$id' not found"));
+
+  @override
+  ScheduleSummary createSchedule(ScheduleRequest request) {
+    _validate(request);
+    scheduleRequests.add(request);
+    final id = 'sch-${++_nextSchedule}';
+    _schedules[id] = (request: request, enabled: true);
+    return _summary(id);
   }
 
   @override
-  List<ScheduleSummary> listSchedules() => List.of(schedules);
+  ScheduleSummary updateSchedule(String id, ScheduleRequest request) {
+    final current = _schedule(id);
+    _validate(request);
+    _schedules[id] = (request: request, enabled: current.enabled);
+    return _summary(id);
+  }
+
+  @override
+  ScheduleSummary setScheduleEnabled(String id, bool enabled) {
+    final current = _schedule(id);
+    _schedules[id] = (request: current.request, enabled: enabled);
+    return _summary(id);
+  }
+
+  @override
+  List<ScheduleSummary> listSchedules() => schedules;
 
   @override
   void removeSchedule(String id) {
-    if (!schedules.any((s) => s.id == id)) {
-      throw AppFailure(message: "schedule '$id' not found");
-    }
-    schedules.removeWhere((s) => s.id == id);
+    _schedule(id);
+    _schedules.remove(id);
   }
 
   @override
@@ -224,12 +333,18 @@ abstract final class FakeCoreWithPeople {
         language: 'pt-BR',
         voiceReady: true,
         gender: Gender.female,
+        consentBy: 'Vó',
+        sampleCount: 2,
+        totalSampleSecs: 12,
       ),
       SpeakerSummary(
         id: 'spk-2',
         name: 'Ana',
         language: 'es',
         voiceReady: false,
+        consentBy: 'Ana',
+        sampleCount: 0,
+        totalSampleSecs: 0,
       ),
     ]);
 }

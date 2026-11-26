@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `epoch_ms`, `recurrence`, `summary`
+// These functions are ignored because they are not marked as `pub`: `clock_time`, `epoch_ms`, `hhmm`, `input`, `recurrence`, `request_of`, `schedule_summary`, `window_text`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// An exact time at which the app should be woken by a notification.
@@ -143,21 +143,49 @@ class ScheduleRequest {
 class ScheduleSummary {
   final String id;
   final String speakerId;
+
+  /// The person's name; `None` once the person was deleted.
+  final String? speakerName;
+
+  /// False when the person was deleted or revoked: choose another voice.
+  final bool voiceAvailable;
+  final bool enabled;
+
+  /// Clock time `HH:MM` of daily, weekly and one-time rules (`None` for
+  /// intervals).
+  final String? time;
   final String toneLabel;
 
-  /// Next firing as `dd/mm HH:MM`, if any.
+  /// Next firing as `dd/mm HH:MM`, if any (`None` when switched off).
   final String? nextDue;
+
+  /// The request that creates this schedule: sending it back to
+  /// `update_schedule` yields the same schedule.
+  final ScheduleRequest request;
 
   const ScheduleSummary({
     required this.id,
     required this.speakerId,
+    this.speakerName,
+    required this.voiceAvailable,
+    required this.enabled,
+    this.time,
     required this.toneLabel,
     this.nextDue,
+    required this.request,
   });
 
   @override
   int get hashCode =>
-      id.hashCode ^ speakerId.hashCode ^ toneLabel.hashCode ^ nextDue.hashCode;
+      id.hashCode ^
+      speakerId.hashCode ^
+      speakerName.hashCode ^
+      voiceAvailable.hashCode ^
+      enabled.hashCode ^
+      time.hashCode ^
+      toneLabel.hashCode ^
+      nextDue.hashCode ^
+      request.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -166,6 +194,11 @@ class ScheduleSummary {
           runtimeType == other.runtimeType &&
           id == other.id &&
           speakerId == other.speakerId &&
+          speakerName == other.speakerName &&
+          voiceAvailable == other.voiceAvailable &&
+          enabled == other.enabled &&
+          time == other.time &&
           toneLabel == other.toneLabel &&
-          nextDue == other.nextDue;
+          nextDue == other.nextDue &&
+          request == other.request;
 }

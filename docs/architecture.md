@@ -120,49 +120,38 @@ The messages call the listener by name, chosen in this order
    ("Filhote", "Campeão");
 3. the caller's name: the app's Settings name or CLI `--my-name`.
 
-## Android bridge (JNI)
+## Flutter bridge (`flutter_app/rust/src/api`)
 
-`app.friendlyvoice.NativeBridge` (Kotlin) → `crates/mobile/src/jni_bridge.rs`
-→ `crates/mobile/src/api.rs`. Every function returns
-`{"ok":true,"data":...}` or `{"ok":false,"error":"..."}`; Java `null` strings
-become `None`; panics never cross into the JVM.
+Dart holds an opaque `Session` (one data folder and engine); every method
+returns its typed value or throws `AppFailure { message }`.
 
-| Kotlin `external fun` (all return `String`) | `data` |
+| `Session` method | Returns |
 |---|---|
-| `configure(dataDir: String, engineUrl: String?)` | `{engine}` |
-| `catalog()` | themes, tones, languages |
-| `listSpeakers()` | `[speaker item]` (revoked people excluded) |
-| `registerSpeaker(name: String, relationship: String?, consentBy: String?, language: String?, listenerName: String?)` | the stored speaker plus the speaker item fields |
-| `setListenerName(speakerId: String, listenerName: String?)` | speaker item |
-| `revokeConsent(speakerId: String, revokedBy: String?)` | `null` |
-| `deleteSpeaker(speakerId: String)` | `null` |
-| `addSample(speakerId: String, wav: ByteArray, transcript: String?)` | sample item |
-| `listSamples(speakerId: String)` | `[sample item]` |
-| `buildVoice(speakerId: String)` | `{language, gender, prosody, sample_count, total_audio_secs}` |
-| `speak(speakerId: String, category: String?, text: String?, tone: String?, pitchShift: Float, listener: String?)` | `{text, tone, language, audio_path}` |
-| `createSchedule(requestJson: String)` | schedule item |
-| `updateSchedule(id: String, requestJson: String)` | schedule item |
-| `setScheduleEnabled(id: String, enabled: Boolean)` | schedule item |
-| `listSchedules()` | `[schedule item]` |
-| `removeSchedule(id: String)` | `null` |
-| `runDueSchedules(listener: String?)` | `[{schedule_id, ok, text, tone, audio_path}]` (or `{schedule_id, ok: false, error}`) |
+| `open(dataDir, engineUrl?)` · `engineName` | the session · engine label |
+| `catalog()` (free function) | themes, tones, languages, max pitch shift |
+| `registerSpeaker(name, relationship?, consentBy?, language?, listenerName?)` | `SpeakerSummary` |
+| `listSpeakers()` | `[SpeakerSummary]` (revoked people excluded) |
+| `setListenerName(speakerId, listenerName?)` | `SpeakerSummary` (blank clears) |
+| `deleteSpeaker(speakerId)` | — (idempotent; their schedules are switched off and kept) |
+| `addSample(speakerId, audio, transcript?)` · `listSamples(speakerId)` | `SampleSummary` · `[SampleSummary]` |
+| `buildVoice(speakerId)` | `VoiceSummary` |
+| `speak(speakerId, theme?, text?, toneStyle?, pitchShift, listener?)` | `SpokenMessage` (WAV path) |
+| `createSchedule(request)` · `updateSchedule(id, request)` · `setScheduleEnabled(id, enabled)` | `ScheduleSummary` |
+| `listSchedules()` · `removeSchedule(id)` | `[ScheduleSummary]` · — |
+| `runDueSchedules(listener?)` · `upcomingAlarms(limit)` | `[DueMessage]` · `[Alarm]` (epoch ms, soonest first) |
 
-* **speaker item:** `{id, name, relationship, language, consent_granted_by,
-  listener_name, voice_ready, gender, sample_count, total_sample_secs}`.
-* **sample item:** `{id, duration_secs, transcript, mean_pitch_hz}`.
-* **schedule request** (create/update): `{speaker_id, kind:
-  "daily"|"weekly"|"interval"|"once", at ("HH:MM", or "YYYY-MM-DD HH:MM" for
-  once), days ("mon,tue,..."), every_minutes, within ("HH:MM-HH:MM"), quiet
-  ("HH:MM-HH:MM"), category, text, tone, pitch_shift}`.
-* **schedule item:** the stored schedule (`id, speaker_id, recurrence,
-  content, tone, quiet_hours, enabled, created_at, last_fired_at,
-  active_since`) plus `speaker_name` (null when the person was deleted),
-  `voice_available` (false when the person is revoked or deleted), `next_due`
-  ("dd/MM HH:mm", null when disabled), `time` ("HH:mm", null for interval),
-  `tone_label` and `request`, the schedule request above; sending it back to
-  `updateSchedule` yields the same schedule. Turning on a schedule whose voice
-  is unavailable fails ("edit the schedule to choose another voice");
-  `updateSchedule` can move it to another voice, keeping its on/off state.
+* **SpeakerSummary:** id, name, relationship, language, voiceReady, gender,
+  consentBy, listenerName, sampleCount, totalSampleSecs.
+* **ScheduleRequest:** speakerId, kind (daily | weekly | interval | once),
+  at (`HH:MM`, or `YYYY-MM-DD HH:MM` for once), days (`mon,fri`),
+  everyMinutes, within and quiet (`HH:MM-HH:MM`), theme, text, tone,
+  pitchShift.
+* **ScheduleSummary:** id, speakerId, speakerName (null once the person was
+  deleted), voiceAvailable, enabled, time (`HH:MM`, null for intervals),
+  toneLabel, nextDue (`dd/mm HH:MM`, null when off) and `request`: sending it
+  back to `updateSchedule` yields the same schedule. Switching on a schedule
+  whose voice is unavailable fails; `updateSchedule` can move it to another
+  voice, keeping its on/off state.
 
 ## Tone of voice
 

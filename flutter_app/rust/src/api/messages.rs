@@ -89,7 +89,7 @@ mod tests {
     fn with_voice(name: &str) -> (Session, String) {
         let s = local_session(name);
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         s.add_sample(p.id.clone(), wav(6.0, 210.0), None).unwrap();
         s.add_sample(p.id.clone(), wav(6.0, 205.0), None).unwrap();
@@ -145,7 +145,7 @@ mod tests {
     fn a_voice_must_be_generated_first() {
         let s = local_session("speak-no-voice");
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         let err = s.speak(p.id, None, None, None, 0.0, None).unwrap_err();
         assert!(

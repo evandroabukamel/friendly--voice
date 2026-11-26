@@ -3,7 +3,7 @@ use super::failure::AppFailure;
 use super::session::{non_empty, Session};
 use super::speakers::Gender;
 use friendly_voice_application::use_cases::AddVoiceSampleInput;
-use friendly_voice_domain::ids::SpeakerId;
+use friendly_voice_domain::{ids::SpeakerId, voice::VoiceSample};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SampleSummary {
@@ -11,6 +11,17 @@ pub struct SampleSummary {
     pub duration_secs: f32,
     pub mean_pitch_hz: f32,
     pub transcript: Option<String>,
+}
+
+impl From<VoiceSample> for SampleSummary {
+    fn from(s: VoiceSample) -> Self {
+        Self {
+            id: s.id.to_string(),
+            duration_secs: s.duration_secs,
+            mean_pitch_hz: s.features.mean_pitch_hz,
+            transcript: s.transcript,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,12 +50,18 @@ impl Session {
                 transcript: non_empty(transcript),
             })
             .map_err(AppFailure::new)?;
-        Ok(SampleSummary {
-            id: sample.id.to_string(),
-            duration_secs: sample.duration_secs,
-            mean_pitch_hz: sample.features.mean_pitch_hz,
-            transcript: sample.transcript,
-        })
+        Ok(sample.into())
+    }
+
+    /// The person's recordings, oldest first.
+    #[flutter_rust_bridge::frb(sync)]
+    pub fn list_samples(&self, speaker_id: String) -> Result<Vec<SampleSummary>, AppFailure> {
+        let all = self
+            .container
+            .list_samples()
+            .execute(&SpeakerId::new(speaker_id))
+            .map_err(AppFailure::new)?;
+        Ok(all.into_iter().map(SampleSummary::from).collect())
     }
 
     /// Generates (or regenerates) the person's voice from all their samples.
@@ -98,7 +115,7 @@ pub(crate) mod tests {
     fn a_sample_is_analyzed_and_a_short_one_refused() {
         let s = local_session("sample");
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         let sample = s
             .add_sample(p.id.clone(), wav(6.0, 210.0), Some("Bom dia".into()))
@@ -114,10 +131,26 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn the_samples_of_a_person_are_listed() {
+        let s = local_session("samples");
+        let p = s
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
+            .unwrap();
+        assert!(s.list_samples(p.id.clone()).unwrap().is_empty());
+        s.add_sample(p.id.clone(), wav(6.0, 210.0), Some("Oi".into()))
+            .unwrap();
+        s.add_sample(p.id.clone(), wav(4.0, 200.0), None).unwrap();
+        let listed = s.list_samples(p.id).unwrap();
+        assert_eq!(listed.len(), 2);
+        assert!((listed[0].duration_secs - 6.0).abs() < 0.01);
+        assert_eq!(listed[0].transcript.as_deref(), Some("Oi"));
+    }
+
+    #[test]
     fn the_voice_is_generated_from_enough_material() {
         let s = local_session("voice");
         let p = s
-            .register_speaker("Vó".into(), None, Some("Vó".into()), None)
+            .register_speaker("Vó".into(), None, Some("Vó".into()), None, None)
             .unwrap();
         s.add_sample(p.id.clone(), wav(6.0, 210.0), None).unwrap();
         let err = s.build_voice(p.id.clone()).unwrap_err();
