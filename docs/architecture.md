@@ -60,6 +60,13 @@ the HTTP adapter (see ADR 0003 and 0007).
                     engine: Chatterbox Multilingual, sentence by sentence ──► WAV
 ```
 
+A refused recording is typed: the decoder (`DecodeError::Rejected`) and the
+quality policy both give a domain `SampleProblem` (unsupported format, no
+audio track, unsupported codec, unreadable, too short, too long, low sample
+rate, clipped, nearly silent), surfaced as
+`DomainError::SampleRejected(problem)`, never as a port failure. Its
+`Display` is the English text; presentations may translate by variant.
+
 The voice — timbre, intonation, rhythm and accent — is imitated by the neural
 model from the reference audio. The domain keeps what the app decides: the
 person's language, consent, the detected gender, the prosody used by the
@@ -123,7 +130,16 @@ The messages call the listener by name, chosen in this order
 ## Flutter bridge (`flutter_app/rust/src/api`)
 
 Dart holds an opaque `Session` (one data folder and engine); every method
-returns its typed value or throws `AppFailure { message }`.
+returns its typed value or throws `AppFailure { kind, message }`. `message`
+is the core's English text; `kind` (`FailureKind`) lets the app explain a
+refused sample in the user's language:
+
+| `FailureKind` | From `SampleProblem` |
+|---|---|
+| `audioFormat` | unsupported format, unsupported codec, unreadable |
+| `noAudioTrack` | no audio track |
+| `audioTooLong` · `audioTooShort` | too long · too short |
+| `other` | everything else (low sample rate, clipped, nearly silent, and every non-sample failure) |
 
 | `Session` method | Returns |
 |---|---|
