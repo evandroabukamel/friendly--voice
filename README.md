@@ -5,14 +5,14 @@ a message right now or schedule them with your own rules.
 
 Written in **Rust**, following **Clean Architecture** and **SOLID**, and
 developed in an **agile** way (backlog, sprints, Definition of Done — see
-[`docs/agile`](docs/agile)). The interface (CLI and Android), code and
+[`docs/agile`](docs/agile)). The interface (CLI and mobile app), code and
 documentation are in English. Each person has a **language** (Brazilian
 Portuguese by default, or any of 23 languages): the recordings are in that
 language and the messages are spoken in it.
 
 ## Highlights
 
-* **Voice cloning from audio files** (WAV or FLAC, any bit depth, mono or
+* **Voice cloning from audio files** (WAV, FLAC, MP3, M4A or OGG; mono or
   stereo) with [Chatterbox Multilingual](https://github.com/resemble-ai/chatterbox)
   (MIT license), zero-shot — no training — behind a small self-hosted server
   ([`engine/`](engine)). Consent of the person is mandatory.
@@ -30,7 +30,7 @@ language and the messages are spoken in it.
   free text in the person's language.
 * Schedules: daily, on weekdays, every N minutes inside a time window, once;
   quiet hours; a single catch-up firing if the app was off.
-* Android app built from the same Rust core, with CI/CD.
+* Mobile app for Android and iOS (Flutter) on the same Rust core, with CI/CD.
 
 ## How the voice is produced
 
@@ -73,8 +73,11 @@ export FRIENDLY_VOICE_PLAYER="aplay"     # optional: play the audio (afplay on m
 fv person add --name "Vó Lúcia" --relationship avó --consent-by "Lúcia"
 #   Person registered: Vó Lúcia (id: spk-..., speaks Portuguese)
 fv person add --name "Grandpa Joe" --consent-by "Joe" --language en-US
+# How this person calls you (wins over FRIENDLY_VOICE_ME / --my-name)
+fv person add --name "Mãe" --consent-by "Mãe" --listener-name "Filhote"
 
-# Upload .wav or .flac recordings (2 s – 180 s each, ≥ 16 kHz).
+# Upload .wav, .flac, .mp3, .m4a or .ogg recordings (2 s – 180 s each, ≥ 16 kHz;
+# the format is read from the content, not the extension).
 # A transcript is optional (--transcript, or recording.txt next to the file).
 fv sample add --person spk-... --audio recording1.flac
 fv sample add --person spk-... --audio recording2.wav
@@ -86,9 +89,17 @@ fv voice generate --person spk-...
 fv speak --person spk-... --theme good-morning
 fv speak --person spk-... --text "Respira fundo, vai dar tudo certo."
 fv speak --person spk-... --theme confidence --tone warm --pitch-shift -1
+fv speak --person spk-... --theme celebration --listener-name "Campeão"   # name for this message only
 fv tones                                                   # list the tones of voice
 fv themes                                                  # list the message themes
 fv languages                                               # list the languages
+
+# How this person calls you (omit --listener-name to clear it)
+fv person set-listener-name --person spk-... --listener-name "Filhote"
+# Revoke consent: deletes recordings, voice (also on the server) and cached
+# speech; the person's schedules are switched off. Re-adding needs new consent.
+fv person revoke --person spk-... --by "Lúcia"
+fv person delete --person spk-...                          # also removes the person
 
 # Schedule
 fv schedule create --person spk-... --daily 07:30 --theme good-morning
@@ -105,27 +116,44 @@ command and option names (`pessoa adicionar --nome`, `falar --tema`, ...) are
 still accepted as hidden aliases, so existing scripts keep working.
 
 Generated audio files and a note with the text, language and tone are written
-to `.friendly-voice/outbox/`.
+to `.friendly-voice/outbox/`. Every generated talk is also cached in
+`.friendly-voice/cache/speech/<person>/`, so the same text, tone and voice is
+never asked from the voice server again; regenerating the voice invalidates
+it, and deleting the folder is always safe (ADR 0008).
 
 Without `--features http-engine` / `FRIENDLY_VOICE_ENGINE_URL`, the app uses a
 **local prosody sketch engine**: it renders audio with the person's rhythm and
 melody (useful for development and tests) but **not** their voice.
 
-## Android app
+## Mobile app (Android and iOS)
 
-The same Rust core runs on Android: `crates/mobile` exposes the use cases via
-JNI and `android/` is the Kotlin app — register the person (with the
-language), upload `.wav`/`.flac` samples, generate the voice, ask for a
-message choosing **the tone**, and schedule messages (fired by WorkManager
-every 15 minutes, with a notification and audio). Point it at the voice engine
-in its settings to use the cloned voice.
+`flutter_app/` is the Flutter app (Flutter 3.50.1) for Android and iOS. It
+runs the same Rust core through flutter_rust_bridge (`flutter_app/rust/`).
+Three tabs in a bottom navigation bar, in a warm design whose background
+follows the time of day (dawn, day, dusk, night) with large, light type:
+**Reminders** (each with its time, switch, message, repeat and voice; tap to
+edit the voice, theme or own words, **tone**, pitch, repeat and quiet hours,
+or play it now), **Voices** (register a person with consent and language,
+add recordings, record from the microphone, create the voice, delete it) and
+**Settings** (your name and the app language: the Kotlin app's 21 languages,
+or the phone's). Recordings may be WAV, FLAC, MP3, M4A or OGG, several at
+once. There is no Save button: every edit saves itself. Schedules wake the phone with **exact
+notifications** (Android 14+ asks for the exact-alarm permission; without it
+they may be a few minutes late); the app speaks what is due when it opens,
+when an alarm is tapped and every minute while open. The voice server is
+compiled in, so users never type it: build with
+`--dart-define=FRIENDLY_VOICE_ENGINE_URL=http://host:8020` (CI uses the
+repository variable of the same name). Without it the app uses the local
+sketch engine. Design: ADR 0009.
 
 ```bash
-rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-cargo install cargo-ndk
-export ANDROID_NDK_HOME=/path/to/ndk
-scripts/build-android.sh            # debug APK in android/app/build/outputs/apk/
-scripts/build-android.sh --release  # release APK (signed if ANDROID_KEYSTORE_* are set)
+cd flutter_app
+cargo install flutter_rust_bridge_codegen --version 2.13.0 cargo-expand  # only to regenerate bindings
+flutter pub get
+flutter test                      # native tests need: cargo build -p friendly_voice_bridge
+flutter run                       # device/emulator; cargokit compiles the Rust bridge
+flutter build apk --release       # Android (rustup targets for the ABIs)
+flutter build ios --no-codesign   # iOS, on macOS (rustup iOS targets)
 ```
 
 ## CI/CD
@@ -134,12 +162,13 @@ scripts/build-android.sh --release  # release APK (signed if ANDROID_KEYSTORE_* 
 |---|---|---|
 | `ci.yml` | every push/PR | `fmt`, `clippy -D warnings`, all Rust tests |
 | `engine.yml` | every push/PR | engine unit + integration tests with the real model, CLI ⇄ engine end-to-end, Docker image build |
-| `android.yml` | every push/PR | tests the mobile bridge, builds the Rust library for `arm64-v8a`, `armeabi-v7a` and `x86_64` (cargo-ndk), the CLI for Android/Termux (arm64), the debug and release APKs (Gradle) and lint; publishes everything as artifacts |
-| `android.yml` → `release` | tag `v*` | creates the GitHub Release with the APKs and the arm64 binary |
+| `flutter.yml` | every push/PR | regenerated bridge bindings must match, Rust bridge tests, Dart format/analyze/tests (some against the real Rust core), Android release APK, unsigned iOS build (macOS) |
+| `flutter.yml` → `release` | tag `v*` | creates the GitHub Release with the APK and the unsigned iOS app |
 
 To sign the release APK, add the secrets `ANDROID_KEYSTORE_BASE64` (keystore
 in base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
-`ANDROID_KEY_PASSWORD`. Without them the release APK is unsigned.
+`ANDROID_KEY_PASSWORD`. Without them the release APK is signed with the debug
+key. The iOS build is unsigned (signing needs an Apple Developer account).
 
 ## Architecture
 
@@ -147,11 +176,11 @@ in base64), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
 crates/
 ├── domain/          pure rules: Speaker, Language, AudioClip, voice (gender, prosody), tone, schedules
 ├── application/     use cases + ports (traits)
-├── infrastructure/  WAV/FLAC, DSP, JSON, voice engines, catalog, delivery
-├── bootstrap/       shared composition root (CLI and Android)
-├── cli/             command line interface
-└── mobile/          native library for Android (JNI → use cases)
-android/             Android app (Kotlin) using the native library
+├── infrastructure/  WAV/FLAC/MP3/M4A/OGG, DSP, JSON, voice engines, catalog, delivery
+├── bootstrap/       shared composition root (CLI and the Flutter app)
+└── cli/             command line interface
+flutter_app/         Flutter app (Android + iOS): atomic design, Riverpod, Clean Architecture
+└── rust/            flutter_rust_bridge API over the use cases (workspace member)
 engine/              voice cloning server (Python: Chatterbox Multilingual)
 ```
 

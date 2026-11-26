@@ -6,14 +6,14 @@ members = [
     "crates/infrastructure",
     "crates/bootstrap",
     "crates/cli",
-    "crates/mobile",
+    "flutter_app/rust",
 ]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-rust-version = "1.82"
+rust-version = "1.85"
 
 [workspace.dependencies]
 chrono = { version = "0.4", features = ["serde"] }
@@ -24,7 +24,6 @@ hound = "3.5"
 clap = { version = "4", features = ["derive", "env"] }
 ureq = { version = "3", features = ["json"] }
 base64 = "0.22"
-jni = "0.21"
 
 friendly-voice-domain = { path = "crates/domain" }
 friendly-voice-application = { path = "crates/application" }

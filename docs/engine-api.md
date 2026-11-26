@@ -5,7 +5,7 @@ Used when the app is built with `--features http-engine` and run with
 implementation is [`engine/`](../engine) (Chatterbox Multilingual, zero-shot
 cloning), but any server implementing these endpoints can be plugged in. All
 audio travels as base64-encoded WAV (the app converts other input formats,
-such as FLAC, to WAV before sending).
+such as FLAC, MP3, M4A or OGG, to WAV before sending).
 
 Languages are BCP 47 tags (`pt-BR`, `en`, `es-MX`); the server uses the
 primary subtag and answers **422** for a language it cannot speak.
@@ -28,6 +28,17 @@ Response: `{ "voice_id": "3eb6a366...", "reference_count": 3, "reference_seconds
 * The reference engine averages the speaker embedding over every recording
   and keeps, as the reference the model imitates, the 10 s window whose own
   embedding is closest to that average.
+
+## `DELETE /v1/voices/{voice_id}` — forget the voice
+Deletes the cloned voice and everything the server kept for it (reference
+window, model conditionals). The app calls it when consent is revoked or the
+person is deleted (US-15).
+
+* **204** — deleted.
+* **404** `{"detail": "unknown voice_id: ..."}` — already gone. The app
+  treats it as success, so the call is idempotent.
+* The `voice_id` is percent-encoded as one path segment; ids the server never
+  issued are answered with 404 and never reach the file system.
 
 ## `POST /v1/synthesize` — speak a text with the voice and the tone
 ```json

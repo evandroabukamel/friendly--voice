@@ -61,6 +61,22 @@ impl<T: Serialize + DeserializeOwned + Clone> JsonRepository<T> {
         self.write(&all)
     }
 
+    /// Removes the matching items; returns how many. Writes only on change.
+    fn remove_where(&self, matches: impl Fn(&T) -> bool) -> PortResult<usize> {
+        let _g = self
+            .lock
+            .lock()
+            .map_err(|_| PortError::new("poisoned lock"))?;
+        let mut all = self.read()?;
+        let before = all.len();
+        all.retain(|x| !matches(x));
+        let removed = before - all.len();
+        if removed > 0 {
+            self.write(&all)?;
+        }
+        Ok(removed)
+    }
+
     fn all(&self) -> PortResult<Vec<T>> {
         let _g = self
             .lock
@@ -80,6 +96,9 @@ impl SpeakerRepository for JsonRepository<Speaker> {
     fn list(&self) -> PortResult<Vec<Speaker>> {
         self.all()
     }
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool> {
+        Ok(self.remove_where(|s| &s.id == id)? > 0)
+    }
 }
 
 impl SampleRepository for JsonRepository<VoiceSample> {
@@ -93,6 +112,9 @@ impl SampleRepository for JsonRepository<VoiceSample> {
             .filter(|s| &s.speaker_id == id)
             .collect())
     }
+    fn delete_by_speaker(&self, id: &SpeakerId) -> PortResult<usize> {
+        self.remove_where(|s| &s.speaker_id == id)
+    }
 }
 
 impl VoiceProfileRepository for JsonRepository<VoiceProfile> {
@@ -101,6 +123,9 @@ impl VoiceProfileRepository for JsonRepository<VoiceProfile> {
     }
     fn find(&self, id: &SpeakerId) -> PortResult<Option<VoiceProfile>> {
         Ok(self.all()?.into_iter().find(|p| &p.speaker_id == id))
+    }
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool> {
+        Ok(self.remove_where(|p| &p.speaker_id == id)? > 0)
     }
 }
 
@@ -112,15 +137,7 @@ impl ScheduleRepository for JsonRepository<Schedule> {
         self.all()
     }
     fn delete(&self, id: &ScheduleId) -> PortResult<bool> {
-        let _g = self
-            .lock
-            .lock()
-            .map_err(|_| PortError::new("poisoned lock"))?;
-        let mut all = self.read()?;
-        let before = all.len();
-        all.retain(|s| &s.id != id);
-        self.write(&all)?;
-        Ok(all.len() != before)
+        Ok(self.remove_where(|s| &s.id == id)? > 0)
     }
 }
 
@@ -169,6 +186,12 @@ impl AudioStore for FileAudioStore {
         }
         fs::read(self.root.join(locator)).map_err(PortError::new)
     }
+    fn delete_all(&self, speaker: &SpeakerId) -> PortResult<()> {
+        match fs::remove_dir_all(self.root.join(Self::safe(speaker.as_str())?)) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(PortError::new(e)),
+            _ => Ok(()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -198,6 +221,9 @@ mod tests {
         repo.save(&s).unwrap();
         assert_eq!(repo.list().unwrap(), vec![s.clone()]);
         assert_eq!(repo.find(&SpeakerId::new("1")).unwrap(), Some(s));
+        assert!(repo.delete(&SpeakerId::new("1")).unwrap());
+        assert!(!repo.delete(&SpeakerId::new("1")).unwrap());
+        assert!(repo.list().unwrap().is_empty());
         fs::remove_dir_all(dir).unwrap();
     }
 
@@ -225,6 +251,66 @@ mod tests {
         assert!(store
             .store(&SpeakerId::new(".."), &SampleId::new("a"), b"x")
             .is_err());
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn deleting_a_persons_data_is_idempotent() {
+        use friendly_voice_domain::audio::AcousticFeatures;
+        use friendly_voice_domain::voice::ProsodyProfile;
+        let dir = tmp("delete");
+        let samples = JsonRepository::<VoiceSample>::new(dir.join("samples.json"));
+        let sample = |id: &str, spk: &str| VoiceSample {
+            id: SampleId::new(id),
+            speaker_id: SpeakerId::new(spk),
+            audio_locator: String::new(),
+            duration_secs: 3.0,
+            transcript: None,
+            features: AcousticFeatures {
+                mean_pitch_hz: 200.0,
+                pitch_spread_hz: 1.0,
+                rms_energy: 0.1,
+                pause_ratio: 0.1,
+            },
+        };
+        for (id, spk) in [("a", "s"), ("b", "s"), ("c", "t")] {
+            samples.save(&sample(id, spk)).unwrap();
+        }
+        let s = SpeakerId::new("s");
+        assert_eq!(samples.delete_by_speaker(&s).unwrap(), 2);
+        assert_eq!(samples.delete_by_speaker(&s).unwrap(), 0);
+        assert_eq!(
+            samples.list_by_speaker(&SpeakerId::new("t")).unwrap().len(),
+            1
+        );
+
+        let profiles = JsonRepository::<VoiceProfile>::new(dir.join("voices.json"));
+        profiles
+            .save(&VoiceProfile {
+                speaker_id: s.clone(),
+                engine_voice_id: "v".into(),
+                language: Default::default(),
+                gender: None,
+                prosody: ProsodyProfile::default(),
+                sample_count: 1,
+                total_audio_secs: 12.0,
+                built_at: None,
+            })
+            .unwrap();
+        assert!(profiles.delete(&s).unwrap());
+        assert!(!profiles.delete(&s).unwrap());
+        assert_eq!(profiles.find(&s).unwrap(), None);
+
+        let store = FileAudioStore::new(dir.join("audio"));
+        store.store(&s, &SampleId::new("a"), b"x").unwrap();
+        store
+            .store(&SpeakerId::new("t"), &SampleId::new("c"), b"y")
+            .unwrap();
+        store.delete_all(&s).unwrap();
+        store.delete_all(&s).unwrap();
+        assert!(!dir.join("audio").join("s").exists());
+        assert!(dir.join("audio").join("t").exists());
+        assert!(store.delete_all(&SpeakerId::new("..")).is_err());
         fs::remove_dir_all(dir).unwrap();
     }
 }

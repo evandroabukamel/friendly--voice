@@ -65,6 +65,7 @@ impl AddVoiceSample {
             .speakers
             .find(&input.speaker_id)?
             .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?;
+        speaker.ensure_active()?;
 
         let clip = self.decoder.decode(&input.audio)?;
         self.policy.validate(&clip)?;
@@ -74,9 +75,9 @@ impl AddVoiceSample {
             &self.transcriber,
         ) {
             (Some(t), _) => Some(t),
-            (None, Some(tr)) => {
-                Some(tr.transcribe(&clip, &speaker.language)?).filter(|t| !t.trim().is_empty())
-            }
+            (None, Some(tr)) => tr
+                .transcribe(&clip, &speaker.language)?
+                .filter(|t| !t.trim().is_empty()),
             (None, None) => None,
         };
 
@@ -98,7 +99,8 @@ impl AddVoiceSample {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fakes::Fakes;
+    use crate::fakes::{Fakes, NoTranscriber};
+    use friendly_voice_domain::{audio::SampleProblem, DomainError};
 
     fn uc(f: &Fakes) -> AddVoiceSample {
         AddVoiceSample::new(
@@ -155,6 +157,43 @@ mod tests {
             .unwrap();
         assert_eq!(s.transcript.as_deref(), Some("bom dia"));
         assert_eq!(f.transcriber.language().unwrap().code(), "es");
+    }
+
+    #[test]
+    fn stored_without_transcript_when_the_server_cannot_transcribe() {
+        let f = Fakes::new();
+        let spk = f.speaker();
+        let s = uc(&f)
+            .with_transcriber(Arc::new(NoTranscriber))
+            .execute(AddVoiceSampleInput {
+                speaker_id: spk.id,
+                audio: Fakes::audio_bytes(5.0),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(s.transcript, None);
+    }
+
+    #[test]
+    fn a_file_that_is_not_audio_is_a_rejected_sample_not_an_outage() {
+        let f = Fakes::new();
+        let spk = f.speaker();
+        let err = uc(&f)
+            .execute(AddVoiceSampleInput {
+                speaker_id: spk.id,
+                audio: b"no".to_vec(),
+                ..Default::default()
+            })
+            .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                AppError::Domain(DomainError::SampleRejected(
+                    SampleProblem::UnsupportedFormat
+                ))
+            ),
+            "{err:?}"
+        );
     }
 
     #[test]

@@ -1,10 +1,13 @@
 //! Test doubles (in-memory) for the ports. They show that the use cases
 //! are testable without I/O — a direct benefit of dependency inversion.
 use crate::ports::*;
-use crate::use_cases::SpeakMessage;
+use crate::use_cases::{
+    AddVoiceSample, BuildVoiceProfile, CreateSchedule, DeleteSpeaker, RevokeConsent,
+    SetScheduleEnabled, SpeakMessage, VoiceDataEraser,
+};
 use chrono::{Duration, NaiveDate, NaiveDateTime};
 use friendly_voice_domain::{
-    audio::{AcousticFeatures, AudioClip},
+    audio::{AcousticFeatures, AudioClip, SampleProblem},
     ids::{SampleId, ScheduleId, SpeakerId},
     language::Language,
     message::{MessageCategory, MotivationalMessage},
@@ -30,6 +33,12 @@ impl SpeakerRepository for MemSpeakers {
     fn list(&self) -> PortResult<Vec<Speaker>> {
         Ok(self.0.lock().unwrap().clone())
     }
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool> {
+        let mut v = self.0.lock().unwrap();
+        let before = v.len();
+        v.retain(|s| &s.id != id);
+        Ok(v.len() != before)
+    }
 }
 
 #[derive(Default)]
@@ -49,6 +58,12 @@ impl SampleRepository for MemSamples {
             .cloned()
             .collect())
     }
+    fn delete_by_speaker(&self, id: &SpeakerId) -> PortResult<usize> {
+        let mut v = self.0.lock().unwrap();
+        let before = v.len();
+        v.retain(|s| &s.speaker_id != id);
+        Ok(before - v.len())
+    }
 }
 
 #[derive(Default)]
@@ -63,6 +78,9 @@ impl VoiceProfileRepository for MemProfiles {
     }
     fn find(&self, id: &SpeakerId) -> PortResult<Option<VoiceProfile>> {
         Ok(self.0.lock().unwrap().get(id).cloned())
+    }
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool> {
+        Ok(self.0.lock().unwrap().remove(id).is_some())
     }
 }
 
@@ -102,16 +120,34 @@ impl AudioStore for MemAudio {
             .cloned()
             .ok_or_else(|| PortError::new("missing"))
     }
+    fn delete_all(&self, spk: &SpeakerId) -> PortResult<()> {
+        let prefix = format!("{spk}/");
+        self.0
+            .lock()
+            .unwrap()
+            .retain(|k, _| !k.starts_with(&prefix));
+        Ok(())
+    }
+}
+impl MemAudio {
+    pub fn len(&self) -> usize {
+        self.0.lock().unwrap().len()
+    }
 }
 
-/// "Decodes" bytes holding only the duration (f32 LE) into a 16 kHz tone.
+/// "Decodes" bytes holding only the duration (f32 LE) into a 16 kHz tone;
+/// anything shorter is not audio.
 pub struct FakeDecoder;
 impl AudioDecoder for FakeDecoder {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip> {
-        let secs = f32::from_le_bytes(bytes[..4].try_into().map_err(PortError::new)?);
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError> {
+        let secs = bytes
+            .get(..4)
+            .and_then(|b| b.try_into().ok())
+            .map(f32::from_le_bytes)
+            .ok_or(SampleProblem::UnsupportedFormat)?;
         let n = (secs * 16_000.0) as usize;
         let s = (0..n).map(|i| 0.3 * (i as f32 * 0.08).sin()).collect();
-        AudioClip::new(16_000, s).map_err(PortError::new)
+        AudioClip::new(16_000, s).map_err(|e| PortError::new(e).into())
     }
 }
 
@@ -136,9 +172,17 @@ impl FakeTranscriber {
     }
 }
 impl Transcriber for FakeTranscriber {
-    fn transcribe(&self, _: &AudioClip, language: &Language) -> PortResult<String> {
+    fn transcribe(&self, _: &AudioClip, language: &Language) -> PortResult<Option<String>> {
         *self.0.lock().unwrap() = Some(language.clone());
-        Ok("bom dia".into())
+        Ok(Some("bom dia".into()))
+    }
+}
+
+/// A server without speech recognition.
+pub struct NoTranscriber;
+impl Transcriber for NoTranscriber {
+    fn transcribe(&self, _: &AudioClip, _: &Language) -> PortResult<Option<String>> {
+        Ok(None)
     }
 }
 
@@ -146,6 +190,9 @@ impl Transcriber for FakeTranscriber {
 pub struct FakeEngine {
     enrolled: Mutex<(usize, Option<VoiceGender>)>,
     spoken: Mutex<Vec<SpeechScript>>,
+    forgotten: Mutex<Vec<String>>,
+    /// When set, `forget` fails (voice server unreachable).
+    pub forget_fails: Mutex<bool>,
 }
 impl FakeEngine {
     pub fn enrolled_references(&self) -> usize {
@@ -156,6 +203,9 @@ impl FakeEngine {
     }
     pub fn spoken(&self) -> Vec<SpeechScript> {
         self.spoken.lock().unwrap().clone()
+    }
+    pub fn forgotten(&self) -> Vec<String> {
+        self.forgotten.lock().unwrap().clone()
     }
 }
 impl VoiceCloningEngine for FakeEngine {
@@ -168,11 +218,33 @@ impl VoiceCloningEngine for FakeEngine {
         *self.enrolled.lock().unwrap() = (refs.len(), gender);
         Ok(format!("fake-voice:{}", s.id))
     }
+    fn forget(&self, voice_id: &str) -> PortResult<()> {
+        if *self.forget_fails.lock().unwrap() {
+            return Err(PortError::new("voice server unreachable"));
+        }
+        self.forgotten.lock().unwrap().push(voice_id.to_string());
+        Ok(())
+    }
 }
 impl SpeechSynthesizer for FakeEngine {
     fn synthesize(&self, _: &VoiceProfile, script: &SpeechScript) -> PortResult<SynthesizedAudio> {
         self.spoken.lock().unwrap().push(script.clone());
         Ok(SynthesizedAudio { wav: vec![1, 2, 3] })
+    }
+}
+
+/// Remembers which people had their cached speech cleared.
+#[derive(Default)]
+pub struct MemSpeechCache(Mutex<Vec<SpeakerId>>);
+impl MemSpeechCache {
+    pub fn cleared(&self) -> Vec<SpeakerId> {
+        self.0.lock().unwrap().clone()
+    }
+}
+impl SpeechCache for MemSpeechCache {
+    fn clear(&self, speaker: &SpeakerId) -> PortResult<()> {
+        self.0.lock().unwrap().push(speaker.clone());
+        Ok(())
     }
 }
 
@@ -235,6 +307,7 @@ pub struct Fakes {
     pub analyzer: Arc<FakeAnalyzer>,
     pub transcriber: Arc<FakeTranscriber>,
     pub engine: Arc<FakeEngine>,
+    pub speech_cache: Arc<MemSpeechCache>,
     pub messages: Arc<FakeMessages>,
     pub delivery: Arc<FakeDelivery>,
     pub clock: Arc<FakeClock>,
@@ -257,6 +330,7 @@ impl Fakes {
             analyzer: Arc::new(FakeAnalyzer),
             transcriber: Default::default(),
             engine: Default::default(),
+            speech_cache: Default::default(),
             messages: Arc::new(FakeMessages),
             delivery: Default::default(),
             clock: Arc::new(FakeClock(Mutex::new(start))),
@@ -322,6 +396,7 @@ impl Fakes {
                 },
                 sample_count: 1,
                 total_audio_secs: 10.0,
+                built_at: None,
             })
             .unwrap();
     }
@@ -333,6 +408,66 @@ impl Fakes {
             self.messages.clone(),
             self.engine.clone(),
             self.delivery.clone(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn eraser(&self) -> VoiceDataEraser {
+        VoiceDataEraser {
+            schedules: self.schedules.clone(),
+            samples: self.samples.clone(),
+            store: self.store.clone(),
+            profiles: self.profiles.clone(),
+            engine: self.engine.clone(),
+            cache: self.speech_cache.clone(),
+            clock: self.clock.clone(),
+        }
+    }
+
+    pub fn revoke_consent(&self) -> RevokeConsent {
+        RevokeConsent::new(self.speakers.clone(), self.eraser(), self.clock.clone())
+    }
+
+    pub fn delete_speaker(&self) -> DeleteSpeaker {
+        DeleteSpeaker::new(self.speakers.clone(), self.eraser(), self.clock.clone())
+    }
+
+    pub fn create_schedule(&self) -> CreateSchedule {
+        CreateSchedule::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.ids.clone(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn set_schedule_enabled(&self) -> SetScheduleEnabled {
+        SetScheduleEnabled::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn add_voice_sample(&self) -> AddVoiceSample {
+        AddVoiceSample::new(
+            self.speakers.clone(),
+            self.samples.clone(),
+            self.store.clone(),
+            self.decoder.clone(),
+            self.analyzer.clone(),
+            self.ids.clone(),
+        )
+    }
+
+    pub fn build_voice_profile(&self) -> BuildVoiceProfile {
+        BuildVoiceProfile::new(
+            self.speakers.clone(),
+            self.samples.clone(),
+            self.profiles.clone(),
+            self.store.clone(),
+            self.engine.clone(),
+            self.speech_cache.clone(),
             self.clock.clone(),
         )
     }

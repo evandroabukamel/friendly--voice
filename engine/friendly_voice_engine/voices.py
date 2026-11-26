@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -50,6 +51,18 @@ class VoiceStore:
             raise KeyError(voice_id)
         meta = VoiceMeta(**json.loads((directory / "voice.json").read_text(encoding="utf-8")))
         return meta, Conditionals.load(directory / CONDITIONALS, map_location=device).to(device)
+
+    def delete(self, voice_id: str) -> bool:
+        """Deletes a voice; ``False`` when it does not exist (idempotent).
+        Invalid ids never reach the file system."""
+        try:
+            directory = self._dir(voice_id)
+        except KeyError:
+            return False
+        if not directory.is_dir():
+            return False
+        shutil.rmtree(directory)
+        return True
 
     @staticmethod
     def new_id() -> str:

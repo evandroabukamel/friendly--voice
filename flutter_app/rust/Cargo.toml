@@ -1,0 +1,28 @@
+[package]
+name = "friendly_voice_bridge"
+description = "flutter_rust_bridge API of the Flutter app: typed calls into the use cases."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[features]
+# The app talks to the voice engine over HTTP; the local sketch engine is
+# used when no engine URL is configured.
+default = ["http-engine"]
+http-engine = ["friendly-voice-bootstrap/http-engine"]
+
+[dependencies]
+flutter_rust_bridge = "=2.13.0"
+friendly-voice-domain.workspace = true
+friendly-voice-application.workspace = true
+friendly-voice-bootstrap.workspace = true
+chrono.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
+
+[dev-dependencies]
+hound.workspace = true

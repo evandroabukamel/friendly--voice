@@ -1,7 +1,7 @@
 //! # Friendly Voice — Bootstrap
 //!
 //! Composition root: the only place that knows the concrete implementations.
-//! It is shared by every interface (CLI, Android app via JNI).
+//! It is shared by every interface (CLI, Flutter app via flutter_rust_bridge).
 //! Swapping an adapter (e.g. JSON → SQLite, sketch → neural engine) means
 //! changing one line here — no use case changes (OCP + DIP).
 pub mod parse;
@@ -18,7 +18,7 @@ use friendly_voice_infrastructure::{
     messages::CuratedMessageCatalog,
     persistence::{FileAudioStore, JsonRepository},
     system::{SystemClock, TimeIdGenerator},
-    voice::{LocalVoiceBank, ProsodySketchSynthesizer},
+    voice::{CachedSpeechSynthesizer, LocalVoiceBank, ProsodySketchSynthesizer},
 };
 use std::path::Path;
 use std::sync::Arc;
@@ -41,6 +41,7 @@ pub struct Container {
     ids: Arc<dyn IdGenerator>,
     cloning: Arc<dyn VoiceCloningEngine>,
     synthesizer: Arc<dyn SpeechSynthesizer>,
+    speech_cache: Arc<dyn SpeechCache>,
     transcriber: Option<Arc<dyn Transcriber>>,
     delivery: Arc<dyn MessageDelivery>,
     pub engine_name: &'static str,
@@ -62,6 +63,17 @@ impl Container {
             ),
             Some(url) => Self::http(url)?,
         };
+        // Every engine sits behind the speech cache (ADR 0008).
+        let speech_cache = Arc::new(CachedSpeechSynthesizer::new(
+            synthesizer,
+            data.join("cache").join("speech"),
+            if engine_url.is_some() {
+                "neural"
+            } else {
+                "sketch"
+            },
+        ));
+        let synthesizer: Arc<dyn SpeechSynthesizer> = speech_cache.clone();
         Ok(Self {
             speakers: Arc::new(JsonRepository::<Speaker>::new(data.join("speakers.json"))),
             samples: Arc::new(JsonRepository::<VoiceSample>::new(
@@ -76,6 +88,7 @@ impl Container {
             ids: Arc::new(TimeIdGenerator::default()),
             cloning,
             synthesizer,
+            speech_cache,
             transcriber,
             delivery: Arc::new(OutboxDelivery::new(data.join("outbox"), player)),
             engine_name,
@@ -103,6 +116,50 @@ impl Container {
         RegisterSpeaker::new(self.speakers.clone(), self.ids.clone(), self.clock.clone())
     }
 
+    pub fn list_speakers(&self) -> ListSpeakers {
+        ListSpeakers::new(
+            self.speakers.clone(),
+            self.samples.clone(),
+            self.profiles.clone(),
+        )
+    }
+
+    pub fn list_samples(&self) -> ListSamples {
+        ListSamples::new(self.speakers.clone(), self.samples.clone())
+    }
+
+    pub fn set_listener_name(&self) -> SetListenerName {
+        SetListenerName::new(self.speakers.clone())
+    }
+
+    fn voice_data_eraser(&self) -> VoiceDataEraser {
+        VoiceDataEraser {
+            schedules: self.schedules.clone(),
+            samples: self.samples.clone(),
+            store: self.store.clone(),
+            profiles: self.profiles.clone(),
+            engine: self.cloning.clone(),
+            cache: self.speech_cache.clone(),
+            clock: self.clock.clone(),
+        }
+    }
+
+    pub fn revoke_consent(&self) -> RevokeConsent {
+        RevokeConsent::new(
+            self.speakers.clone(),
+            self.voice_data_eraser(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn delete_speaker(&self) -> DeleteSpeaker {
+        DeleteSpeaker::new(
+            self.speakers.clone(),
+            self.voice_data_eraser(),
+            self.clock.clone(),
+        )
+    }
+
     pub fn add_voice_sample(&self) -> AddVoiceSample {
         let mut uc = AddVoiceSample::new(
             self.speakers.clone(),
@@ -125,6 +182,8 @@ impl Container {
             self.profiles.clone(),
             self.store.clone(),
             self.cloning.clone(),
+            self.speech_cache.clone(),
+            self.clock.clone(),
         )
     }
 
@@ -154,6 +213,22 @@ impl Container {
 
     pub fn remove_schedule(&self) -> RemoveSchedule {
         RemoveSchedule::new(self.schedules.clone())
+    }
+
+    pub fn update_schedule(&self) -> UpdateSchedule {
+        UpdateSchedule::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.clock.clone(),
+        )
+    }
+
+    pub fn set_schedule_enabled(&self) -> SetScheduleEnabled {
+        SetScheduleEnabled::new(
+            self.speakers.clone(),
+            self.schedules.clone(),
+            self.clock.clone(),
+        )
     }
 
     pub fn run_due_schedules(&self) -> RunDueSchedules {

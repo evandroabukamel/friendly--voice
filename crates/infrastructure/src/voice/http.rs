@@ -42,6 +42,32 @@ impl From<CallError> for PortError {
     }
 }
 
+/// The server's own explanation of an error (`detail`), or the raw body.
+fn error_detail(bytes: &[u8]) -> String {
+    #[derive(Deserialize)]
+    struct ErrorBody {
+        detail: serde_json::Value,
+    }
+    serde_json::from_slice::<ErrorBody>(bytes)
+        .map(|b| match b.detail {
+            serde_json::Value::String(s) => s,
+            other => other.to_string(),
+        })
+        .unwrap_or_else(|_| String::from_utf8_lossy(bytes).into_owned())
+}
+
+/// Percent-encodes one URL path segment.
+fn path_segment(s: &str) -> String {
+    s.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone)]
 struct Client {
     base_url: String,
@@ -81,20 +107,39 @@ impl Client {
         match status {
             200..=299 => Ok(bytes),
             NOT_IMPLEMENTED => Err(CallError::NotImplemented),
-            _ => {
-                #[derive(Deserialize)]
-                struct ErrorBody {
-                    detail: serde_json::Value,
-                }
-                let detail = serde_json::from_slice::<ErrorBody>(&bytes)
-                    .map(|b| match b.detail {
-                        serde_json::Value::String(s) => s,
-                        other => other.to_string(),
-                    })
-                    .unwrap_or_else(|_| String::from_utf8_lossy(&bytes).into_owned());
-                Err(CallError::Other(err(format!("HTTP {status}: {detail}"))))
-            }
+            _ => Err(CallError::Other(err(format!(
+                "HTTP {status}: {}",
+                error_detail(&bytes)
+            )))),
         }
+    }
+
+    /// DELETEs a resource; returns the HTTP status of a 2xx or 404 answer.
+    fn delete(&self, path: &str) -> Result<u16, CallError> {
+        let response = ureq::delete(&self.url(path))
+            .config()
+            .http_status_as_error(false)
+            .build()
+            .call()
+            .map_err(|e| CallError::Other(err(e)))?;
+        Self::status_or_error(response)
+    }
+
+    fn status_or_error(mut response: ureq::http::Response<ureq::Body>) -> Result<u16, CallError> {
+        let status = response.status().as_u16();
+        if (200..=299).contains(&status) || status == 404 {
+            return Ok(status);
+        }
+        let bytes = response
+            .body_mut()
+            .with_config()
+            .limit(MAX_AUDIO_BYTES)
+            .read_to_vec()
+            .unwrap_or_default();
+        Err(CallError::Other(err(format!(
+            "HTTP {status}: {}",
+            error_detail(&bytes)
+        ))))
     }
 
     fn post_json<Res: for<'de> Deserialize<'de>>(
@@ -166,6 +211,13 @@ impl VoiceCloningEngine for HttpVoiceEngine {
         let res: EnrollResponse = self.client.post_json("v1/voices", &req)?;
         Ok(res.voice_id)
     }
+
+    /// `DELETE /v1/voices/{voice_id}`; 404 (already gone) counts as success.
+    fn forget(&self, voice_id: &str) -> PortResult<()> {
+        self.client
+            .delete(&format!("v1/voices/{}", path_segment(voice_id)))?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize)]
@@ -234,16 +286,18 @@ struct TranscribeResponse {
 }
 
 impl Transcriber for HttpTranscriber {
-    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<String> {
+    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<Option<String>> {
         let req = AudioRequest {
             language: language.tag(),
             audio_wav_base64: B64.encode(encode_wav(clip)?),
         };
-        match self.client.post_json::<TranscribeResponse>("v1/transcribe", &req) {
-            Ok(res) => Ok(res.text),
-            Err(CallError::NotImplemented) => Err(err(
-                "the server does not transcribe; provide the transcript (--transcript or a .txt file) or leave it out",
-            )),
+        match self
+            .client
+            .post_json::<TranscribeResponse>("v1/transcribe", &req)
+        {
+            Ok(res) => Ok(Some(res.text)),
+            // 501: no transcriber installed on the server (engine-api.md).
+            Err(CallError::NotImplemented) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -261,14 +315,16 @@ mod tests {
     use std::sync::mpsc;
 
     /// Minimal one-shot HTTP server: answers with `status`/`body` and hands
-    /// the request body back to the test.
-    fn serve_once(status: u16, body: &'static str) -> (String, mpsc::Receiver<String>) {
+    /// the request line ("POST /v1/voices HTTP/1.1") and body back to the test.
+    fn serve(status: u16, body: &'static str) -> (String, mpsc::Receiver<(String, String)>) {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let (tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
             let (stream, _) = listener.accept().unwrap();
             let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut first = String::new();
+            reader.read_line(&mut first).unwrap();
             let mut length = 0;
             loop {
                 let mut line = String::new();
@@ -282,7 +338,10 @@ mod tests {
             }
             let mut request = vec![0; length];
             reader.read_exact(&mut request).unwrap();
-            let _ = tx.send(String::from_utf8(request).unwrap());
+            let _ = tx.send((
+                first.trim().to_string(),
+                String::from_utf8(request).unwrap(),
+            ));
             let mut stream = stream;
             write!(
                 stream,
@@ -292,6 +351,43 @@ mod tests {
             .unwrap();
         });
         (url, rx)
+    }
+
+    /// Like [`serve`], handing back only the request body.
+    fn serve_once(status: u16, body: &'static str) -> (String, mpsc::Receiver<String>) {
+        let (url, rx) = serve(status, body);
+        let (tx, body_rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            if let Ok((_, b)) = rx.recv() {
+                let _ = tx.send(b);
+            }
+        });
+        (url, body_rx)
+    }
+
+    #[test]
+    fn forgetting_a_voice_deletes_it_on_the_server() {
+        let (url, rx) = serve(204, "");
+        HttpVoiceEngine::new(url).forget("abc-123").unwrap();
+        let (line, _) = rx.recv().unwrap();
+        assert!(line.starts_with("DELETE /v1/voices/abc-123 "), "{line}");
+
+        let (url, rx) = serve(200, "{}");
+        HttpVoiceEngine::new(url).forget("local:spk 1").unwrap();
+        let (line, _) = rx.recv().unwrap();
+        assert!(
+            line.starts_with("DELETE /v1/voices/local%3Aspk%201 "),
+            "{line}"
+        );
+    }
+
+    #[test]
+    fn forgetting_an_unknown_voice_is_ok_but_errors_are_reported() {
+        let (url, _) = serve(404, r#"{"detail":"unknown voice_id"}"#);
+        assert!(HttpVoiceEngine::new(url).forget("gone-voice").is_ok());
+        let (url, _) = serve(500, r#"{"detail":"disk full"}"#);
+        let e = HttpVoiceEngine::new(url).forget("some-voice").unwrap_err();
+        assert!(e.0.contains("HTTP 500") && e.0.contains("disk full"), "{e}");
     }
 
     fn clip() -> AudioClip {
@@ -308,6 +404,15 @@ mod tests {
             Client::new("http://engine.lan:8020").url("health"),
             "http://engine.lan:8020/health"
         );
+    }
+
+    #[test]
+    fn a_server_without_transcriber_gives_no_transcript() {
+        let (url, _) = serve_once(501, r#"{"detail":"transcription is not installed"}"#);
+        let text = HttpTranscriber::new(url)
+            .transcribe(&clip(), &Language::default())
+            .unwrap();
+        assert_eq!(text, None);
     }
 
     #[test]
@@ -333,6 +438,7 @@ mod tests {
             prosody: ProsodyProfile::default(),
             sample_count: 1,
             total_audio_secs: 10.0,
+            built_at: None,
         };
         let script = SpeechScript {
             text: "Boa noite, meu bem.".into(),

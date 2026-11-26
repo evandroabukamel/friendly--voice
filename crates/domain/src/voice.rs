@@ -4,6 +4,7 @@ use crate::ids::{SampleId, SpeakerId};
 use crate::language::Language;
 use crate::tone::VoiceTone;
 use crate::DomainError;
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -167,6 +168,10 @@ pub struct VoiceProfile {
     pub prosody: ProsodyProfile,
     pub sample_count: usize,
     pub total_audio_secs: f32,
+    /// When the voice was generated: its version. Rebuilding the voice
+    /// changes it, which invalidates the synthesized-speech cache.
+    #[serde(default)]
+    pub built_at: Option<NaiveDateTime>,
 }
 
 /// Script handed to the synthesizer: text + language + prosody (already
@@ -256,5 +261,6 @@ mod tests {
         let p: VoiceProfile = serde_json::from_str(old_profile).unwrap();
         assert_eq!(p.language, Language::default());
         assert_eq!(p.gender, None);
+        assert_eq!(p.built_at, None);
     }
 }

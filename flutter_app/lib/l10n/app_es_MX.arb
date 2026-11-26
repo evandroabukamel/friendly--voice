@@ -1,0 +1,14 @@
+{
+  "@@locale": "es_MX",
+  "tabSettings": "Configuración",
+  "voicesEmpty": "Aún no hay voces.\nToca + para agregar la voz de alguien a quien quieres.",
+  "voicesAdd": "Agregar voz",
+  "voiceListenerHelp": "Opcional, p. ej., un apodo. Vacío: tu nombre de Configuración.",
+  "voiceRegistered": "Voz guardada. Ahora agrega grabaciones.",
+  "samplesAddFiles": "Agregar archivos de audio",
+  "samplesAdded": "Grabaciones agregadas: {count}",
+  "createVoiceHint": "Agrega al menos 10 segundos de grabaciones (WAV, MP3 o FLAC, de 2 s a 3 min cada una) y luego crea la voz.",
+  "createVoiceHintReady": "La voz está lista. ¿Agregaste más grabaciones? Créala de nuevo para mejorarla.",
+  "settingsTitle": "Configuración",
+  "settingsSaved": "Configuración guardada."
+}

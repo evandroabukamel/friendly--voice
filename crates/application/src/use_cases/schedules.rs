@@ -45,7 +45,8 @@ impl CreateSchedule {
     pub fn execute(&self, input: CreateScheduleInput) -> AppResult<Schedule> {
         self.speakers
             .find(&input.speaker_id)?
-            .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?;
+            .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?
+            .ensure_active()?;
         let schedule = Schedule::new(
             ScheduleId::new(self.ids.next_id("sch")),
             input.speaker_id,
@@ -134,6 +135,7 @@ impl RunDueSchedules {
                 speaker_id: schedule.speaker_id.clone(),
                 content: schedule.content.clone(),
                 listener: self.listener.clone(),
+                listener_override: None,
                 tone: schedule.tone,
             });
             schedule.mark_fired(now);
@@ -200,6 +202,43 @@ mod tests {
         f.clock.advance(Duration::days(1));
         assert_eq!(run.execute().unwrap().len(), 1);
         assert_eq!(f.delivery.delivered().len(), 2);
+    }
+
+    #[test]
+    fn scheduled_runs_use_the_name_the_person_uses() {
+        let f = Fakes::new();
+        let spk = f.speaker().with_listener_name(Some("Filhote".into()));
+        f.speakers.save(&spk).unwrap();
+        f.voice_profile(&spk);
+        CreateSchedule::new(
+            f.speakers.clone(),
+            f.schedules.clone(),
+            f.ids.clone(),
+            f.clock.clone(),
+        )
+        .execute(CreateScheduleInput {
+            speaker_id: spk.id,
+            recurrence: Recurrence::Daily {
+                at: (f.clock.now() + Duration::minutes(1)).time(),
+            },
+            content: MessageContent::Category(
+                friendly_voice_domain::message::MessageCategory::Motivation,
+            ),
+            tone: None,
+            quiet_hours: None,
+        })
+        .unwrap();
+        f.clock.advance(Duration::minutes(2));
+        let out = RunDueSchedules::new(
+            f.schedules.clone(),
+            Arc::new(f.speak_message()),
+            f.clock.clone(),
+        )
+        .with_listener(Some("Evandro".into()))
+        .execute()
+        .unwrap();
+        let spoken = out[0].result.as_ref().unwrap();
+        assert!(spoken.message.text().contains("Filhote"));
     }
 
     #[test]

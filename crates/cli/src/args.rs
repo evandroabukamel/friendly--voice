@@ -97,15 +97,45 @@ pub enum PersonCmd {
             default_value = "pt-BR"
         )]
         language: String,
+        #[arg(
+            help = "How this person calls you in the messages (e.g. \"Filhote\"); wins over --my-name.",
+            long = "listener-name"
+        )]
+        listener_name: Option<String>,
     },
     #[command(about = "Lists the registered people.", alias = "listar")]
     List,
+    #[command(
+        about = "Changes how this person calls you in the messages (omit --listener-name to clear it)."
+    )]
+    SetListenerName {
+        #[arg(long = "person", alias = "pessoa")]
+        speaker: String,
+        #[arg(long = "listener-name")]
+        listener_name: Option<String>,
+    },
+    #[command(
+        about = "Revokes the consent: deletes the person's recordings, voice and cached speech; their schedules are switched off."
+    )]
+    Revoke {
+        #[arg(long = "person", alias = "pessoa")]
+        speaker: String,
+        #[arg(help = "Who revoked the consent (optional).", long = "by")]
+        by: Option<String>,
+    },
+    #[command(
+        about = "Deletes the person and everything made from their voice; their schedules are switched off."
+    )]
+    Delete {
+        #[arg(long = "person", alias = "pessoa")]
+        speaker: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum SampleCmd {
     #[command(
-        about = "Adds a .wav or .flac recording. If `<file>.txt` (transcript) exists next to it, it is used.",
+        about = "Adds a .wav, .flac, .mp3, .m4a or .ogg recording (format read from the content, 2 s to 3 min). If `<file>.txt` (transcript) exists next to it, it is used.",
         alias = "adicionar"
     )]
     Add {
@@ -188,6 +218,11 @@ pub struct SpeakArgs {
     pub content: ContentArgs,
     #[command(flatten)]
     pub tone: ToneArgs,
+    #[arg(
+        help = "How the person calls you in this message; wins over the stored name and --my-name.",
+        long = "listener-name"
+    )]
+    pub listener_name: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]

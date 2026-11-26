@@ -4,7 +4,7 @@
 //! needs, and each use case depends only on what it uses.
 use chrono::NaiveDateTime;
 use friendly_voice_domain::{
-    audio::{AcousticFeatures, AudioClip},
+    audio::{AcousticFeatures, AudioClip, SampleProblem},
     ids::{SampleId, ScheduleId, SpeakerId},
     language::Language,
     message::{MessageCategory, MotivationalMessage},
@@ -39,34 +39,86 @@ pub trait SpeakerRepository: Send + Sync {
     fn save(&self, speaker: &Speaker) -> PortResult<()>;
     fn find(&self, id: &SpeakerId) -> PortResult<Option<Speaker>>;
     fn list(&self) -> PortResult<Vec<Speaker>>;
+    /// Idempotent: `false` when there was nothing to delete.
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool>;
 }
 
 pub trait SampleRepository: Send + Sync {
     fn save(&self, sample: &VoiceSample) -> PortResult<()>;
     fn list_by_speaker(&self, speaker: &SpeakerId) -> PortResult<Vec<VoiceSample>>;
+    /// Deletes every sample entry of the person; returns how many. Idempotent.
+    fn delete_by_speaker(&self, speaker: &SpeakerId) -> PortResult<usize>;
 }
 
 pub trait VoiceProfileRepository: Send + Sync {
     fn save(&self, profile: &VoiceProfile) -> PortResult<()>;
     fn find(&self, speaker: &SpeakerId) -> PortResult<Option<VoiceProfile>>;
+    /// Idempotent: `false` when there was nothing to delete.
+    fn delete(&self, speaker: &SpeakerId) -> PortResult<bool>;
 }
 
 pub trait ScheduleRepository: Send + Sync {
     fn save(&self, schedule: &Schedule) -> PortResult<()>;
     fn list(&self) -> PortResult<Vec<Schedule>>;
     fn delete(&self, id: &ScheduleId) -> PortResult<bool>;
+    fn find(&self, id: &ScheduleId) -> PortResult<Option<Schedule>> {
+        Ok(self.list()?.into_iter().find(|s| &s.id == id))
+    }
 }
 
 /// Stores the original audio files.
 pub trait AudioStore: Send + Sync {
     fn store(&self, speaker: &SpeakerId, sample: &SampleId, bytes: &[u8]) -> PortResult<String>;
     fn load(&self, locator: &str) -> PortResult<Vec<u8>>;
+    /// Deletes every stored audio file of the person. Idempotent.
+    fn delete_all(&self, speaker: &SpeakerId) -> PortResult<()>;
 }
 
 // ---------- Audio ----------
 
+/// Why bytes could not be decoded into a clip.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DecodeError {
+    /// The bytes are not usable audio: a problem of the sample, for the user
+    /// to fix (another file), not an outage.
+    Rejected(SampleProblem),
+    /// The decoder itself failed (e.g. I/O); the sample may be fine.
+    Port(PortError),
+}
+
+impl fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Rejected(problem) => problem.fmt(f),
+            Self::Port(e) => e.fmt(f),
+        }
+    }
+}
+impl std::error::Error for DecodeError {}
+
+impl From<SampleProblem> for DecodeError {
+    fn from(problem: SampleProblem) -> Self {
+        Self::Rejected(problem)
+    }
+}
+impl From<PortError> for DecodeError {
+    fn from(e: PortError) -> Self {
+        Self::Port(e)
+    }
+}
+/// For adapters that decode a sample already accepted (e.g. converting it
+/// for the engine): any failure there is the adapter's.
+impl From<DecodeError> for PortError {
+    fn from(e: DecodeError) -> Self {
+        match e {
+            DecodeError::Rejected(problem) => PortError::new(problem),
+            DecodeError::Port(e) => e,
+        }
+    }
+}
+
 pub trait AudioDecoder: Send + Sync {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip>;
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError>;
 }
 
 pub trait AcousticAnalyzer: Send + Sync {
@@ -74,8 +126,10 @@ pub trait AcousticAnalyzer: Send + Sync {
 }
 
 /// Speech recognition (optional): produces the transcript from the audio.
+/// `None` means this backend cannot transcribe; the sample is then stored
+/// without a transcript.
 pub trait Transcriber: Send + Sync {
-    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<String>;
+    fn transcribe(&self, clip: &AudioClip, language: &Language) -> PortResult<Option<String>>;
 }
 
 // ---------- Voice ----------
@@ -97,6 +151,9 @@ pub trait VoiceCloningEngine: Send + Sync {
         gender: Option<VoiceGender>,
         references: &[ReferenceAudio],
     ) -> PortResult<String>;
+    /// Deletes a voice from the engine. Idempotent: an unknown voice is not
+    /// an error.
+    fn forget(&self, voice_id: &str) -> PortResult<()>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -110,6 +167,12 @@ pub trait SpeechSynthesizer: Send + Sync {
         voice: &VoiceProfile,
         script: &SpeechScript,
     ) -> PortResult<SynthesizedAudio>;
+}
+
+/// Synthesized speech kept on the device (ADR 0008).
+pub trait SpeechCache: Send + Sync {
+    /// Deletes every cached talk of the person. Idempotent.
+    fn clear(&self, speaker: &SpeakerId) -> PortResult<()>;
 }
 
 // ---------- Messages ----------

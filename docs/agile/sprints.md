@@ -12,6 +12,8 @@ One-week sprints. Every sprint delivers a **usable, tested increment**
 | 4 | Tone of voice per message and Android app with CI/CD | US-18, US-19, US-20 | 21 |
 | 5 | Real timbre cloning (OpenVoice) and English documentation | US-11, US-21 | 11 |
 | 6 | FLAC input; CLI commands and output in English | US-24, US-25, US-26 | 7 |
+| 8 | Alarm switch and editing, listener name per voice, speech cache, revoke consent | US-15, US-30, US-31, US-32, US-33 | 13 |
+| 9 | Flutter app for Android and iOS; Kotlin app removed | US-35 | 13 |
 
 Average velocity (sprints 1–5): **~14 pts/sprint**.
 
@@ -139,4 +141,56 @@ person's recordings; a language is chosen per person; female/male is detected.
 * Added: `Language` (23 languages, `person add --language`, `languages`),
   `VoiceGender` from the mean pitch, speaker embedding averaged over every
   recording with the closest reference window, retries for cut-off takes.
+
+## Sprint 8 — Alarm editing, listener name and speech cache
+**Increment:** the app can switch alarms on and off and edit them, each voice
+can call the listener by its own name, and generated speech is cached.
+* US-30 `SetScheduleEnabled`: re-enabling only fires future occurrences
+  (`Schedule.active_since`).
+* US-31 `UpdateSchedule`: keeps id and on/off state; `listSchedules` returns a
+  `request` that round-trips to `updateSchedule`.
+* US-32 `Speaker.listener_name` (`person add --listener-name`,
+  `setListenerName`), winning over `--my-name` / the app's Settings name.
+* US-33 `CachedSpeechSynthesizer` around every engine (ADR 0008);
+  `VoiceProfile.built_at` versions the voice.
+* Bridge: `listSamples`, richer `listSpeakers` (sample totals, consent,
+  listener name). US-16 MP3 import in progress on the Android side.
+* US-15 `RevokeConsent` and `DeleteSpeaker` (idempotent, crash-safe
+  cleanup), engine `DELETE /v1/voices/{id}`, speech cache cleared on voice
+  regeneration, schedules report `voice_available`; CLI `person revoke`,
+  `person delete`, `person set-listener-name`, `speak --listener-name`.
+
+## Sprint 9 — Flutter app for Android and iOS
+**Increment:** the same app on Android and iOS, built by CI on every push and
+released on `v*` tags; the Kotlin app, its JNI crate and its workflow removed.
+Every technical choice was made by the product owner (ADR 0009).
+* `flutter_app/` (Flutter 3.50.1), same application/bundle id; typed
+  flutter_rust_bridge API over the use cases (opaque `Session`, `AppFailure`).
+* Domain rule added in Rust: `Schedule::upcoming` (next firings for exact
+  notifications, capped below iOS's 64 pending).
+* Dart: ports + adapters (Rust core, preferences, file picker, SoLoud player,
+  local notifications), Riverpod state, atomic design (atoms → molecules →
+  organisms → template → page) reproducing the Kotlin screen in Material 3.
+* `flutter.yml`: bindings must match, Rust + Dart tests (incl. native),
+  Android APK (release signing from secrets), unsigned iOS build.
+
+**Retrospective**
+* 👍 Test-first found real bugs before users: `usize` arriving as `BigInt`,
+  a cancelled file choice leaving "Processing…", and the hand-written fake
+  drifting from the Rust rules — fixed once with a shared contract test that
+  runs against both.
+* 👎 Two CI failures came from setup details: generated comments that
+  depended on the rustc version (`derive(Eq)`), and the compileSdk 37
+  required by flutter_local_notifications 23. **Action:** both rules are now
+  in CLAUDE.md.
+* 👎 The first port copied the older single-page Kotlin screen instead of
+  the tabbed design on `main`. **Fix:** Reminders/Voices/Settings tabs, the
+  daylight design system, self-saving editors and the build-time server URL;
+  the UI product rules are now in `flutter_app/CLAUDE.md`.
+* 👎 The port was English only and missed Android features. **Fix:** the
+  21 languages, converted from the Kotlin `strings.xml` files; a test that
+  fails when an Android text goes unused surfaced the missing features:
+  microphone recording, several files per pick, MP3/M4A/OGG (decoded in
+  the core, so the CLI gains them too), the saved confirmations and the
+  locked switch of a reminder whose voice was deleted.
 

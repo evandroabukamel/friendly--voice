@@ -1,0 +1,300 @@
+{
+  "@@locale": "en",
+  "appName": "Friendly Voice",
+  "actionBack": "Back",
+  "errorGeneric": "Something went wrong. Please try again.",
+  "errorPlayback": "Could not play the message.",
+  "errorFileOpen": "Could not open the file.",
+  "errorNoAudioTrack": "This file has no audio. Use a WAV, MP3 or FLAC file.",
+  "errorAudioFormat": "This audio format is not supported. Convert the file to WAV.",
+  "errorAudioTooLong": "This recording is longer than 3 minutes: split it into pieces.",
+  "errorMicUnavailable": "The microphone is not available.",
+  "errorRecordingFailed": "The recording failed. Please try again.",
+  "rangeSeparator": "–",
+  "clockFormat": "{minutes}:{seconds}",
+  "@clockFormat": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "tabReminders": "Reminders",
+  "tabVoices": "Voices",
+  "tabSettings": "Settings",
+  "remindersTitle": "Reminders",
+  "remindersEmpty": "No reminders yet.\nTap + to hear someone you love at the right time.",
+  "remindersAdd": "Add reminder",
+  "reminderSwitchDescription": "Reminder on or off",
+  "reminderTimeInterval": "{minutes} min",
+  "@reminderTimeInterval": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "reminderThemeLine": "{theme} · {tone}",
+  "@reminderThemeLine": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      },
+      "tone": {
+        "type": "String"
+      }
+    }
+  },
+  "reminderOwnText": "Your own text",
+  "reminderVoiceUnavailable": "Voice unavailable — tap to choose another",
+  "editReminderTitleNew": "New reminder",
+  "editReminderTitleEdit": "Edit reminder",
+  "reminderVoiceHint": "Voice",
+  "reminderNoVoices": "No voice is ready yet. Create one in the Voices tab first.",
+  "reminderGoToVoices": "Go to Voices",
+  "reminderThemeHint": "Theme",
+  "reminderToneHint": "Tone of voice",
+  "toneSuggested": "Suggested by the theme",
+  "toneSuggestedWith": "Suggested by the theme ({tone})",
+  "@toneSuggestedWith": {
+    "placeholders": {
+      "tone": {
+        "type": "String"
+      }
+    }
+  },
+  "toneOption": "{tone} — {description}",
+  "@toneOption": {
+    "placeholders": {
+      "tone": {
+        "type": "String"
+      },
+      "description": {
+        "type": "String"
+      }
+    }
+  },
+  "pitchNatural": "Pitch: natural",
+  "pitchDescription": "Pitch shift in semitones",
+  "reminderPlayNow": "Play now",
+  "reminderPlaying": "Preparing the message…",
+  "repeatTitle": "Repeat",
+  "repeatKindDaily": "Daily",
+  "repeatKindWeekly": "Chosen days",
+  "repeatKindInterval": "Every N minutes",
+  "repeatKindOnce": "Once",
+  "repeatTimeLabel": "At",
+  "repeatDateLabel": "On",
+  "repeatPickDate": "Pick a date",
+  "repeatDateValue": "{day}/{month}",
+  "@repeatDateValue": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "repeatEveryHint": "Every",
+  "repeatEverySuffix": "minutes",
+  "repeatWindowLabel": "Between",
+  "repeatLabelDaily": "Daily",
+  "repeatLabelWeekdays": "Weekdays",
+  "repeatLabelWeekends": "Weekends",
+  "repeatLabelWithin": "{repeat} · {from}–{to}",
+  "@repeatLabelWithin": {
+    "placeholders": {
+      "repeat": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "repeatLabelOnce": "Once · {date}",
+  "@repeatLabelOnce": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "dayMonShort": "M",
+  "dayTueShort": "T",
+  "dayWedShort": "W",
+  "dayThuShort": "T",
+  "dayFriShort": "F",
+  "daySatShort": "S",
+  "daySunShort": "S",
+  "dayMon": "Monday",
+  "dayTue": "Tuesday",
+  "dayWed": "Wednesday",
+  "dayThu": "Thursday",
+  "dayFri": "Friday",
+  "daySat": "Saturday",
+  "daySun": "Sunday",
+  "dayMonAbbr": "Mon",
+  "dayTueAbbr": "Tue",
+  "dayWedAbbr": "Wed",
+  "dayThuAbbr": "Thu",
+  "dayFriAbbr": "Fri",
+  "daySatAbbr": "Sat",
+  "daySunAbbr": "Sun",
+  "quietTitle": "Quiet hours",
+  "quietHelp": "No messages between these times.",
+  "formErrorNoVoice": "Choose a voice first.",
+  "formErrorNoTheme": "Choose a theme.",
+  "formErrorNoDays": "Choose at least one day.",
+  "formErrorInterval": "Enter how many minutes between messages (1 or more).",
+  "formErrorNoDate": "Pick the date.",
+  "voicesTitle": "Voices",
+  "voicesEmpty": "No voices yet.\nTap + to add the voice of someone you love.",
+  "voicesAdd": "Add voice",
+  "voiceStatusReady": "Voice ready",
+  "voiceStatusNotCreated": "Voice not created yet",
+  "samplesCountAndSecs": "{recordings} · {duration}",
+  "@samplesCountAndSecs": {
+    "placeholders": {
+      "recordings": {
+        "type": "String"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "importVoiceTitleNew": "New voice",
+  "importVoiceTitleEdit": "Voice",
+  "voiceNameHint": "Name (e.g. Grandma Lucia)",
+  "voiceNameRequired": "Enter the name.",
+  "voiceConsentHint": "Who authorized the use of this voice",
+  "voiceConsentHelp": "Required: only use a voice with the person's permission.",
+  "voiceConsentRequired": "Enter who authorized the use of this voice.",
+  "voiceLanguageHint": "Language",
+  "voiceListenerHint": "How this voice calls you",
+  "voiceListenerHelp": "Optional, e.g. a nickname. Empty: your name from Settings.",
+  "voiceRegistered": "Voice saved. Now add recordings.",
+  "voiceSaved": "Saved.",
+  "voiceCreated": "Voice created! It is ready for your reminders.",
+  "samplesTitle": "Recordings",
+  "samplesAddFiles": "Add audio files",
+  "samplesRecord": "Record",
+  "samplesStop": "Stop recording",
+  "samplesAdded": "Recordings added: {count}",
+  "@samplesAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sampleTitle": "Recording {number}",
+  "@sampleTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "sampleDuration": "{secs} s",
+  "@sampleDuration": {
+    "placeholders": {
+      "secs": {
+        "type": "String"
+      }
+    }
+  },
+  "recordingStatus": "Recording… {elapsed} of {limit}",
+  "@recordingStatus": {
+    "placeholders": {
+      "elapsed": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "recordPermissionDenied": "Allow the microphone to record a voice.",
+  "actionCancel": "Cancel",
+  "deleteVoice": "Delete voice",
+  "deleteVoiceTitle": "Delete this voice?",
+  "deleteVoiceMessage": "Its recordings and the created voice are deleted from this phone and the voice server. Reminders that use it are turned off and kept, so you can choose another voice.",
+  "deleteVoiceConfirm": "Delete",
+  "voiceDeleted": "Voice deleted.",
+  "createVoice": "Create voice",
+  "createVoiceRunning": "Creating the voice…",
+  "createVoiceHint": "Add at least 10 seconds of recordings (WAV, MP3 or FLAC, 2 s to 3 min each), then create the voice.",
+  "createVoiceHintReady": "The voice is ready. Added more recordings? Create it again to improve it.",
+  "settingsTitle": "Settings",
+  "settingsListenerHint": "Your name",
+  "settingsListenerHelp": "Used in the messages when a voice has no nickname for you.",
+  "settingsEngineHint": "Voice server URL",
+  "settingsSaved": "Settings saved.",
+  "settingsLanguageHint": "App language",
+  "languageSystemDefault": "System default",
+  "channelName": "Scheduled messages",
+  "notificationTitle": "A message for you",
+  "notificationBody": "{text}\n(tone: {tone})",
+  "@notificationBody": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      },
+      "tone": {
+        "type": "String"
+      }
+    }
+  },
+  "pitchHigher": "{count, plural, one{Pitch: {count} semitone higher} other{Pitch: {count} semitones higher}}",
+  "@pitchHigher": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pitchLower": "{count, plural, one{Pitch: {count} semitone lower} other{Pitch: {count} semitones lower}}",
+  "@pitchLower": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "repeatLabelEvery": "{count, plural, one{Every minute} other{Every {count} min}}",
+  "@repeatLabelEvery": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "samplesCount": "{count, plural, one{{count} recording} other{{count} recordings}}",
+  "@samplesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seconds": "{count, plural, one{{count} second} other{{count} seconds}}",
+  "@seconds": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteReminder": "Delete reminder",
+  "samplesFillFirst": "Fill in the name and who authorized it, then add recordings."
+}

@@ -1,0 +1,5 @@
+{
+  "@@locale": "en_AU",
+  "voiceConsentHint": "Who authorised the use of this voice",
+  "voiceConsentRequired": "Enter who authorised the use of this voice."
+}

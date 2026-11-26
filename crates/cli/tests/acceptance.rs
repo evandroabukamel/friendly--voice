@@ -242,19 +242,24 @@ fn accepts_flac_samples() {
     env.ok(&["voice", "generate", "--person", &id]);
     env.ok(&["speak", "--person", &id, "--text", "Boa noite."]);
 
-    let ogg = env.dir.join("x.ogg");
-    std::fs::write(&ogg, b"OggS\0\0\0\0\0\0\0\0 not supported").unwrap();
+    // AIFF: a real audio format, but not one we read.
+    let aiff = env.dir.join("x.aiff");
+    std::fs::write(&aiff, b"FORM\0\0\0\x2eAIFFCOMM not supported").unwrap();
     let (ok, out) = env.run(&[
         "sample",
         "add",
         "--person",
         &id,
         "--audio",
-        p(&ogg),
+        p(&aiff),
         "--transcript",
         "oi",
     ]);
-    assert!(!ok && out.contains("WAV (PCM/float) or FLAC"), "{out}");
+    assert!(
+        !ok && out
+            .contains("This audio format is not supported. Use a WAV, FLAC, MP3, M4A or OGG file."),
+        "{out}"
+    );
 }
 
 /// The former Portuguese command and option names still work (hidden aliases),
@@ -348,6 +353,74 @@ fn english_values_are_accepted() {
     assert!(out.contains("mon,fri at 07:30"), "{out}");
 }
 
+/// Real ≈3 s phone-style recordings shared with the infrastructure tests.
+fn fixture(name: &str) -> Vec<u8> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../infrastructure/tests/fixtures");
+    std::fs::read(dir.join(name)).unwrap()
+}
+
+/// US-16: MP3, M4A and OGG recordings are accepted like WAV and FLAC.
+#[test]
+fn accepts_mp3_m4a_and_ogg_samples() {
+    let env = Env::new("compressed");
+    let help = env.ok(&["sample", "add", "--help"]);
+    assert!(help.contains(".mp3, .m4a or .ogg"), "{help}");
+
+    let id = speaker_id(&env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]));
+    // Four samples: the voice needs at least 10 s in total.
+    for (i, name) in ["voice.mp3", "voice.m4a", "voice.ogg", "voice.mp3"]
+        .iter()
+        .enumerate()
+    {
+        // The format comes from the content: the stored name is not trusted.
+        let path = env.dir.join(format!("upload-{i}"));
+        std::fs::write(&path, fixture(name)).unwrap();
+        let out = env.ok(&["sample", "add", "--person", &id, "--audio", p(&path)]);
+        assert!(out.contains("added (3.0s)"), "{name}: {out}");
+    }
+    // The original files are kept, with the right extensions.
+    let mut stored: Vec<_> = std::fs::read_dir(env.dir.join("data/audio").join(&id))
+        .unwrap()
+        .map(|e| e.unwrap().path().extension().unwrap().to_owned())
+        .collect();
+    stored.sort();
+    assert_eq!(stored, ["m4a", "mp3", "mp3", "ogg"]);
+    env.ok(&["voice", "generate", "--person", &id]);
+
+    // A recording over 3 minutes goes through the same limit as a WAV.
+    // MP3 frames can be concatenated: repeat the tag-less frames 61 times.
+    let mp3 = fixture("voice.mp3");
+    let tag = 10
+        + mp3[6..10]
+            .iter()
+            .fold(0usize, |acc, &b| (acc << 7) | b as usize);
+    let long = env.dir.join("long.mp3");
+    std::fs::write(&long, mp3[tag..].repeat(61)).unwrap();
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&long)]);
+    assert!(
+        !ok && out.contains("too long") && out.contains("split it"),
+        "{out}"
+    );
+
+    let opus = env.dir.join("opus.ogg");
+    std::fs::write(&opus, fixture("opus.ogg")).unwrap();
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&opus)]);
+    assert!(
+        !ok && out.contains("This audio format is not supported. Convert the file to WAV."),
+        "{out}"
+    );
+    // An unusable file is a problem of the sample, not an outage.
+    assert!(out.contains("audio sample rejected"), "{out}");
+    assert!(!out.contains("external dependency"), "{out}");
+    let silent = env.dir.join("no-audio.m4a");
+    std::fs::write(&silent, fixture("no-audio.m4a")).unwrap();
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&silent)]);
+    assert!(
+        !ok && out.contains("This file has no audio. Use a WAV, FLAC, MP3, M4A or OGG file."),
+        "{out}"
+    );
+}
+
 #[test]
 fn rejects_invalid_audio() {
     let env = Env::new("bad");
@@ -410,4 +483,92 @@ fn speaks_in_the_chosen_language() {
         out.contains("pt  Portuguese") && out.contains("ja  Japanese"),
         "{out}"
     );
+}
+
+#[test]
+fn the_name_the_person_uses_wins_over_my_name() {
+    let env = Env::new("listener");
+    let out = env.ok(&[
+        "person",
+        "add",
+        "--name",
+        "Mãe",
+        "--consent-by",
+        "Mãe",
+        "--listener-name",
+        "Filhote",
+    ]);
+    assert!(out.contains("calls you Filhote"), "{out}");
+    let id = speaker_id(&out);
+    let wav = env.wav("m1", 12.0, 210.0, None);
+    env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    env.ok(&["voice", "generate", "--person", &id]);
+    let out = env.ok(&[
+        "--my-name",
+        "Evandro",
+        "speak",
+        "--person",
+        &id,
+        "--theme",
+        "celebration",
+    ]);
+    assert!(out.contains("Filhote") && !out.contains("Evandro"), "{out}");
+}
+
+#[test]
+fn listener_names_revoke_and_delete_from_the_cli() {
+    let env = Env::new("lifecycle");
+    let out = env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]);
+    let id = speaker_id(&out);
+    let wav = env.wav("m1", 12.0, 210.0, None);
+    env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    env.ok(&["voice", "generate", "--person", &id]);
+    let speak = |extra: &[&str]| {
+        let mut args = vec!["--my-name", "Evandro", "speak", "--person", &id];
+        args.extend(["--theme", "celebration"]);
+        args.extend(extra);
+        env.ok(&args)
+    };
+
+    // A name for one message wins over the stored one and --my-name.
+    let out = speak(&["--listener-name", "Campeão"]);
+    assert!(out.contains("Campeão"), "{out}");
+    let out = env.ok(&[
+        "person",
+        "set-listener-name",
+        "--person",
+        &id,
+        "--listener-name",
+        "Filhote",
+    ]);
+    assert!(out.contains("Mãe calls you Filhote"), "{out}");
+    assert!(speak(&[]).contains("Filhote"));
+    let out = env.ok(&["person", "set-listener-name", "--person", &id]);
+    assert!(out.contains("cleared"), "{out}");
+    assert!(speak(&[]).contains("Evandro"));
+
+    // US-15: revoking consent deletes the voice and refuses every use.
+    env.ok(&["schedule", "create", "--person", &id, "--daily", "08:00"]);
+    let out = env.ok(&["person", "revoke", "--person", &id, "--by", "Mãe"]);
+    assert!(out.contains("revoked") && out.contains("deleted"), "{out}");
+    env.ok(&["person", "revoke", "--person", &id]);
+    let (ok, out) = env.run(&["speak", "--person", &id, "--text", "oi"]);
+    assert!(!ok && out.contains("revoked"), "{out}");
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    assert!(!ok && out.contains("revoked"), "{out}");
+    assert!(!env.ok(&["person", "list"]).contains(&id));
+    let out = env.ok(&["schedule", "list"]);
+    assert!(
+        out.contains("next: —"),
+        "the schedule is kept, switched off: {out}"
+    );
+    assert!(!env.dir.join("data/audio").join(&id).exists());
+
+    // Deleting a person is idempotent.
+    let out = env.ok(&["person", "add", "--name", "Tio", "--consent-by", "Tio"]);
+    let uncle = speaker_id(&out);
+    let out = env.ok(&["person", "delete", "--person", &uncle]);
+    assert!(out.contains("deleted"), "{out}");
+    env.ok(&["person", "delete", "--person", &uncle]);
+    assert!(!env.ok(&["person", "list"]).contains(&uncle));
 }
