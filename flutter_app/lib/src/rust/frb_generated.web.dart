@@ -82,6 +82,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_32(dynamic raw);
 
   @protected
+  FailureKind dco_decode_failure_kind(dynamic raw);
+
+  @protected
   Gender dco_decode_gender(dynamic raw);
 
   @protected
@@ -220,6 +223,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_f_32(SseDeserializer deserializer);
+
+  @protected
+  FailureKind sse_decode_failure_kind(SseDeserializer deserializer);
 
   @protected
   Gender sse_decode_gender(SseDeserializer deserializer);
@@ -372,6 +378,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_failure_kind(FailureKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_gender(Gender self, SseSerializer serializer);

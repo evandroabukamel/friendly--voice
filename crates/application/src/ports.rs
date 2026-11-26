@@ -4,7 +4,7 @@
 //! needs, and each use case depends only on what it uses.
 use chrono::NaiveDateTime;
 use friendly_voice_domain::{
-    audio::{AcousticFeatures, AudioClip},
+    audio::{AcousticFeatures, AudioClip, SampleProblem},
     ids::{SampleId, ScheduleId, SpeakerId},
     language::Language,
     message::{MessageCategory, MotivationalMessage},
@@ -76,8 +76,49 @@ pub trait AudioStore: Send + Sync {
 
 // ---------- Audio ----------
 
+/// Why bytes could not be decoded into a clip.
+#[derive(Debug, Clone, PartialEq)]
+pub enum DecodeError {
+    /// The bytes are not usable audio: a problem of the sample, for the user
+    /// to fix (another file), not an outage.
+    Rejected(SampleProblem),
+    /// The decoder itself failed (e.g. I/O); the sample may be fine.
+    Port(PortError),
+}
+
+impl fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Rejected(problem) => problem.fmt(f),
+            Self::Port(e) => e.fmt(f),
+        }
+    }
+}
+impl std::error::Error for DecodeError {}
+
+impl From<SampleProblem> for DecodeError {
+    fn from(problem: SampleProblem) -> Self {
+        Self::Rejected(problem)
+    }
+}
+impl From<PortError> for DecodeError {
+    fn from(e: PortError) -> Self {
+        Self::Port(e)
+    }
+}
+/// For adapters that decode a sample already accepted (e.g. converting it
+/// for the engine): any failure there is the adapter's.
+impl From<DecodeError> for PortError {
+    fn from(e: DecodeError) -> Self {
+        match e {
+            DecodeError::Rejected(problem) => PortError::new(problem),
+            DecodeError::Port(e) => e,
+        }
+    }
+}
+
 pub trait AudioDecoder: Send + Sync {
-    fn decode(&self, bytes: &[u8]) -> PortResult<AudioClip>;
+    fn decode(&self, bytes: &[u8]) -> Result<AudioClip, DecodeError>;
 }
 
 pub trait AcousticAnalyzer: Send + Sync {

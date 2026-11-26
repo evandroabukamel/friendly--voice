@@ -409,6 +409,9 @@ fn accepts_mp3_m4a_and_ogg_samples() {
         !ok && out.contains("This audio format is not supported. Convert the file to WAV."),
         "{out}"
     );
+    // An unusable file is a problem of the sample, not an outage.
+    assert!(out.contains("audio sample rejected"), "{out}");
+    assert!(!out.contains("external dependency"), "{out}");
     let silent = env.dir.join("no-audio.m4a");
     std::fs::write(&silent, fixture("no-audio.m4a")).unwrap();
     let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&silent)]);

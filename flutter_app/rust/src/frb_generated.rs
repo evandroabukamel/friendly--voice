@@ -1018,8 +1018,10 @@ impl SseDecode for crate::api::schedules::Alarm {
 impl SseDecode for crate::api::failure::AppFailure {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind = <crate::api::failure::FailureKind>::sse_decode(deserializer);
         let mut var_message = <String>::sse_decode(deserializer);
         return crate::api::failure::AppFailure {
+            kind: var_kind,
             message: var_message,
         };
     }
@@ -1071,6 +1073,21 @@ impl SseDecode for f32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_f32::<NativeEndian>().unwrap()
+    }
+}
+
+impl SseDecode for crate::api::failure::FailureKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::failure::FailureKind::Other,
+            1 => crate::api::failure::FailureKind::AudioFormat,
+            2 => crate::api::failure::FailureKind::NoAudioTrack,
+            3 => crate::api::failure::FailureKind::AudioTooLong,
+            4 => crate::api::failure::FailureKind::AudioTooShort,
+            _ => unreachable!("Invalid variant for FailureKind: {}", inner),
+        };
     }
 }
 
@@ -1555,7 +1572,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::schedules::Alarm>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::failure::AppFailure {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.message.into_into_dart().into_dart()].into_dart()
+        [
+            self.kind.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -1610,6 +1631,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::schedules::DueMessage>
     for crate::api::schedules::DueMessage
 {
     fn into_into_dart(self) -> crate::api::schedules::DueMessage {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::failure::FailureKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Other => 0.into_dart(),
+            Self::AudioFormat => 1.into_dart(),
+            Self::NoAudioTrack => 2.into_dart(),
+            Self::AudioTooLong => 3.into_dart(),
+            Self::AudioTooShort => 4.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::failure::FailureKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::failure::FailureKind>
+    for crate::api::failure::FailureKind
+{
+    fn into_into_dart(self) -> crate::api::failure::FailureKind {
         self
     }
 }
@@ -1908,6 +1953,7 @@ impl SseEncode for crate::api::schedules::Alarm {
 impl SseEncode for crate::api::failure::AppFailure {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::failure::FailureKind>::sse_encode(self.kind, serializer);
         <String>::sse_encode(self.message, serializer);
     }
 }
@@ -1944,6 +1990,25 @@ impl SseEncode for f32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_f32::<NativeEndian>(self).unwrap();
+    }
+}
+
+impl SseEncode for crate::api::failure::FailureKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::failure::FailureKind::Other => 0,
+                crate::api::failure::FailureKind::AudioFormat => 1,
+                crate::api::failure::FailureKind::NoAudioTrack => 2,
+                crate::api::failure::FailureKind::AudioTooLong => 3,
+                crate::api::failure::FailureKind::AudioTooShort => 4,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 
