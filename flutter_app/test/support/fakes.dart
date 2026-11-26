@@ -62,6 +62,9 @@ final class FakeVoiceCore implements VoiceCore {
   >
   spoken = [];
   List<DueMessage> due = [];
+
+  /// When set, every new sample is refused with it (as the core would).
+  AppFailure? rejectSamples;
   List<Alarm> alarms = [];
 
   final Map<String, ({ScheduleRequest request, bool enabled})> _schedules = {};
@@ -111,6 +114,7 @@ final class FakeVoiceCore implements VoiceCore {
     final consent = _clean(consentBy);
     if (consent == null) {
       throw AppFailure(
+        kind: FailureKind.other,
         message:
             "the consent of '$name' must be recorded before cloning the voice",
       );
@@ -135,7 +139,12 @@ final class FakeVoiceCore implements VoiceCore {
     SpeakerSummary Function(SpeakerSummary) change,
   ) {
     final i = people.indexWhere((p) => p.id == personId);
-    if (i < 0) throw AppFailure(message: "person '$personId' not found");
+    if (i < 0) {
+      throw AppFailure(
+        kind: FailureKind.other,
+        message: "person '$personId' not found",
+      );
+    }
     return people[i] = change(people[i]);
   }
 
@@ -183,6 +192,7 @@ final class FakeVoiceCore implements VoiceCore {
     required Uint8List audio,
     String? transcript,
   }) async {
+    if (rejectSamples case final failure?) throw failure;
     samples.add((
       personId: personId,
       bytes: audio.length,
@@ -211,7 +221,10 @@ final class FakeVoiceCore implements VoiceCore {
   Future<VoiceSummary> buildVoice(String personId) async {
     final count = listSamples(personId).length;
     if (count < 2) {
-      throw AppFailure(message: 'not enough voice material: $count sample(s)');
+      throw AppFailure(
+        kind: FailureKind.other,
+        message: 'not enough voice material: $count sample(s)',
+      );
     }
     final p = _replace(
       personId,
@@ -253,7 +266,10 @@ final class FakeVoiceCore implements VoiceCore {
 
   static void _validate(ScheduleRequest r) {
     if (_clean(r.at) == null && r.kind != ScheduleKind.interval) {
-      throw const AppFailure(message: 'provide the time (HH:MM)');
+      throw const AppFailure(
+        kind: FailureKind.other,
+        message: 'provide the time (HH:MM)',
+      );
     }
   }
 
@@ -277,7 +293,11 @@ final class FakeVoiceCore implements VoiceCore {
   }
 
   ({ScheduleRequest request, bool enabled}) _schedule(String id) =>
-      _schedules[id] ?? (throw AppFailure(message: "schedule '$id' not found"));
+      _schedules[id] ??
+      (throw AppFailure(
+        kind: FailureKind.other,
+        message: "schedule '$id' not found",
+      ));
 
   @override
   ScheduleSummary createSchedule(ScheduleRequest request) {

@@ -169,4 +169,59 @@ void main() {
     expect(find.text('Voice deleted.'), findsOneWidget);
     expect(find.text('Vó'), findsNothing);
   });
+
+  testWidgets('a refused recording is explained in the app language', (
+    tester,
+  ) async {
+    final core = FakeCoreWithPeople.make()
+      ..rejectSamples = const AppFailure(
+        kind: FailureKind.audioTooLong,
+        message: 'audio sample rejected: audio too long (200.0s)',
+      );
+    await pumpApp(
+      tester,
+      core: core,
+      picker: FakeAudioPicker([
+        [wav('long.mp3')],
+        [wav('long.mp3')],
+      ]),
+    );
+    await openVoices(tester);
+    await tapText(tester, 'Ana');
+    await tapText(tester, 'Add audio files');
+    expect(
+      find.text(
+        'This recording is longer than 3 minutes: split it into pieces.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  for (final (kind, text) in const [
+    (
+      FailureKind.audioFormat,
+      'This audio format is not supported. Convert the file to WAV.',
+    ),
+    (
+      FailureKind.noAudioTrack,
+      'This file has no audio. Use a WAV, MP3 or FLAC file.',
+    ),
+  ]) {
+    testWidgets('a $kind failure shows the Android text', (tester) async {
+      final core = FakeCoreWithPeople.make()
+        ..rejectSamples = AppFailure(kind: kind, message: 'core words');
+      await pumpApp(
+        tester,
+        core: core,
+        picker: FakeAudioPicker([
+          [wav('x.bin')],
+        ]),
+      );
+      await openVoices(tester);
+      await tapText(tester, 'Ana');
+      await tapText(tester, 'Add audio files');
+      expect(find.text(text), findsOneWidget);
+      expect(find.text('core words'), findsNothing);
+    });
+  }
 }

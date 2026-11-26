@@ -7,10 +7,7 @@ import 'package:friendly_voice/presentation/state/app_language.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Keys of features still being ported; each later unit empties its part.
-const pending = <String>{
-  // The core's audio failures, translated once the bridge reports their kind.
-  'errorNoAudioTrack', 'errorAudioFormat', 'errorAudioTooLong',
-};
+const pending = <String>{};
 
 Map<String, Object?> arb(String locale) =>
     (jsonDecode(File('lib/l10n/app_$locale.arb').readAsStringSync()) as Map)

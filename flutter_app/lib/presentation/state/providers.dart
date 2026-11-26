@@ -122,7 +122,10 @@ class ConnectionNotifier extends AsyncNotifier<Connection> {
 /// The connected core; actions before the connection fail clearly.
 VoiceCore requireCore(Ref ref) =>
     ref.read(connectionProvider).value?.core ??
-    (throw const AppFailure(message: 'the voice engine is not connected yet'));
+    (throw const AppFailure(
+      kind: FailureKind.other,
+      message: 'the voice engine is not connected yet',
+    ));
 
 /// Words for the user, written in the app language when shown.
 typedef Phrase = String Function(AppLocalizations l);
@@ -187,13 +190,22 @@ class MessagesNotifier extends Notifier<UserMessage?> {
     } on Notice catch (n) {
       show(n.text);
     } on AppFailure catch (f) {
-      show((_) => f.message, isError: true);
+      show((l) => failureText(l, f), isError: true);
     } on Exception {
       show((l) => l.errorGeneric, isError: true);
     }
     return false;
   }
 }
+
+/// A core failure in the app language when the Kotlin app had words for
+/// it; otherwise the core's own (English) message.
+String failureText(AppLocalizations l, AppFailure f) => switch (f.kind) {
+  FailureKind.audioFormat => l.errorAudioFormat,
+  FailureKind.noAudioTrack => l.errorNoAudioTrack,
+  FailureKind.audioTooLong => l.errorAudioTooLong,
+  FailureKind.audioTooShort || FailureKind.other => f.message,
+};
 
 enum AppTab { reminders, voices, settings }
 
