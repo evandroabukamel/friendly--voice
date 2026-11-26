@@ -242,19 +242,24 @@ fn accepts_flac_samples() {
     env.ok(&["voice", "generate", "--person", &id]);
     env.ok(&["speak", "--person", &id, "--text", "Boa noite."]);
 
-    let ogg = env.dir.join("x.ogg");
-    std::fs::write(&ogg, b"OggS\0\0\0\0\0\0\0\0 not supported").unwrap();
+    // AIFF: a real audio format, but not one we read.
+    let aiff = env.dir.join("x.aiff");
+    std::fs::write(&aiff, b"FORM\0\0\0\x2eAIFFCOMM not supported").unwrap();
     let (ok, out) = env.run(&[
         "sample",
         "add",
         "--person",
         &id,
         "--audio",
-        p(&ogg),
+        p(&aiff),
         "--transcript",
         "oi",
     ]);
-    assert!(!ok && out.contains("WAV (PCM/float) or FLAC"), "{out}");
+    assert!(
+        !ok && out
+            .contains("This audio format is not supported. Use a WAV, FLAC, MP3, M4A or OGG file."),
+        "{out}"
+    );
 }
 
 /// The former Portuguese command and option names still work (hidden aliases),
