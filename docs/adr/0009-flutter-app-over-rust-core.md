@@ -40,8 +40,12 @@ All choices below were made by the product owner:
   speaks what is due on start (single catch-up), on a tapped alarm and every
   minute while open. Android 14+: `SCHEDULE_EXACT_ALARM` asked at runtime,
   inexact-while-idle fallback when refused.
-* **Same screen as the Kotlin app** in Material 3: one scrolling page, status
-  line on top, sections Settings → Person → Samples → Message → Schedule.
+* **The Kotlin app's design** (from `main`'s `res/` layouts) in Material 3:
+  a bottom navigation bar with Reminders, Voices and Settings; a warm,
+  Timely-like look whose gradient follows the time of day, with large,
+  light type; edits save themselves (no Save buttons); the voice server URL
+  is compiled in (`--dart-define=FRIENDLY_VOICE_ENGINE_URL`), never typed.
+  *Revised:* the first port reproduced the older single-page Kotlin screen.
 * **CI/CD:** `flutter.yml` — regenerated bindings must match, Rust bridge
   tests, Dart tests (some call the real Rust core on the host), Android
   APK, unsigned iOS build on macOS, release on `v*` tags.

@@ -351,11 +351,22 @@ Scenario: continuous delivery
 > the chosen time.
 
 ```gherkin
-Scenario: same features and look as the Kotlin app
+Scenario: three tabs in a warm look that follows the time of day
   Given the Flutter app is connected to the core
-  Then I see the status line and the sections Settings, 1. Person of the voice,
-       2. Audio samples, 3. Message and 4. Schedule with the former texts
-  And every action shows "Processing…", then its result or "⚠️ <failure>"
+  Then a bottom navigation bar offers Reminders, Voices and Settings
+  And the background is the dawn, day, dusk or night gradient of the hour
+  And no screen has a Save button, and no screen asks for a server URL
+
+Scenario: a reminder saves itself
+  Given a ready voice
+  When I tap + on Reminders and change any choice
+  Then the reminder is created; later changes update the same reminder
+  And incomplete choices are explained ("Choose at least one day.")
+
+Scenario: a voice is registered with consent when it is first needed
+  When I fill in the name and who authorized it, and add a recording
+  Then the person is registered with that consent and the recording kept
+  And with 10 s or more of recordings I can create the voice
 
 Scenario: exact alarms on both platforms
   Given a daily schedule at 08:00

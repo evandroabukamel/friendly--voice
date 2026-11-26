@@ -127,11 +127,14 @@ melody (useful for development and tests) but **not** their voice.
 ## Mobile app (Android and iOS)
 
 `flutter_app/` is the Flutter app (Flutter 3.50.1) for Android and iOS. It
-runs the same Rust core through flutter_rust_bridge (`flutter_app/rust/`):
-register the person (with consent and language), upload `.wav`/`.flac`
-samples, generate the voice, ask for a message choosing **the tone** and the
-pitch shift, and schedule messages; switch them on and off and
-edit them. Schedules wake the phone with **exact
+runs the same Rust core through flutter_rust_bridge (`flutter_app/rust/`).
+Three tabs in a bottom navigation bar, in a warm design whose background
+follows the time of day (dawn, day, dusk, night) with large, light type:
+**Reminders** (each with its time, switch, message, repeat and voice; tap to
+edit the voice, theme or own words, **tone**, pitch, repeat and quiet hours,
+or play it now), **Voices** (register a person with consent and language,
+add `.wav`/`.flac` recordings, create the voice, delete it) and **Settings**
+(your name). There is no Save button: every edit saves itself. Schedules wake the phone with **exact
 notifications** (Android 14+ asks for the exact-alarm permission; without it
 they may be a few minutes late); the app speaks what is due when it opens,
 when an alarm is tapped and every minute while open. The voice server is

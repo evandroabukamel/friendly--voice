@@ -183,4 +183,8 @@ Every technical choice was made by the product owner (ADR 0009).
   depended on the rustc version (`derive(Eq)`), and the compileSdk 37
   required by flutter_local_notifications 23. **Action:** both rules are now
   in CLAUDE.md.
+* 👎 The first port copied the older single-page Kotlin screen instead of
+  the tabbed design on `main`. **Fix:** Reminders/Voices/Settings tabs, the
+  daylight design system, self-saving editors and the build-time server URL;
+  the UI product rules are now in `flutter_app/CLAUDE.md`.
 
