@@ -134,8 +134,10 @@ follows the time of day (dawn, day, dusk, night) with large, light type:
 **Reminders** (each with its time, switch, message, repeat and voice; tap to
 edit the voice, theme or own words, **tone**, pitch, repeat and quiet hours,
 or play it now), **Voices** (register a person with consent and language,
-add `.wav`/`.flac` recordings, create the voice, delete it) and **Settings**
-(your name). There is no Save button: every edit saves itself. Schedules wake the phone with **exact
+add recordings, record from the microphone, create the voice, delete it) and
+**Settings** (your name and the app language: the Kotlin app's 21 languages,
+or the phone's). Recordings may be WAV, FLAC, MP3, M4A or OGG, several at
+once. There is no Save button: every edit saves itself. Schedules wake the phone with **exact
 notifications** (Android 14+ asks for the exact-alarm permission; without it
 they may be a few minutes late); the app speaks what is due when it opens,
 when an alarm is tapped and every minute while open. The voice server is

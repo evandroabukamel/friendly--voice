@@ -187,4 +187,10 @@ Every technical choice was made by the product owner (ADR 0009).
   the tabbed design on `main`. **Fix:** Reminders/Voices/Settings tabs, the
   daylight design system, self-saving editors and the build-time server URL;
   the UI product rules are now in `flutter_app/CLAUDE.md`.
+* 👎 The port was English only and missed Android features. **Fix:** the
+  21 languages, converted from the Kotlin `strings.xml` files; a test that
+  fails when an Android text goes unused surfaced the missing features:
+  microphone recording, several files per pick, MP3/M4A/OGG (decoded in
+  the core, so the CLI gains them too), the saved confirmations and the
+  locked switch of a reminder whose voice was deleted.
 

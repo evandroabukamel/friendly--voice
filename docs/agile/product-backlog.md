@@ -383,6 +383,15 @@ Scenario: a voice is registered with consent when it is first needed
   When I fill in the name and who authorized it, and add a recording
   Then the person is registered with that consent and the recording kept
   And with 10 s or more of recordings I can create the voice
+  And I can also record from the microphone ("Recording… 0:12 of 3:00"),
+      which stops by itself at 3 minutes
+
+Scenario: the Kotlin app's 21 languages
+  Given the phone is in Japanese and nothing is chosen in Settings
+  Then the app speaks Japanese
+  When I choose "Deutsch" as the app language
+  Then every screen, message and notification is in German, and it is kept
+  And Arabic lays the screens out right to left
 
 Scenario: exact alarms on both platforms
   Given a daily schedule at 08:00
