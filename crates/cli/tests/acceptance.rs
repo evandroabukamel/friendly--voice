@@ -411,3 +411,91 @@ fn speaks_in_the_chosen_language() {
         "{out}"
     );
 }
+
+#[test]
+fn the_name_the_person_uses_wins_over_my_name() {
+    let env = Env::new("listener");
+    let out = env.ok(&[
+        "person",
+        "add",
+        "--name",
+        "Mãe",
+        "--consent-by",
+        "Mãe",
+        "--listener-name",
+        "Filhote",
+    ]);
+    assert!(out.contains("calls you Filhote"), "{out}");
+    let id = speaker_id(&out);
+    let wav = env.wav("m1", 12.0, 210.0, None);
+    env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    env.ok(&["voice", "generate", "--person", &id]);
+    let out = env.ok(&[
+        "--my-name",
+        "Evandro",
+        "speak",
+        "--person",
+        &id,
+        "--theme",
+        "celebration",
+    ]);
+    assert!(out.contains("Filhote") && !out.contains("Evandro"), "{out}");
+}
+
+#[test]
+fn listener_names_revoke_and_delete_from_the_cli() {
+    let env = Env::new("lifecycle");
+    let out = env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]);
+    let id = speaker_id(&out);
+    let wav = env.wav("m1", 12.0, 210.0, None);
+    env.ok(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    env.ok(&["voice", "generate", "--person", &id]);
+    let speak = |extra: &[&str]| {
+        let mut args = vec!["--my-name", "Evandro", "speak", "--person", &id];
+        args.extend(["--theme", "celebration"]);
+        args.extend(extra);
+        env.ok(&args)
+    };
+
+    // A name for one message wins over the stored one and --my-name.
+    let out = speak(&["--listener-name", "Campeão"]);
+    assert!(out.contains("Campeão"), "{out}");
+    let out = env.ok(&[
+        "person",
+        "set-listener-name",
+        "--person",
+        &id,
+        "--listener-name",
+        "Filhote",
+    ]);
+    assert!(out.contains("Mãe calls you Filhote"), "{out}");
+    assert!(speak(&[]).contains("Filhote"));
+    let out = env.ok(&["person", "set-listener-name", "--person", &id]);
+    assert!(out.contains("cleared"), "{out}");
+    assert!(speak(&[]).contains("Evandro"));
+
+    // US-15: revoking consent deletes the voice and refuses every use.
+    env.ok(&["schedule", "create", "--person", &id, "--daily", "08:00"]);
+    let out = env.ok(&["person", "revoke", "--person", &id, "--by", "Mãe"]);
+    assert!(out.contains("revoked") && out.contains("deleted"), "{out}");
+    env.ok(&["person", "revoke", "--person", &id]);
+    let (ok, out) = env.run(&["speak", "--person", &id, "--text", "oi"]);
+    assert!(!ok && out.contains("revoked"), "{out}");
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&wav)]);
+    assert!(!ok && out.contains("revoked"), "{out}");
+    assert!(!env.ok(&["person", "list"]).contains(&id));
+    let out = env.ok(&["schedule", "list"]);
+    assert!(
+        out.contains("next: —"),
+        "the schedule is kept, switched off: {out}"
+    );
+    assert!(!env.dir.join("data/audio").join(&id).exists());
+
+    // Deleting a person is idempotent.
+    let out = env.ok(&["person", "add", "--name", "Tio", "--consent-by", "Tio"]);
+    let uncle = speaker_id(&out);
+    let out = env.ok(&["person", "delete", "--person", &uncle]);
+    assert!(out.contains("deleted"), "{out}");
+    env.ok(&["person", "delete", "--person", &uncle]);
+    assert!(!env.ok(&["person", "list"]).contains(&uncle));
+}

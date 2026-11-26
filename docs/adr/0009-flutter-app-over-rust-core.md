@@ -1,6 +1,6 @@
-# ADR 0008 — Flutter app (Android + iOS) over the Rust core (supersedes 0005)
+# ADR 0009 — Flutter app (Android + iOS) over the Rust core (supersedes 0005)
 
-**Status:** accepted · Sprint 8
+**Status:** accepted · Sprint 9
 
 ## Context
 The Kotlin app (ADR 0005) only ran on Android. The app must also run on

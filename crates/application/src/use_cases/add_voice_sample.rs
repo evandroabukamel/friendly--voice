@@ -65,6 +65,7 @@ impl AddVoiceSample {
             .speakers
             .find(&input.speaker_id)?
             .ok_or_else(|| AppError::not_found("person", &input.speaker_id))?;
+        speaker.ensure_active()?;
 
         let clip = self.decoder.decode(&input.audio)?;
         self.policy.validate(&clip)?;

@@ -33,6 +33,10 @@ impl VoiceCloningEngine for LocalVoiceBank {
         }
         Ok(format!("local:{}:{}", speaker.id, references.len()))
     }
+    /// Nothing is kept outside the voice profile.
+    fn forget(&self, _voice_id: &str) -> PortResult<()> {
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

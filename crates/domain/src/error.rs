@@ -7,6 +7,8 @@ pub enum DomainError {
     InvalidValue { field: &'static str, reason: String },
     #[error("the consent of '{0}' must be recorded before cloning the voice")]
     ConsentRequired(String),
+    #[error("the consent of '{0}' was revoked and their voice deleted; register the person again with a new consent to use it")]
+    ConsentRevoked(String),
     #[error("audio sample rejected: {0}")]
     SampleRejected(String),
     #[error("not enough voice material: {0}")]

@@ -39,28 +39,39 @@ pub trait SpeakerRepository: Send + Sync {
     fn save(&self, speaker: &Speaker) -> PortResult<()>;
     fn find(&self, id: &SpeakerId) -> PortResult<Option<Speaker>>;
     fn list(&self) -> PortResult<Vec<Speaker>>;
+    /// Idempotent: `false` when there was nothing to delete.
+    fn delete(&self, id: &SpeakerId) -> PortResult<bool>;
 }
 
 pub trait SampleRepository: Send + Sync {
     fn save(&self, sample: &VoiceSample) -> PortResult<()>;
     fn list_by_speaker(&self, speaker: &SpeakerId) -> PortResult<Vec<VoiceSample>>;
+    /// Deletes every sample entry of the person; returns how many. Idempotent.
+    fn delete_by_speaker(&self, speaker: &SpeakerId) -> PortResult<usize>;
 }
 
 pub trait VoiceProfileRepository: Send + Sync {
     fn save(&self, profile: &VoiceProfile) -> PortResult<()>;
     fn find(&self, speaker: &SpeakerId) -> PortResult<Option<VoiceProfile>>;
+    /// Idempotent: `false` when there was nothing to delete.
+    fn delete(&self, speaker: &SpeakerId) -> PortResult<bool>;
 }
 
 pub trait ScheduleRepository: Send + Sync {
     fn save(&self, schedule: &Schedule) -> PortResult<()>;
     fn list(&self) -> PortResult<Vec<Schedule>>;
     fn delete(&self, id: &ScheduleId) -> PortResult<bool>;
+    fn find(&self, id: &ScheduleId) -> PortResult<Option<Schedule>> {
+        Ok(self.list()?.into_iter().find(|s| &s.id == id))
+    }
 }
 
 /// Stores the original audio files.
 pub trait AudioStore: Send + Sync {
     fn store(&self, speaker: &SpeakerId, sample: &SampleId, bytes: &[u8]) -> PortResult<String>;
     fn load(&self, locator: &str) -> PortResult<Vec<u8>>;
+    /// Deletes every stored audio file of the person. Idempotent.
+    fn delete_all(&self, speaker: &SpeakerId) -> PortResult<()>;
 }
 
 // ---------- Audio ----------
@@ -99,6 +110,9 @@ pub trait VoiceCloningEngine: Send + Sync {
         gender: Option<VoiceGender>,
         references: &[ReferenceAudio],
     ) -> PortResult<String>;
+    /// Deletes a voice from the engine. Idempotent: an unknown voice is not
+    /// an error.
+    fn forget(&self, voice_id: &str) -> PortResult<()>;
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -112,6 +126,12 @@ pub trait SpeechSynthesizer: Send + Sync {
         voice: &VoiceProfile,
         script: &SpeechScript,
     ) -> PortResult<SynthesizedAudio>;
+}
+
+/// Synthesized speech kept on the device (ADR 0008).
+pub trait SpeechCache: Send + Sync {
+    /// Deletes every cached talk of the person. Idempotent.
+    fn clear(&self, speaker: &SpeakerId) -> PortResult<()>;
 }
 
 // ---------- Messages ----------

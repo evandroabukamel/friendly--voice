@@ -70,6 +70,7 @@ impl Session {
                 relationship: non_empty(relationship),
                 consent_granted_by: non_empty(consent_by),
                 language,
+                listener_name: None,
             })
             .map_err(AppFailure::new)?;
         self.summary(speaker)

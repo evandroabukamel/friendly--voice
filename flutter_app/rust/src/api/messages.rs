@@ -67,6 +67,7 @@ impl Session {
                 speaker_id: SpeakerId::new(speaker_id),
                 content: content(theme, text)?,
                 listener: non_empty(listener),
+                listener_override: None,
                 tone: tone(tone_style, pitch_shift)?,
             })
             .map_err(AppFailure::new)?;

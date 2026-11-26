@@ -1,6 +1,6 @@
 # ADR 0005 — Android reusing the Rust core through JNI
 
-**Status:** superseded by [ADR 0008](0008-flutter-app-over-rust-core.md) (Flutter app; the Kotlin app and the JNI crate were removed in Sprint 8) · Sprint 4
+**Status:** superseded by [ADR 0009](0009-flutter-app-over-rust-core.md) (Flutter app; the Kotlin app and the JNI crate were removed in Sprint 8) · Sprint 4
 
 ## Context
 We want the app on Android without duplicating business rules (accent, tone,

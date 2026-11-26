@@ -27,18 +27,18 @@ afternoon.* Full stories with Gherkin criteria:
 
 | Epic | Delivered stories |
 |---|---|
-| E1 People & consent | US-01 register a person **only with recorded consent** (name + who authorized + timestamp) · US-27 language per person |
+| E1 People & consent | US-01 register a person **only with recorded consent** (name + who authorized + timestamp) · US-27 language per person · US-15 revoke consent / delete a person (samples, voice, engine voice and cache deleted; alarms disabled) · US-32 listener name per voice |
 | E2 Voice cloning | US-02 upload samples (transcript optional) · US-11 zero-shot cloning from all recordings + female/male detection · US-24 FLAC input |
-| E3 Messages | US-05 message now (theme or free text, personalized with the listener's name) · US-18 tone per message |
-| E4 Schedules | US-07 rules (daily, weekdays, every N min in a window, once) + quiet hours · US-08 fire due messages exactly once, single catch-up |
-| E5 Mobile | US-19 APK built in CI, release on `v*` tags · US-20 full flow on the phone with notifications · US-30 Flutter app for Android and iOS (ADR 0008) |
+| E3 Messages | US-05 message now (theme or free text, personalized with the listener's name) · US-18 tone per message · US-33 synthesized speech cached locally (ADR 0008) |
+| E4 Schedules | US-07 rules (daily, weekdays, every N min in a window, once) + quiet hours · US-08 fire due messages exactly once, single catch-up · US-30 alarm on/off switch · US-31 edit an alarm |
+| E5 Mobile | US-19 APK built in CI, release on `v*` tags · US-20 full flow on the phone with notifications · US-35 Flutter app for Android and iOS (ADR 0009): Reminders / Voices / Settings tabs |
 | E6 Project | US-21 English docs and comments · US-25/26 English CLI and output |
 
 Withdrawn (ADR 0007): the accent rules, G2P, phone recognizer, pronunciation
 preview and accent intensity (US-03/04/06/09/10). Do not reintroduce them.
-Open backlog (respect when touching related code): US-15 revoking consent
-must delete samples and voice (Must), US-17 no repeated messages, US-16
-MP3/OGG/M4A, US-28 themes in other languages, US-29 gendered first-person words.
+Open backlog (respect when touching related code): US-17 no repeated
+messages, US-16 MP3/OGG/M4A in the CLI (the app already decodes them),
+US-28 themes in other languages, US-29 gendered first-person words.
 
 ## How it works
 
@@ -72,7 +72,7 @@ crates/application     use cases (one per file) + ports (traits); depends only o
 crates/infrastructure  adapters: WAV/FLAC decode, DSP, JSON repos, HTTP engine, sketch engine, delivery
 crates/bootstrap       the ONLY composition root, shared by the CLI and the Flutter app
 crates/cli             `friendly-voice` binary (clap)
-flutter_app/           Flutter app (Android + iOS) — presentation only, no business rules (ADR 0008)
+flutter_app/           Flutter app (Android + iOS) — presentation only, no business rules (ADR 0009)
 flutter_app/rust       flutter_rust_bridge API (typed, opaque Session, AppFailure); workspace member
 engine/                Python FastAPI server: Chatterbox Multilingual
 ```
@@ -189,7 +189,8 @@ Agile, one-week sprints, MoSCoW + story points
 | 5 | Real timbre cloning with OpenVoice V2, engine server, English docs |
 | 6 | FLAC input, English CLI and output |
 | 7 | Zero-shot cloning with Chatterbox; language per person; gender detection; accent rules removed |
-| 8 | Flutter app for Android + iOS over the Rust core (flutter_rust_bridge, atomic design, Riverpod, exact alarms); Kotlin app removed |
+| 8 | Alarm on/off and editing, listener name per voice, speech cache, revoke consent / delete a person (US-15) |
+| 9 | Flutter app for Android + iOS over the Rust core (flutter_rust_bridge, atomic design, Riverpod, exact alarms); Kotlin app removed |
 
 ## Commands
 

@@ -73,6 +73,8 @@ export FRIENDLY_VOICE_PLAYER="aplay"     # optional: play the audio (afplay on m
 fv person add --name "Vó Lúcia" --relationship avó --consent-by "Lúcia"
 #   Person registered: Vó Lúcia (id: spk-..., speaks Portuguese)
 fv person add --name "Grandpa Joe" --consent-by "Joe" --language en-US
+# How this person calls you (wins over FRIENDLY_VOICE_ME / --my-name)
+fv person add --name "Mãe" --consent-by "Mãe" --listener-name "Filhote"
 
 # Upload .wav or .flac recordings (2 s – 180 s each, ≥ 16 kHz).
 # A transcript is optional (--transcript, or recording.txt next to the file).
@@ -86,9 +88,17 @@ fv voice generate --person spk-...
 fv speak --person spk-... --theme good-morning
 fv speak --person spk-... --text "Respira fundo, vai dar tudo certo."
 fv speak --person spk-... --theme confidence --tone warm --pitch-shift -1
+fv speak --person spk-... --theme celebration --listener-name "Campeão"   # name for this message only
 fv tones                                                   # list the tones of voice
 fv themes                                                  # list the message themes
 fv languages                                               # list the languages
+
+# How this person calls you (omit --listener-name to clear it)
+fv person set-listener-name --person spk-... --listener-name "Filhote"
+# Revoke consent: deletes recordings, voice (also on the server) and cached
+# speech; the person's schedules are switched off. Re-adding needs new consent.
+fv person revoke --person spk-... --by "Lúcia"
+fv person delete --person spk-...                          # also removes the person
 
 # Schedule
 fv schedule create --person spk-... --daily 07:30 --theme good-morning
@@ -105,7 +115,10 @@ command and option names (`pessoa adicionar --nome`, `falar --tema`, ...) are
 still accepted as hidden aliases, so existing scripts keep working.
 
 Generated audio files and a note with the text, language and tone are written
-to `.friendly-voice/outbox/`.
+to `.friendly-voice/outbox/`. Every generated talk is also cached in
+`.friendly-voice/cache/speech/<person>/`, so the same text, tone and voice is
+never asked from the voice server again; regenerating the voice invalidates
+it, and deleting the folder is always safe (ADR 0008).
 
 Without `--features http-engine` / `FRIENDLY_VOICE_ENGINE_URL`, the app uses a
 **local prosody sketch engine**: it renders audio with the person's rhythm and
@@ -117,11 +130,12 @@ melody (useful for development and tests) but **not** their voice.
 runs the same Rust core through flutter_rust_bridge (`flutter_app/rust/`):
 register the person (with consent and language), upload `.wav`/`.flac`
 samples, generate the voice, ask for a message choosing **the tone** and the
-pitch shift, and schedule messages. Schedules wake the phone with **exact
+pitch shift, and schedule messages; switch them on and off and
+edit them. Schedules wake the phone with **exact
 notifications** (Android 14+ asks for the exact-alarm permission; without it
 they may be a few minutes late); the app speaks what is due when it opens,
 when an alarm is tapped and every minute while open. Point it at the voice
-engine in its settings to use the cloned voice. Design: ADR 0008.
+engine in its settings to use the cloned voice. Design: ADR 0009.
 
 ```bash
 cd flutter_app

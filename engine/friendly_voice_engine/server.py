@@ -95,6 +95,12 @@ def create_app(engine: Engine | None = None, settings: Settings | None = None) -
             "median_pitch_hz": meta.median_pitch_hz,
         }
 
+    @app.delete("/v1/voices/{voice_id}", status_code=204)
+    def forget(voice_id: str) -> Response:
+        if not get_engine().forget(voice_id):
+            raise HTTPException(404, f"unknown voice_id: {voice_id}")
+        return Response(status_code=204)
+
     @app.post("/v1/synthesize")
     def synthesize(req: SynthesizeRequest) -> Response:
         try:
