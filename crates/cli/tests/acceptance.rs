@@ -353,6 +353,71 @@ fn english_values_are_accepted() {
     assert!(out.contains("mon,fri at 07:30"), "{out}");
 }
 
+/// Real ≈3 s phone-style recordings shared with the infrastructure tests.
+fn fixture(name: &str) -> Vec<u8> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../infrastructure/tests/fixtures");
+    std::fs::read(dir.join(name)).unwrap()
+}
+
+/// US-16: MP3, M4A and OGG recordings are accepted like WAV and FLAC.
+#[test]
+fn accepts_mp3_m4a_and_ogg_samples() {
+    let env = Env::new("compressed");
+    let help = env.ok(&["sample", "add", "--help"]);
+    assert!(help.contains(".mp3, .m4a or .ogg"), "{help}");
+
+    let id = speaker_id(&env.ok(&["person", "add", "--name", "Mãe", "--consent-by", "Mãe"]));
+    // Four samples: the voice needs at least 10 s in total.
+    for (i, name) in ["voice.mp3", "voice.m4a", "voice.ogg", "voice.mp3"]
+        .iter()
+        .enumerate()
+    {
+        // The format comes from the content: the stored name is not trusted.
+        let path = env.dir.join(format!("upload-{i}"));
+        std::fs::write(&path, fixture(name)).unwrap();
+        let out = env.ok(&["sample", "add", "--person", &id, "--audio", p(&path)]);
+        assert!(out.contains("added (3.0s)"), "{name}: {out}");
+    }
+    // The original files are kept, with the right extensions.
+    let mut stored: Vec<_> = std::fs::read_dir(env.dir.join("data/audio").join(&id))
+        .unwrap()
+        .map(|e| e.unwrap().path().extension().unwrap().to_owned())
+        .collect();
+    stored.sort();
+    assert_eq!(stored, ["m4a", "mp3", "mp3", "ogg"]);
+    env.ok(&["voice", "generate", "--person", &id]);
+
+    // A recording over 3 minutes goes through the same limit as a WAV.
+    // MP3 frames can be concatenated: repeat the tag-less frames 61 times.
+    let mp3 = fixture("voice.mp3");
+    let tag = 10
+        + mp3[6..10]
+            .iter()
+            .fold(0usize, |acc, &b| (acc << 7) | b as usize);
+    let long = env.dir.join("long.mp3");
+    std::fs::write(&long, mp3[tag..].repeat(61)).unwrap();
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&long)]);
+    assert!(
+        !ok && out.contains("too long") && out.contains("split it"),
+        "{out}"
+    );
+
+    let opus = env.dir.join("opus.ogg");
+    std::fs::write(&opus, fixture("opus.ogg")).unwrap();
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&opus)]);
+    assert!(
+        !ok && out.contains("This audio format is not supported. Convert the file to WAV."),
+        "{out}"
+    );
+    let silent = env.dir.join("no-audio.m4a");
+    std::fs::write(&silent, fixture("no-audio.m4a")).unwrap();
+    let (ok, out) = env.run(&["sample", "add", "--person", &id, "--audio", p(&silent)]);
+    assert!(
+        !ok && out.contains("This file has no audio. Use a WAV, FLAC, MP3, M4A or OGG file."),
+        "{out}"
+    );
+}
+
 #[test]
 fn rejects_invalid_audio() {
     let env = Env::new("bad");

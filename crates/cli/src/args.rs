@@ -135,7 +135,7 @@ pub enum PersonCmd {
 #[derive(Debug, Subcommand)]
 pub enum SampleCmd {
     #[command(
-        about = "Adds a .wav or .flac recording. If `<file>.txt` (transcript) exists next to it, it is used.",
+        about = "Adds a .wav, .flac, .mp3, .m4a or .ogg recording (format read from the content, 2 s to 3 min). If `<file>.txt` (transcript) exists next to it, it is used.",
         alias = "adicionar"
     )]
     Add {
