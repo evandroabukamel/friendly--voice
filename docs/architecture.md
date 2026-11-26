@@ -6,7 +6,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │ cli / mobile  (presentation)   bootstrap (composition root) │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │ infrastructure  (adapters: WAV/FLAC, DSP, JSON,       │  │
+│  │ infrastructure  (adapters: audio files, DSP, JSON,    │  │
 │  │                  HTTP, catalog, delivery, clock)      │  │
 │  │  ┌─────────────────────────────────────────────────┐  │  │
 │  │  │ application  (use cases + ports/traits)         │  │  │
@@ -46,9 +46,9 @@ the HTTP adapter (see ADR 0003 and 0007).
 ## Voice cloning — data flow
 
 ```
- WAV/FLAC ──► AudioFileDecoder ──► AudioClip ──► SampleQualityPolicy (domain)
-                                        │
-                                        └──► DspAcousticAnalyzer ──► pitch, pauses
+ WAV/FLAC/MP3/M4A/OGG ──► AudioFileDecoder ──► AudioClip ──► SampleQualityPolicy (domain)
+                                                    │
+                                                    └──► DspAcousticAnalyzer ──► pitch, pauses
  transcript (optional: --transcript, .txt or Transcriber in the person's language)
 
  all samples ──► ProsodyProfile ──► VoiceGender::from_pitch (≥ 160 Hz → female)

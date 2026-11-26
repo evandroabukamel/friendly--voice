@@ -12,7 +12,7 @@ language and the messages are spoken in it.
 
 ## Highlights
 
-* **Voice cloning from audio files** (WAV or FLAC, any bit depth, mono or
+* **Voice cloning from audio files** (WAV, FLAC, MP3, M4A or OGG; mono or
   stereo) with [Chatterbox Multilingual](https://github.com/resemble-ai/chatterbox)
   (MIT license), zero-shot — no training — behind a small self-hosted server
   ([`engine/`](engine)). Consent of the person is mandatory.
@@ -76,7 +76,8 @@ fv person add --name "Grandpa Joe" --consent-by "Joe" --language en-US
 # How this person calls you (wins over FRIENDLY_VOICE_ME / --my-name)
 fv person add --name "Mãe" --consent-by "Mãe" --listener-name "Filhote"
 
-# Upload .wav or .flac recordings (2 s – 180 s each, ≥ 16 kHz).
+# Upload .wav, .flac, .mp3, .m4a or .ogg recordings (2 s – 180 s each, ≥ 16 kHz;
+# the format is read from the content, not the extension).
 # A transcript is optional (--transcript, or recording.txt next to the file).
 fv sample add --person spk-... --audio recording1.flac
 fv sample add --person spk-... --audio recording2.wav
@@ -173,7 +174,7 @@ key. The iOS build is unsigned (signing needs an Apple Developer account).
 crates/
 ├── domain/          pure rules: Speaker, Language, AudioClip, voice (gender, prosody), tone, schedules
 ├── application/     use cases + ports (traits)
-├── infrastructure/  WAV/FLAC, DSP, JSON, voice engines, catalog, delivery
+├── infrastructure/  WAV/FLAC/MP3/M4A/OGG, DSP, JSON, voice engines, catalog, delivery
 ├── bootstrap/       shared composition root (CLI and the Flutter app)
 └── cli/             command line interface
 flutter_app/         Flutter app (Android + iOS): atomic design, Riverpod, Clean Architecture
